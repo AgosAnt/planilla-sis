@@ -2,4 +2,13 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="slate_900">#1E2A38</color>
+    <color name="slate_700">#3A4750</color>
+    <color name="slate_500">#6B7785</color>
+    <color name="bg_app">#F4F6F8</color>
+
+    <color name="green_active">#2E7D5B</color>
+    <color name="red_alert">#C62828</color>
+    <color name="disabled_grey">#CBD2D9</color>
+    <color name="disabled_grey_text">#8A96A3</color>
 </resources>

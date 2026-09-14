@@ -4,89 +4,132 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/bg_app"
     android:padding="24dp"
     tools:context=".MainActivity">
 
+    <!-- Encabezado: título + subtítulo, alineado a la izquierda -->
     <TextView
         android:id="@+id/tvTitulo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Registro de Jornada"
-        android:textSize="28sp"
+        android:layout_marginTop="16dp"
+        android:text="Planilla"
+        android:textColor="@color/slate_900"
+        android:textSize="30sp"
         android:textStyle="bold"
-        app:layout_constraintBottom_toTopOf="@+id/tvFechaHoraActual"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_chainStyle="packed" />
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tvSubtitulo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Registro de jornada"
+        android:textColor="@color/slate_500"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="@+id/tvTitulo"
+        app:layout_constraintTop_toBottomOf="@+id/tvTitulo" />
 
     <TextView
         android:id="@+id/tvFechaHoraActual"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="40dp"
         android:text="Cargando hora..."
-        android:textSize="18sp"
-        app:layout_constraintBottom_toTopOf="@+id/btnEntrada"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:textColor="@color/slate_900"
+        android:textSize="22sp"
+        android:fontFamily="sans-serif-medium"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tvTitulo" />
+        app:layout_constraintTop_toBottomOf="@+id/tvSubtitulo" />
 
+    <!-- Tarjeta de estado -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardEstado"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@android:color/white"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvFechaHoraActual">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="16dp">
+
+            <View
+                android:id="@+id/dotEstado"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/status_dot" />
+
+            <TextView
+                android:id="@+id/tvEstado"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Listo para iniciar"
+                android:textColor="@color/slate_900"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium" />
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Botones principales -->
     <Button
         android:id="@+id/btnEntrada"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_marginTop="64dp"
-        android:backgroundTint="#4CAF50"
-        android:text="MARCAR ENTRADA"
-        android:textSize="18sp"
-        app:layout_constraintBottom_toTopOf="@+id/btnSalida"
+        android:layout_height="60dp"
+        android:layout_marginTop="28dp"
+        android:backgroundTint="@color/btn_entrada_tint"
+        android:text="Marcar entrada"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        android:textSize="17sp"
+        android:fontFamily="sans-serif-medium"
+        app:cornerRadius="14dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tvFechaHoraActual" />
+        app:layout_constraintTop_toBottomOf="@+id/cardEstado" />
 
     <Button
         android:id="@+id/btnSalida"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_marginTop="16dp"
-        android:backgroundTint="#F44336"
-        android:text="MARCAR SALIDA"
-        android:textSize="18sp"
+        android:layout_height="60dp"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="@color/btn_salida_tint"
         android:enabled="false"
-        app:layout_constraintBottom_toTopOf="@+id/tvEstado"
+        android:text="Marcar salida"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        android:textSize="17sp"
+        android:fontFamily="sans-serif-medium"
+        app:cornerRadius="14dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btnEntrada" />
 
-    <TextView
-        android:id="@+id/tvEstado"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="Estado: Esperando registro"
-        android:textSize="16sp"
-        android:textStyle="italic"
-        app:layout_constraintBottom_toTopOf="@+id/btnEmergencia"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnSalida" />
-
-    <!-- NUEVO BOTÓN DE EMERGENCIA -->
+    <!-- Botón de emergencia: circular, esquina inferior derecha -->
     <Button
         android:id="@+id/btnEmergencia"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:layout_marginTop="32dp"
-        android:backgroundTint="#8B0000"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginBottom="8dp"
+        android:backgroundTint="@color/red_alert"
         android:text="!"
-        android:textSize="40sp"
-        android:textColor="#FFFFFF"
+        android:textColor="@android:color/white"
+        android:textSize="28sp"
         android:textStyle="bold"
-        app:cornerRadius="40dp"
+        android:elevation="4dp"
+        app:cornerRadius="32dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tvEstado" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
