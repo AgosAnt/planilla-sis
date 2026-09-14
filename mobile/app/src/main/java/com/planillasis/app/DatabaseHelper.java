@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.database.Cursor;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -53,5 +54,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         long result = db.insert(TABLE_REGISTROS, null, contentValues);
         return result != -1; // Retorna true si se guardó correctamente
+    }
+
+    // Método para obtener los registros que aún no se han enviado (Modo Offline)
+    public Cursor obtenerRegistrosPendientes() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        // Busca todos los registros donde la columna SINCRONIZADO sea igual a 0
+        return db.rawQuery("SELECT * FROM " + TABLE_REGISTROS + " WHERE " + COL_SINCRONIZADO + " = 0", null);
+    }
+
+    // Método para marcar un registro como enviado y que no se vuelva a enviar
+    public void marcarComoSincronizado(int id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COL_SINCRONIZADO, 1);
+        db.update(TABLE_REGISTROS, values, COL_ID + " = ?", new String[]{String.valueOf(id)});
     }
 }

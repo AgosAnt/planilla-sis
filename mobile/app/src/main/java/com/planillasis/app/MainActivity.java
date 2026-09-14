@@ -2,6 +2,7 @@ package com.planillasis.app;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
@@ -20,6 +21,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class MainActivity extends AppCompatActivity {
 
     private TextView tvFechaHoraActual, tvEstado;
@@ -27,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Handler handler;
     private Runnable runnable;
-    private Toast toastActual; // Para evitar que se acumulen los mensajes
+    private Toast toastActual;
 
     // Base de datos local
     private DatabaseHelper dbHelper;
@@ -37,9 +42,9 @@ public class MainActivity extends AppCompatActivity {
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1000;
 
     // Coordenadas de prueba
-    private static final double EMPRESA_LAT = 14.635057784329875;
-    private static final double EMPRESA_LON = -90.74818247343977;
-    private static final float RADIO_PERMITIDO_METROS = 999.0f;
+    private static final double EMPRESA_LAT = 14.635050366193266;
+    private static final double EMPRESA_LON = -90.74816412408792;
+    private static final float RADIO_PERMITIDO_METROS = 100.0f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,13 +66,12 @@ public class MainActivity extends AppCompatActivity {
         iniciarReloj();
         pedirPermisosGPS();
 
-        // 3. Eventos de botones (Nota: La emergencia ignora la distancia permitida)
+        // 3. Eventos de botones
         btnEntrada.setOnClickListener(v -> procesarRegistro("ENTRADA", false));
         btnSalida.setOnClickListener(v -> procesarRegistro("SALIDA", false));
         btnEmergencia.setOnClickListener(v -> procesarRegistro("EMERGENCIA", true));
     }
 
-    // Nuevo método para evitar que los mensajes se acumulen en pantalla
     private void mostrarMensaje(String mensaje) {
         if (toastActual != null) {
             toastActual.cancel();
@@ -85,7 +89,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // Se añadió un boolean para saber si es una emergencia y no validar la distancia
     private void procesarRegistro(String tipoRegistro, boolean ignorarGeocerca) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -98,10 +101,8 @@ public class MainActivity extends AppCompatActivity {
         fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
             if (location != null) {
                 if (ignorarGeocerca) {
-                    // Si es emergencia, guarda directamente sin importar dónde esté
                     guardarRegistroLocal(tipoRegistro, location);
                 } else {
-                    // Si es entrada o salida, revisa que esté en la empresa
                     verificarGeocerca(location, tipoRegistro);
                 }
             } else {
@@ -129,22 +130,68 @@ public class MainActivity extends AppCompatActivity {
                 btnSalida.setEnabled(false);
             }
 
-            // Si está dentro de la distancia, se guarda en SQLite
             guardarRegistroLocal(tipoRegistro, ubicacionActual);
-            mostrarMensaje(tipoRegistro + " autorizada. Guardado en modo Offline.");
 
         } else {
             mostrarMensaje("ESTÁS MUY LEJOS: A " + Math.round(distanciaMetros) + " metros de la empresa.");
         }
     }
 
-    // Método que escribe en la base de datos local
     private void guardarRegistroLocal(String tipo, Location loc) {
         String fecha = obtenerHoraActual();
         boolean exito = dbHelper.insertarRegistro(tipo, fecha, loc.getLatitude(), loc.getLongitude());
 
-        if (exito && tipo.equals("EMERGENCIA")) {
-            mostrarMensaje("🚨 ALERTA DE EMERGENCIA REGISTRADA Y GUARDADA 🚨");
+        if (exito) {
+            if (tipo.equals("EMERGENCIA")) {
+                mostrarMensaje("🚨 EMERGENCIA GUARDADA OFFLINE. Intentando enviar...");
+            } else {
+                mostrarMensaje(tipo + " guardada en modo Offline. Intentando enviar...");
+            }
+            // Inmediatamente después de guardar, intentamos sincronizar
+            sincronizarConServidor();
+        }
+    }
+
+    // Método que busca los datos Offline y los envía por Retrofit
+    private void sincronizarConServidor() {
+        Cursor cursor = dbHelper.obtenerRegistrosPendientes();
+        ApiService apiService = RetrofitClient.getApiService();
+
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                int idCol = cursor.getColumnIndex(DatabaseHelper.COL_ID);
+                int tipoCol = cursor.getColumnIndex(DatabaseHelper.COL_TIPO);
+                int fechaCol = cursor.getColumnIndex(DatabaseHelper.COL_FECHA);
+                int latCol = cursor.getColumnIndex(DatabaseHelper.COL_LATITUD);
+                int lonCol = cursor.getColumnIndex(DatabaseHelper.COL_LONGITUD);
+
+                int idLocal = cursor.getInt(idCol);
+                String tipo = cursor.getString(tipoCol);
+                String fecha = cursor.getString(fechaCol);
+                double lat = cursor.getDouble(latCol);
+                double lon = cursor.getDouble(lonCol);
+
+                Registro registro = new Registro(tipo, fecha, lat, lon);
+
+                apiService.enviarRegistroAlServidor(registro).enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(Call<Void> call, Response<Void> response) {
+                        if (response.isSuccessful()) {
+                            dbHelper.marcarComoSincronizado(idLocal);
+                            mostrarMensaje("¡Sincronizado con el servidor (" + tipo + ")!");
+                        } else {
+                            mostrarMensaje("Error al enviar al servidor.");
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<Void> call, Throwable t) {
+                        mostrarMensaje("Sin conexión al servidor. Datos guardados Offline.");
+                    }
+                });
+
+            } while (cursor.moveToNext());
+            cursor.close();
         }
     }
 
