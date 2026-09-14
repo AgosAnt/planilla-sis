@@ -70,4 +70,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COL_SINCRONIZADO, 1);
         db.update(TABLE_REGISTROS, values, COL_ID + " = ?", new String[]{String.valueOf(id)});
     }
+
+    // Devuelve el tipo del último registro (ENTRADA o SALIDA), ignorando emergencias
+    public String obtenerUltimoEstado() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT " + COL_TIPO + " FROM " + TABLE_REGISTROS +
+                        " WHERE " + COL_TIPO + " != 'EMERGENCIA'" +
+                        " ORDER BY " + COL_ID + " DESC LIMIT 1", null);
+
+        String ultimoTipo = null;
+        if (cursor != null && cursor.moveToFirst()) {
+            ultimoTipo = cursor.getString(cursor.getColumnIndex(COL_TIPO));
+        }
+        if (cursor != null) cursor.close();
+        return ultimoTipo; // "ENTRADA", "SALIDA", o null si nunca ha marcado nada
+    }
 }

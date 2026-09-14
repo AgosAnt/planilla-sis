@@ -21,6 +21,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import okhttp3.ResponseBody;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -66,10 +68,31 @@ public class MainActivity extends AppCompatActivity {
         iniciarReloj();
         pedirPermisosGPS();
 
+        // 2.1 Restaurar el estado de los botones según el último registro guardado
+        restaurarEstadoUI();
+
         // 3. Eventos de botones
         btnEntrada.setOnClickListener(v -> procesarRegistro("ENTRADA", false));
         btnSalida.setOnClickListener(v -> procesarRegistro("SALIDA", false));
         btnEmergencia.setOnClickListener(v -> procesarRegistro("EMERGENCIA", true));
+    }
+
+    // Consulta el último registro en SQLite y ajusta los botones/estado
+    // para que sobreviva a cerrar y reabrir la app.
+    private void restaurarEstadoUI() {
+        String ultimoEstado = dbHelper.obtenerUltimoEstado();
+
+        if ("ENTRADA".equals(ultimoEstado)) {
+            // Hay una jornada abierta: ya marcó entrada, falta salida
+            tvEstado.setText("Estado: EN RUTA");
+            btnEntrada.setEnabled(false);
+            btnSalida.setEnabled(true);
+        } else {
+            // No hay jornada abierta (nunca marcó, o la última fue SALIDA)
+            tvEstado.setText("Estado: LISTO PARA INICIAR");
+            btnEntrada.setEnabled(true);
+            btnSalida.setEnabled(false);
+        }
     }
 
     private void mostrarMensaje(String mensaje) {
@@ -173,9 +196,9 @@ public class MainActivity extends AppCompatActivity {
 
                 Registro registro = new Registro(tipo, fecha, lat, lon);
 
-                apiService.enviarRegistroAlServidor(registro).enqueue(new Callback<Void>() {
+                apiService.enviarRegistroAlServidor(registro).enqueue(new Callback<ResponseBody>() {
                     @Override
-                    public void onResponse(Call<Void> call, Response<Void> response) {
+                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                         if (response.isSuccessful()) {
                             dbHelper.marcarComoSincronizado(idLocal);
                             mostrarMensaje("¡Sincronizado con el servidor (" + tipo + ")!");
@@ -185,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onFailure(Call<Void> call, Throwable t) {
+                    public void onFailure(Call<ResponseBody> call, Throwable t) {
                         mostrarMensaje("Sin conexión al servidor. Datos guardados Offline.");
                     }
                 });
