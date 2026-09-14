@@ -19,15 +19,14 @@ const pool = new Pool({
 
 // Ruta principal para verificar conexión desde el navegador
 app.get('/', (req, res) => {
-    res.send('¡Servidor de Planilla Asis funcionando al 100%!');
+    res.send('Servidor funcionando');
 });
 
 // 2. Ruta para recibir datos de Android
 app.post('/api/registros', async (req, res) => {
-    // Extraemos los datos del JSON que envía Android
+    // Extraccion de datos del cuerpo de la solicitud
     const { tipo_registro, fecha_hora, latitud, longitud } = req.body;
     
-    // Por ahora, forzamos el ID del usuario de prueba que creamos en SQL
     const id_usuario = 1; 
     const id_ruta = 1;
 
@@ -55,22 +54,33 @@ app.post('/api/registros', async (req, res) => {
             res.status(200).json({ mensaje: 'Salida actualizada en DB', datos: result.rows[0] });
         } 
         
-        else if (tipo_registro === 'EMERGENCIA') {
+        else if (tipo_registro === 'SALIDA') {
+            // Buscamos la jornada de ESTE usuario, que NO tenga salida, y que se haya creado HOY
             const query = `
-                INSERT INTO Eventos_Ruta (id_usuario, tipo_evento, fecha_hora, latitud, longitud)
-                VALUES ($1, 'EMERGENCIA', $2, $3, $4) RETURNING *
+                UPDATE Jornadas 
+                SET hora_salida = $1, latitud_salida = $2, longitud_salida = $3, estado = 'FINALIZADA'
+                WHERE id_usuario = $4 
+                  AND hora_salida IS NULL 
+                  AND DATE(hora_entrada) = DATE($1)
+                RETURNING *
             `;
-            const result = await pool.query(query, [id_usuario, fecha_hora, latitud, longitud]);
-            res.status(201).json({ mensaje: '🚨 Emergencia registrada en DB', datos: result.rows[0] });
+            const result = await pool.query(query, [fecha_hora, latitud, longitud, id_usuario]);
+            
+            if (result.rowCount === 0) {
+                // Si no actualizó nada, significa que no había entrada hoy o ya estaba cerrada
+                res.status(400).json({ error: 'No se encontró una jornada abierta para hoy' });
+            } else {
+                res.status(200).json({ mensaje: 'Salida actualizada en DB', datos: result.rows[0] });
+            }
         }
 
     } catch (error) {
-        console.error('❌ Error de Base de Datos:', error);
+        console.error('Error de Base de Datos:', error);
         res.status(500).json({ error: 'Error guardando en PostgreSQL' });
     }
 });
 
-// 3. Encender el servidor (0.0.0.0 permite que el celular lo encuentre)
+// 3. Encender el servidor 
 app.listen(port, '0.0.0.0', () => {
-    console.log(`🚀 Servidor backend corriendo en http://localhost:${port}`);
+    console.log(`SV corriendo en http://localhost:${port}`);
 });
