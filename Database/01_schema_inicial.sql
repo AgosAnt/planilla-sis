@@ -19,13 +19,30 @@ CREATE TABLE Jornadas (
     id_usuario INT REFERENCES Usuarios(id_usuario) ON DELETE CASCADE,
     id_ruta INT REFERENCES Rutas(id_ruta) ON DELETE SET NULL,
     fecha DATE NOT NULL DEFAULT CURRENT_DATE,
+    
+    -- Datos capturados directamente desde Android
     hora_entrada TIMESTAMP NOT NULL,
-    hora_salida TIMESTAMP,
     latitud_entrada NUMERIC(10,8),
     longitud_entrada NUMERIC(11,8),
+    
+    -- Se llenan cuando el usuario marca SALIDA en la app
+    hora_salida TIMESTAMP,
     latitud_salida NUMERIC(10,8),
     longitud_salida NUMERIC(11,8),
+    
     estado VARCHAR(50) DEFAULT 'EN_RUTA' -- 'PROGRAMADA', 'EN_RUTA', 'EN_PAUSA', 'FINALIZADA', 'APROBADA'
+);
+
+-- ¡NUEVA TABLA! Registro de Eventos Especiales y Emergencias (Desde la app móvil)
+CREATE TABLE Eventos_Ruta (
+    id_evento SERIAL PRIMARY KEY,
+    id_usuario INT REFERENCES Usuarios(id_usuario) ON DELETE CASCADE,
+    id_jornada INT REFERENCES Jornadas(id_jornada) ON DELETE CASCADE,
+    tipo_evento VARCHAR(50) NOT NULL, -- 'EMERGENCIA', 'VISITA_FALLIDA', 'PROBLEMA_VEHICULO'
+    fecha_hora TIMESTAMP NOT NULL,
+    latitud NUMERIC(10,8) NOT NULL,
+    longitud NUMERIC(11,8) NOT NULL,
+    estado_atencion VARCHAR(50) DEFAULT 'PENDIENTE_REVISION' -- Para que el supervisor lo revise en la web
 );
 
 -- Tabla de Eventos de Descanso (Almuerzos o pausas para restar al total trabajado)
