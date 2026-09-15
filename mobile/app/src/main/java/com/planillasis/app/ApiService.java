@@ -6,9 +6,6 @@ import retrofit2.http.Body;
 import retrofit2.http.POST;
 
 public interface ApiService {
-
-    // Se envian los datos por el método POST a la ruta de tu futuro servidor
-    @POST("api/registros")
-    Call<ResponseBody> enviarRegistroAlServidor(@Body Registro registro);
-
+    @POST("/api/registros") // Asegúrate de que esta ruta coincida con tu backend
+    Call<ResponseBody> registrarAsistencia(@Body AsistenciaRequest request);
 }
