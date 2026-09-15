@@ -20,9 +20,9 @@ import com.google.android.gms.location.LocationServices;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 
 import okhttp3.ResponseBody;
-
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -36,27 +36,23 @@ public class MainActivity extends AppCompatActivity {
     private Runnable runnable;
     private Toast toastActual;
 
-    // Base de datos local
     private DatabaseHelper dbHelper;
-
-    // Variables para GPS
     private FusedLocationProviderClient fusedLocationClient;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1000;
-
-    // Coordenadas de prueba
-    private static final double EMPRESA_LAT = 14.635050366193266;
-    private static final double EMPRESA_LON = -90.74816412408792;
+    private static final double EMPRESA_LAT = 14.635202183200219;
+    private static final double EMPRESA_LON = -90.74817535490664;
     private static final float RADIO_PERMITIDO_METROS = 100.0f;
+
+    private boolean procesandoRegistro = false;
+    private int solicitudesPendientes = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // 1. Inicializar la base de datos local SQLite
         dbHelper = new DatabaseHelper(this);
 
-        // 2. Vincular interfaz
         tvFechaHoraActual = findViewById(R.id.tvFechaHoraActual);
         tvEstado = findViewById(R.id.tvEstado);
         btnEntrada = findViewById(R.id.btnEntrada);
@@ -67,28 +63,45 @@ public class MainActivity extends AppCompatActivity {
 
         iniciarReloj();
         pedirPermisosGPS();
-
-        // 2.1 Restaurar el estado de los botones según el último registro guardado
         restaurarEstadoUI();
 
-        // 3. Eventos de botones
         btnEntrada.setOnClickListener(v -> procesarRegistro("ENTRADA", false));
         btnSalida.setOnClickListener(v -> procesarRegistro("SALIDA", false));
         btnEmergencia.setOnClickListener(v -> procesarRegistro("EMERGENCIA", true));
+    } // <--- AQUÍ TERMINA EL ONCREATE CORRECTAMENTE
+
+    // === MÉTODOS NUEVOS AFUERA DEL ONCREATE ===
+
+    private String obtenerHoraActual() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC")); // Siempre enviar UTC al servidor
+        return sdf.format(new Date());
     }
 
-    // Consulta el último registro en SQLite y ajusta los botones/estado
-    // para que sobreviva a cerrar y reabrir la app.
+    private void iniciarReloj() {
+        handler = new Handler(Looper.getMainLooper());
+        runnable = new Runnable() {
+            @Override
+            public void run() {
+                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault());
+                String fechaHoraStr = sdf.format(new Date());
+                tvFechaHoraActual.setText(fechaHoraStr);
+                handler.postDelayed(this, 1000);
+            }
+        };
+        handler.post(runnable);
+    }
+
+    // === RESTO DE TUS MÉTODOS ===
+
     private void restaurarEstadoUI() {
         String ultimoEstado = dbHelper.obtenerUltimoEstado();
 
         if ("ENTRADA".equals(ultimoEstado)) {
-            // Hay una jornada abierta: ya marcó entrada, falta salida
             tvEstado.setText("Estado: EN RUTA");
             btnEntrada.setEnabled(false);
             btnSalida.setEnabled(true);
         } else {
-            // No hay jornada abierta (nunca marcó, o la última fue SALIDA)
             tvEstado.setText("Estado: LISTO PARA INICIAR");
             btnEntrada.setEnabled(true);
             btnSalida.setEnabled(false);
@@ -113,25 +126,53 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void procesarRegistro(String tipoRegistro, boolean ignorarGeocerca) {
+        if (procesandoRegistro) {
+            mostrarMensaje("Ya se está procesando un registro, espera un momento...");
+            return;
+        }
+
+        // Apagar botones inmediatamente para evitar clicks multiples
+        btnEntrada.setEnabled(false);
+        btnSalida.setEnabled(false);
+        btnEmergencia.setEnabled(false);
+        mostrarMensaje("📍 Obteniendo ubicación...");
+
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
             mostrarMensaje("Se requiere permiso de ubicación para marcar.");
             pedirPermisosGPS();
+            restaurarEstadoUI();
+            btnEmergencia.setEnabled(true);
             return;
         }
 
-        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
-            if (location != null) {
-                if (ignorarGeocerca) {
-                    guardarRegistroLocal(tipoRegistro, location);
-                } else {
-                    verificarGeocerca(location, tipoRegistro);
-                }
-            } else {
-                mostrarMensaje("El GPS está inactivo. Abre Google Maps un momento y vuelve a intentar.");
-            }
-        });
+        procesandoRegistro = true;
+
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, location -> {
+                    try {
+                        if (location != null) {
+                            if (ignorarGeocerca) {
+                                guardarRegistroLocal(tipoRegistro, location);
+                            } else {
+                                verificarGeocerca(location, tipoRegistro);
+                            }
+                        } else {
+                            mostrarMensaje("El GPS está inactivo. Abre Google Maps un momento y vuelve a intentar.");
+                        }
+                    } finally {
+                        procesandoRegistro = false;
+                        restaurarEstadoUI();
+                        btnEmergencia.setEnabled(true);
+                    }
+                })
+                .addOnFailureListener(this, e -> {
+                    procesandoRegistro = false;
+                    restaurarEstadoUI();
+                    btnEmergencia.setEnabled(true);
+                    mostrarMensaje("No se pudo obtener la ubicación. Intenta de nuevo.");
+                });
     }
 
     private void verificarGeocerca(Location ubicacionActual, String tipoRegistro) {
@@ -170,13 +211,15 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 mostrarMensaje(tipo + " guardada en modo Offline. Intentando enviar...");
             }
-            // Inmediatamente después de guardar, intentamos sincronizar
             sincronizarConServidor();
         }
     }
 
-    // Método que busca los datos Offline y los envía por Retrofit
     private void sincronizarConServidor() {
+        if (solicitudesPendientes > 0) {
+            return;
+        }
+
         Cursor cursor = dbHelper.obtenerRegistrosPendientes();
         ApiService apiService = RetrofitClient.getApiService();
 
@@ -188,27 +231,32 @@ public class MainActivity extends AppCompatActivity {
                 int latCol = cursor.getColumnIndex(DatabaseHelper.COL_LATITUD);
                 int lonCol = cursor.getColumnIndex(DatabaseHelper.COL_LONGITUD);
 
-                int idLocal = cursor.getInt(idCol);
+                final int idLocal = cursor.getInt(idCol);
                 String tipo = cursor.getString(tipoCol);
                 String fecha = cursor.getString(fechaCol);
                 double lat = cursor.getDouble(latCol);
                 double lon = cursor.getDouble(lonCol);
 
-                Registro registro = new Registro(tipo, fecha, lat, lon);
+                AsistenciaRequest request = new AsistenciaRequest(1, tipo, fecha, lat, lon);
+                solicitudesPendientes++;
 
-                apiService.enviarRegistroAlServidor(registro).enqueue(new Callback<ResponseBody>() {
+                Call<ResponseBody> call = apiService.registrarAsistencia(request);
+
+                call.enqueue(new Callback<ResponseBody>() {
                     @Override
                     public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                        if (response.isSuccessful()) {
+                        solicitudesPendientes--;
+                        if (response.isSuccessful() || response.code() == 409 || response.code() == 400) {
                             dbHelper.marcarComoSincronizado(idLocal);
-                            mostrarMensaje("¡Sincronizado con el servidor (" + tipo + ")!");
+                            mostrarMensaje("Sincronización exitosa con el servidor.");
                         } else {
-                            mostrarMensaje("Error al enviar al servidor.");
+                            mostrarMensaje("Error del servidor al sincronizar.");
                         }
                     }
 
                     @Override
                     public void onFailure(Call<ResponseBody> call, Throwable t) {
+                        solicitudesPendientes--;
                         mostrarMensaje("Sin conexión al servidor. Datos guardados Offline.");
                     }
                 });
@@ -216,23 +264,6 @@ public class MainActivity extends AppCompatActivity {
             } while (cursor.moveToNext());
             cursor.close();
         }
-    }
-
-    private String obtenerHoraActual() {
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault());
-        return sdf.format(new Date());
-    }
-
-    private void iniciarReloj() {
-        handler = new Handler(Looper.getMainLooper());
-        runnable = new Runnable() {
-            @Override
-            public void run() {
-                tvFechaHoraActual.setText(obtenerHoraActual());
-                handler.postDelayed(this, 1000);
-            }
-        };
-        handler.post(runnable);
     }
 
     @Override
