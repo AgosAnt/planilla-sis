@@ -4,7 +4,7 @@
 
 | Campo | Detalle |
 | --- | --- |
-| Versión | 1.1 – Borrador para revisión (incorpora esquema SQL, código del backend y de la app móvil) |
+| Versión | 2.0 – Borrador para revisión (Decisión D-3 tomada: PostgreSQL autoadministrado + autenticación propia) |
 | Fecha | 21 de septiembre de 2026 |
 | Elaborado por | Arquitectura de Software y Análisis de Sistemas |
 | Equipo | 7 integrantes: 6 en Web/Backend, 1 en App Móvil |
@@ -24,10 +24,9 @@
 | **Dev Backend 1** | Líder Técnico / Arquitecto | ADRs, contrato API, revisión de calidad |
 | **Dev Backend 2** | Backend – Dominio | API REST, motor de cálculo de planillas |
 | **Dev Backend 3** | Datos / DBA | Esquema 3FN, JSONB, migraciones, RLS |
-| **Dev Backend 4** | Seguridad / DevOps / QA | Auth, OWASP, CI/CD, secretos, pruebas |
+| **Dev Backend 4** | Seguridad / Autenticación / DevOps / QA | Módulo de autenticación propio (hash, JWT, refresh), OWASP, CI/CD, secretos, pruebas |
 | **Dev Móvil 1** | Móvil | App móvil, sincronización offline |
 
-> Reemplazar los nombres genéricos por los integrantes reales. La distribución de 2 web + 4 backend/datos/seguridad refleja que el riesgo técnico del proyecto se concentra en el cálculo de planillas, RLS y seguridad.
 
 **Leyenda.** **R** = Responsable (ejecuta). **A** = Aprobador/Accountable (rinde cuentas; **uno solo por fila**). **C** = Consultado (bidireccional). **I** = Informado. **A/R** = quien aprueba también ejecuta.
 
@@ -39,14 +38,14 @@
 | 2 | Integración con repo `planilla-sis` (estructura, ramas, convenciones) | C | I | **A** | R | C | R | I |
 | 3 | Auditoría del esquema BD existente | I | I | C | C | **A/R** | C | C |
 | 4 | Modelo ER 3FN, JSONB y migraciones | I | I | C | C | **A/R** | I | C |
-| 5 | Políticas RLS en Supabase | I | I | C | C | **A/R** | C | I |
+| 5 | Autorización a nivel de fila (RLS opcional, defensa en profundidad, §D.4) | I | I | C | C | **A/R** | C | I |
 | 6 | Contrato API REST (OpenAPI 3.x) | C | I | **A** | R | C | C | C |
 | 7 | Backend: módulos Rutas, Turnos, Registros de tiempo | I | I | C | **A/R** | C | C | C |
 | 8 | Backend: motor de cálculo, verificación y aprobación de planilla | I | I | C | **A/R** | C | C | I |
 | 9 | Frontend: shell SPA, History API, guardas por rol | **A/R** | R | C | I | I | C | I |
 | 10 | Frontend: módulos de rutas, turnos y supervisión | **A** | R | I | C | I | I | I |
 | 11 | Frontend: módulos de planillas y pagos | **A** | R | I | C | I | I | I |
-| 12 | Autenticación y sesiones (Supabase Auth + cookies) | C | I | C | C | C | **A/R** | C |
+| 12 | Autenticación propia (hash de contraseñas, JWT, rotación de refresh, MFA) y endpoints de sesión | C | I | C | R | C | **A/R** | C |
 | 13 | Seguridad OWASP (XSS, CSRF, CSP, secretos) | R | C | C | C | C | **A/R** | I |
 | 14 | API móvil y sincronización offline (idempotencia) | I | I | **A** | R | C | C | R |
 | 15 | App móvil (registro de ingreso/descanso/eventos, cálculos) | I | I | I | C | I | C | **A/R** |
@@ -62,7 +61,7 @@
 
 ### B.1 Diagrama de arquitectura (vista de contenedores, nivel C4-2)
 
-> Este es el diagrama **objetivo**. El estado actual (MVP) se muestra en §0.4.1 y la decisión sobre Supabase en §0.4.4.
+> Este es el diagrama **objetivo**. El estado actual (MVP) se muestra en §0.4.1 y la decisión de usar autenticación propia sobre PostgreSQL en §0.4.4 (ADR-001).
 
 ```mermaid
 flowchart LR
@@ -70,32 +69,30 @@ flowchart LR
     W["Cliente Web (SPA)<br/>Administradores y Supervisores"]
     M["App Móvil<br/>Trabajadores en ruta"]
   end
-  subgraph BE["Backend - API REST /api/v1"]
-    GW["Capa HTTP<br/>CORS, rate limit, authN/authZ, validación"]
+  subgraph BE["Backend Node.js + Express - API REST /api/v1"]
+    GW["Capa HTTP<br/>CORS, rate limit, validación"]
+    AUTH["Módulo de autenticación propio<br/>hash, emisión/verificación de JWT, refresh"]
     SVC["Servicios de dominio<br/>Rutas, Turnos, Registros, Planillas, Pagos"]
     CALC["Motor de cálculo de planilla"]
+    GW --> AUTH
     GW --> SVC --> CALC
   end
-  subgraph SB["Supabase"]
-    AUTH["Auth (emisión de JWT)"]
-    PG[("PostgreSQL<br/>3FN + JSONB + RLS")]
-  end
+  PG[("PostgreSQL autoadministrado<br/>3FN + JSONB + RLS opcional")]
   W -- "HTTPS, cookies HttpOnly + CSRF" --> GW
   M -- "HTTPS, Bearer JWT + Idempotency-Key" --> GW
-  GW -- "verificación de JWT" --> AUTH
-  SVC -- "consultas con el JWT del usuario (RLS activo)" --> PG
-  AUTH --- PG
+  AUTH -- "verifica credenciales,<br/>lee/escribe perfiles y sesiones_refresh" --> PG
+  SVC -- "consultas con pool pg<br/>(rol de aplicación, no superusuario)" --> PG
 ```
 
 **Descripción textual (C4)**
 
-- **Nivel 1 – Contexto.** Tres personas interactúan con el sistema: el *Administrador* (configura, aprueba y paga), el *Supervisor* (asigna, supervisa, verifica) y el *Trabajador en ruta* (registra su jornada). El sistema depende de un sistema externo: **Supabase** (identidad y datos).
+- **Nivel 1 – Contexto.** Tres personas interactúan con el sistema: el *Administrador* (configura, aprueba y paga), el *Supervisor* (asigna, supervisa, verifica) y el *Trabajador en ruta* (registra su jornada). El sistema no depende de proveedores externos de identidad ni de datos: la autenticación y la persistencia son propias (PostgreSQL autoadministrado).
 - **Nivel 2 – Contenedores.**
   1. **Cliente Web (SPA):** aplicación estática en el navegador. Se comunica **solo** con la API REST mediante cookies `HttpOnly`.
   2. **App Móvil:** aplicación nativa/multiplataforma. Se comunica con la misma API mediante `Authorization: Bearer`. Guarda tokens en el almacén seguro del SO (Keychain/Keystore).
   3. **API REST (Backend):** contenedor de lógica de negocio, validación, autorización y motor de cálculo. Es la **frontera de confianza**.
-  4. **Supabase Auth:** emite y renueva JWT.
-  5. **Supabase PostgreSQL:** persistencia con RLS y JSONB.
+  4. **Módulo de autenticación (dentro del backend):** valida credenciales, emite y renueva JWT propios, gestiona la rotación de *refresh tokens*.
+  5. **PostgreSQL autoadministrado:** persistencia con 3FN, JSONB y RLS opcional como defensa en profundidad.
 - **Nivel 3 – Componentes (API).** Capa HTTP → Servicios de dominio → Repositorios de datos. El *Motor de cálculo* es un componente puro (sin E/S), fácilmente testeable con casos de prueba deterministas.
 
 **Patrones aplicados**
@@ -168,7 +165,7 @@ window.addEventListener("popstate", () =>
 );
 ```
 
-> **Nota de seguridad:** la guarda de rutas en el cliente es solo **experiencia de usuario**. La autorización real ocurre en la API y en RLS; ocultar una ruta no protege un dato.
+> **Nota de seguridad:** la guarda de rutas en el cliente es solo **experiencia de usuario**. La autorización real ocurre en la API (rol + pertenencia) y, si está activa, en RLS; ocultar una ruta no protege un dato.
 
 ### B.4 Distribución del almacenamiento web
 
@@ -212,7 +209,7 @@ Convenciones: ramas `main` (protegida) / `develop` / `feature/*`, *pull requests
 | **Administrador** | Primario | Responsable de configuración, aprobación final y pago | Web | Gestionar usuarios/roles, parámetros de pago, **aprobar planilla**, registrar pagos, consultar auditoría |
 | **Supervisor** | Primario | Responsable operativo de una o varias rutas | Web | Asignar rutas y turnos, confirmar acuerdos, supervisar horarios, validar registros, **verificar cálculo de horas** |
 | **Trabajador en Ruta** | Primario | Personal operativo | Móvil | Registrar ingreso/salida, descansos y eventos; consultar sus turnos, horas y horas extra |
-| **Supabase Auth** | Secundario (sistema) | Proveedor de identidad | — | Emitir y renovar JWT |
+| **Módulo de Autenticación** | Secundario (interno) | Componente del backend que valida credenciales y emite/renueva JWT propios | — | Hash y verificación de contraseñas, emisión y rotación de tokens |
 | **Motor de cálculo** | Secundario (interno) | Componente que aplica reglas de pago | — | Calcular horas y montos de forma determinista |
 | **Auditor** *(opcional, fase futura)* | Primario | Rol de solo lectura | Web | Consultar planillas y bitácora |
 
@@ -260,7 +257,7 @@ Convenciones: ramas `main` (protegida) / `develop` / `feature/*`, *pull requests
 | **Identificador** | CU-11 |
 | **Nombre** | Cálculo, verificación y aprobación de planilla |
 | **Actores primarios** | Supervisor (calcula y verifica), Administrador (aprueba) |
-| **Actores secundarios** | Motor de cálculo, Supabase (BD/Auth) |
+| **Actores secundarios** | Motor de cálculo, PostgreSQL (persistencia) |
 | **Descripción** | Genera la planilla de un período a partir de los registros de tiempo validados, aplica las reglas de pago vigentes, somete el resultado a revisión independiente y a aprobación final, dejando el resultado inmutable y listo para pago. |
 | **Disparador** | Cierre de un período de planilla (fecha fin alcanzada) o solicitud manual de un usuario autorizado. |
 | **Precondiciones** | 1. El usuario está autenticado con rol autorizado. 2. El período existe en estado `ABIERTO`. 3. Existen parámetros de pago y tarifa vigentes para el período. 4. No quedan registros de tiempo en estado `PENDIENTE` dentro del alcance (o el usuario acepta excluirlos explícitamente). |
@@ -344,7 +341,7 @@ stateDiagram-v2
 
 ---
 
-## D. Diseño de Base de Datos Híbrida (PostgreSQL en Supabase)
+## D. Diseño de Base de Datos Híbrida (PostgreSQL autoadministrado)
 
 ### D.1 Análisis del esquema existente (`Database/` en `planilla-sis`)
 
@@ -368,7 +365,7 @@ Severidad: **Crítica** (bloquea seguridad o integridad de pago) · **Alta** · 
 
 | ID | Tabla | Hallazgo | Impacto | Sev. |
 | --- | --- | --- | --- | --- |
-| H-01 | `Usuarios` | No hay vínculo con **Supabase Auth** (`auth.users`); la identidad y el rol no pueden derivarse del JWT. | Sin esto no es posible RLS por usuario ni login real. | Alta |
+| H-01 | `Usuarios` | No existe columna de credenciales (`email`, `password_hash`) ni tabla de sesiones; no hay forma de emitir un login real ni de derivar la identidad de un JWT. | Sin esto no hay autenticación propia ni RLS por usuario. | Alta |
 | H-02 | `Usuarios` | `rol` es texto libre (`VARCHAR(50)`) sin `CHECK` ni catálogo. | Valores inválidos o con distinta capitalización rompen la autorización. | Media |
 | H-03 | `Usuarios` | `tarifa_hora` vive en la tabla de identidad, **sin vigencia ni historial**. | Un cambio de tarifa altera la reproducibilidad de pagos pasados; cualquier política que exponga `Usuarios` expone salarios. | Alta |
 | H-04 | `Usuarios` | Faltan `activo`, estado laboral (CU-03), documento y datos de contacto. | No hay baja lógica ni estados de trabajador. | Media |
@@ -387,23 +384,23 @@ Severidad: **Crítica** (bloquea seguridad o integridad de pago) · **Alta** · 
 | H-17 | `Planillas` | Mezcla cabecera de período y detalle por trabajador; `periodo` es `VARCHAR` (`'SEMANA_1_SEP_2026'`) **sin fechas**. | No es consultable ni validable por rango; no se puede evitar solapar períodos. | Alta |
 | H-18 | `Planillas` | `estado_aprobacion` solo admite `PENDIENTE`/`PAGADA`; no hay `calculada_por`, `verificada_por`, `aprobada_por`. | No soporta el flujo calcular → verificar → aprobar ni la segregación de funciones (CU-11). | Alta |
 | H-19 | `Planillas` | No guarda la tarifa aplicada, la separación de horas extra diurnas/nocturnas, bonificaciones/deducciones ni el desglose del cálculo; no existe tabla de **pagos**. | El pago no es auditable ni reproducible. | Alta |
-| H-20 | Todas | El script **no habilita RLS** ni define índices. Hoy la única barrera es la API, y esta no autentica (C-02). | Cualquier cliente que alcance la API lee y escribe datos. Al migrar a Supabase, una tabla sin RLS quedaría además expuesta por su API de datos con la llave pública. | **Crítica** |
+| H-20 | Todas | El script **no habilita RLS** ni define índices. Hoy la única barrera es la API, y esta no autentica (C-02). | Con autenticación propia y sin RLS, toda la autorización recae en el código del backend; un error de autorización en un endpoint expone o modifica datos sin una segunda barrera. | **Crítica** |
 | H-21 | Backend | La aplicación se conecta con el rol `postgres` (superusuario) y la contraseña está en el código (C-01). | Un fallo de autorización o una inyección comprometen toda la base; no hay separación de privilegios. | **Crítica** |
 
 #### D.1.3 Disposición por tabla (conservar / modificar / agregar)
 
 | Tabla existente | Decisión | Destino en el modelo objetivo | Cambios principales |
 | --- | --- | --- | --- |
-| `Usuarios` | **Modificar y dividir** | `perfiles` (+ `roles`, `estados_trabajador`, `historial_estado_trabajador`, `tarifas_trabajador`) | La PK pasa a `uuid` = `auth.users.id`; `rol` → `rol_id` (FK); se **retira** `tarifa_hora` hacia `tarifas_trabajador` con vigencia; se añaden `activo`, documento, código de empleado. |
+| `Usuarios` | **Modificar y dividir** | `perfiles` (+ `roles`, `estados_trabajador`, `historial_estado_trabajador`, `tarifas_trabajador`, `sesiones_refresh`) | La PK pasa a `uuid` generado con `gen_random_uuid()`; se añaden `email` (UNIQUE) y `password_hash` para el login propio; `rol` → `rol_id` (FK); se **retira** `tarifa_hora` hacia `tarifas_trabajador` con vigencia; se añaden `activo`, documento, código de empleado, y la tabla `sesiones_refresh` para las sesiones (§D.2, §F.1). |
 | `Rutas` | **Modificar** | `rutas` (+ `ruta_puntos`) | Añadir `codigo`, `supervisor_id` (FK), `activa`; `descripcion` → `nombre`/`descripcion`; el texto `ubicacion` se conserva como referencia y las coordenadas van a `ruta_puntos`. |
 | `Jornadas` | **Dividir** | `registros_tiempo` (lo que **ocurrió**) + `asignaciones_ruta` y `acuerdos_turno` (lo que está **programado**) + `turnos` | Se resuelve H-07: lo programado deja de vivir en la misma fila que la entrada real. `hora_entrada` sigue `NOT NULL` en `registros_tiempo`. `APROBADA` pasa a `estado_validacion`. `TIMESTAMP` → `timestamptz`. `fecha` se elimina (se deriva). |
 | `Eventos_Ruta` | **Conservar y evolucionar** | `eventos_diarios` | Se conservan las columnas tipadas (`tipo_evento`, `fecha_hora`, `latitud`, `longitud`, `estado_atencion`) porque alimentan la cola de revisión del supervisor. Se añaden `payload jsonb`, `client_uuid`, `atendido_por`, `atendido_at`, `CHECK` de dominios y FK compuesta (H-14). |
 | `Eventos_Descanso` | **Renombrar y modificar** | `descansos` (+ `tipos_descanso`) | `tipo_evento` → `tipo_id` (FK a catálogo con `remunerado`); `CHECK (fin > inicio)`; sin solapamiento por jornada. |
 | `Planillas` | **Reinterpretar y dividir** | `planilla_detalle` (cada fila actual es en realidad el detalle de **un trabajador**) + `periodos_planilla` + `planillas` (cabecera) + `detalle_conceptos` + `pagos` | `periodo` texto → `periodos_planilla` con fechas; se añade el flujo de estados y las columnas de segregación; se guarda la tarifa aplicada y el desglose en `calculo_detalle jsonb`. |
 
-**Tablas nuevas (19):** `roles`, `permisos`, `rol_permiso`, `estados_trabajador`, `historial_estado_trabajador`, `ruta_puntos`, `asignaciones_ruta`, `turnos`, `acuerdos_turno`, `tipos_descanso`, `tarifas_trabajador`, `parametros_pago`, `periodos_planilla`, `planillas` (cabecera), `conceptos_pago`, `detalle_conceptos`, `metodos_pago`, `pagos`, `auditoria`.
+**Tablas nuevas (20):** `roles`, `permisos`, `rol_permiso`, `estados_trabajador`, `historial_estado_trabajador`, `ruta_puntos`, `asignaciones_ruta`, `turnos`, `acuerdos_turno`, `tipos_descanso`, `tarifas_trabajador`, `parametros_pago`, `periodos_planilla`, `planillas` (cabecera), `conceptos_pago`, `detalle_conceptos`, `metodos_pago`, `pagos`, `auditoria`, `sesiones_refresh`.
 
-**Resultado:** 6 tablas existentes (todas modificadas o evolucionadas) + 19 nuevas = **25 tablas** del modelo de §D.2.
+**Resultado:** 6 tablas existentes (todas modificadas o evolucionadas) + 20 nuevas = **26 tablas** del modelo de §D.2.
 
 **Convenciones de nombres.** Se propone `snake_case`, minúsculas y plurales (`registros_tiempo`), y `trabajador_id` en lugar de `id_usuario`. Equivalencias de columnas más usadas:
 
@@ -438,7 +435,7 @@ create unique index registros_uno_abierto
 
 #### D.1.4 Estrategia de migración
 
-**Decisión D-1 (resuelta):** las tablas actuales contienen **solo datos de prueba**. Se adopta la **reconstrucción limpia** del esquema con migraciones versionadas (herramienta a elegir: `node-pg-migrate`, Flyway o Supabase CLI **\[VALIDAR\]**), en sustitución del script SQL único. Solo se cargan *seeds* de catálogos; los datos de prueba se descartan.
+**Decisión D-1 (resuelta):** las tablas actuales contienen **solo datos de prueba**. Se adopta la **reconstrucción limpia** del esquema con migraciones versionadas (herramienta a elegir: `node-pg-migrate` o Flyway **\[VALIDAR\]**), en sustitución del script SQL único. Solo se cargan *seeds* de catálogos; los datos de prueba se descartan.
 
 **Decisión D-2 (resuelta con una observación):** el equipo indica que los valores actuales están en hora local del dispositivo. Sin embargo, el código de la app **ya envía UTC** (`yyyy-MM-dd'T'HH:mm:ss.SSS'Z'`) y el servidor lo inserta tal cual en columnas `TIMESTAMP`, que **ignoran el sufijo `Z`**: los registros recientes quedan como hora UTC sin etiqueta de zona (la consulta `AT TIME ZONE 'UTC' AT TIME ZONE 'America/Guatemala'` del servidor es coherente con eso). Como los datos se descartan, no hace falta convertirlos; lo que importa es fijar el contrato de aquí en adelante:
 
@@ -461,12 +458,12 @@ create unique index registros_uno_abierto
 | --- | --- |
 | M001 | Extensiones (`btree_gist`, `pgcrypto`), esquema `app`, funciones auxiliares |
 | M002 | Catálogos (`roles`, `permisos`, `estados_trabajador`, `tipos_descanso`, `metodos_pago`, `conceptos_pago`, `turnos`) |
-| M003 | `perfiles`, `tarifas_trabajador`, `historial_estado_trabajador` *(FK a `auth.users`: pieza específica de Supabase, ver ADR-001)* |
+| M003 | `perfiles` (con `email`, `password_hash`), `tarifas_trabajador`, `historial_estado_trabajador`, `sesiones_refresh` (tokens de renovación para rotación y detección de reúso) |
 | M004 | `rutas`, `ruta_puntos`, `asignaciones_ruta`, `acuerdos_turno` |
 | M005 | `registros_tiempo`, `descansos`, `eventos_diarios` (con `CHECK`, índices y exclusiones) |
 | M006 | `parametros_pago`, `periodos_planilla`, `planillas`, `planilla_detalle`, `detalle_conceptos`, `pagos` |
 | M007 | `auditoria` y *triggers* de auditoría |
-| M008 | **RLS y políticas** de §D.4 *(pieza específica de Supabase)* y pruebas automatizadas por rol |
+| M008 | **RLS y políticas** de §D.4 (capa opcional de defensa en profundidad, ver ADR-001) y pruebas automatizadas por rol |
 
 #### D.1.5 Información pendiente para cerrar el análisis
 
@@ -474,7 +471,7 @@ create unique index registros_uno_abierto
 2. **Estructura del backend:** nombre del archivo principal y si existe algún otro archivo o carpeta además del servidor recibido.
 3. **Estado real de la base local:** salida de `\d jornadas` y `\di` para confirmar si existe el índice único que el código da por hecho (C-06).
 4. **Reglas de negocio del cálculo (a definir con quien corresponda):** jornada ordinaria diaria y semanal; factor de horas extra diurnas y nocturnas; definición de horario nocturno; si los descansos restan o son remunerados; regla de redondeo; periodicidad de planilla (semanal, quincenal o mensual); qué ocurre con jornadas sin salida.
-5. **Decisión D-3** del ADR-001 (Supabase u otra opción).
+5. Política de contraseñas y si el **MFA del Administrador** se construye desde el MVP o se difiere a una fase posterior (ver §F.1); ya no depende de un proveedor externo, así que es una decisión enteramente del equipo.
 
 ### D.2 Modelo relacional transaccional (3FN)
 
@@ -508,6 +505,7 @@ erDiagram
   PLANILLA_DETALLE ||--o{ PAGOS : "se paga con"
   METODOS_PAGO ||--o{ PAGOS : "medio"
   PERFILES ||--o{ AUDITORIA : "actor de"
+  PERFILES ||--o{ SESIONES_REFRESH : "autentica"
 ```
 
 **Diccionario de datos (tablas, PK y FK)**
@@ -517,7 +515,7 @@ erDiagram
 | 1 | `roles` | `id smallint` | — | `nombre` UNIQUE (`administrador`, `supervisor`, `trabajador`) |
 | 2 | `permisos` | `id smallint` | — | `codigo` UNIQUE (p. ej. `planilla.aprobar`) |
 | 3 | `rol_permiso` | (`rol_id`, `permiso_id`) | `rol_id`→roles, `permiso_id`→permisos | PK compuesta (N:M) |
-| 4 | `perfiles` | `id uuid` (= `auth.users.id`) | `id`→auth.users, `rol_id`→roles | `codigo_empleado` UNIQUE, nombres, apellidos, documento UNIQUE, `activo` |
+| 4 | `perfiles` | `id uuid` (gen. con `gen_random_uuid()`) | `rol_id`→roles | `email` UNIQUE, `password_hash`, `codigo_empleado` UNIQUE, nombres, apellidos, documento UNIQUE, `activo`, `mfa_secret` (nullable) |
 | 5 | `estados_trabajador` | `id smallint` | — | `codigo` UNIQUE (ACTIVO, EN_RUTA, DESCANSO, INCAPACIDAD, VACACIONES, SUSPENDIDO, INACTIVO) |
 | 6 | `historial_estado_trabajador` | `id uuid` | `perfil_id`→perfiles, `estado_id`→estados_trabajador, `registrado_por`→perfiles | `desde`, `hasta` NULL = vigente; sin solapamiento por perfil (*exclusion constraint*) |
 | 7 | `rutas` | `id uuid` | `supervisor_id`→perfiles | `codigo` UNIQUE, `nombre`, `activa` |
@@ -539,6 +537,25 @@ erDiagram
 | 23 | `metodos_pago` | `id smallint` | — | `nombre` (TRANSFERENCIA, EFECTIVO, CHEQUE) |
 | 24 | `pagos` | `id uuid` | `detalle_id`→planilla_detalle, `metodo_id`→metodos_pago, `registrado_por`→perfiles | `monto`, `referencia`, `pagado_at`, `estado` |
 | 25 | `auditoria` | `id bigint identity` | `actor_id`→perfiles | **JSONB** `datos_antes`, `datos_despues`, `contexto` (§D.3) |
+| 26 | `sesiones_refresh` | `id uuid` | `perfil_id`→perfiles, `reemplazado_por`→sesiones_refresh (self-FK, nullable) | `token_hash` UNIQUE (nunca el token en claro), `creado_at`, `expira_at`, `revocado_at`, `ip`, `user_agent`; encadena la rotación (§F.1) |
+
+**Tabla `sesiones_refresh` (soporta la autenticación propia, §F.1)**
+
+```sql
+create table public.sesiones_refresh (
+  id                uuid primary key default gen_random_uuid(),
+  perfil_id         uuid        not null references public.perfiles(id) on delete cascade,
+  token_hash        text        not null unique,        -- SHA-256 del refresh token; nunca el token en claro
+  creado_at         timestamptz not null default now(),
+  expira_at         timestamptz not null,
+  revocado_at       timestamptz,                        -- logout o detección de reúso
+  reemplazado_por   uuid        references public.sesiones_refresh(id), -- encadena la rotación
+  ip                inet,
+  user_agent        text
+);
+
+create index sesiones_refresh_perfil on public.sesiones_refresh (perfil_id) where revocado_at is null;
+```
 
 **Justificación de 3FN**
 
@@ -556,7 +573,7 @@ erDiagram
 
 ### D.3 Componente NoSQL: JSONB
 
-**Justificación.** La app móvil produce eventos de estructura variable (incidentes, geocercas, cambios de conectividad, notas) que evolucionan más rápido que el esquema relacional. JSONB permite **almacenar sin migrar** mientras se conserva consulta indexada, transaccionalidad y RLS de PostgreSQL. Los datos que participan en el **cálculo de pago** permanecen en columnas relacionales tipadas. De igual forma, en `eventos_diarios` se conservan como columnas tipadas los campos que el supervisor filtra a diario (tipo, coordenadas, estado de atención) y solo la parte variable va en `payload`.
+**Justificación.** La app móvil produce eventos de estructura variable (incidentes, geocercas, cambios de conectividad, notas) que evolucionan más rápido que el esquema relacional. JSONB permite **almacenar sin migrar** mientras se conserva consulta indexada y transaccionalidad de PostgreSQL (más RLS si el equipo la activa, §D.4). Los datos que participan en el **cálculo de pago** permanecen en columnas relacionales tipadas. De igual forma, en `eventos_diarios` se conservan como columnas tipadas los campos que el supervisor filtra a diario (tipo, coordenadas, estado de atención) y solo la parte variable va en `payload`.
 
 **Tabla 1: `eventos_diarios`** (generada por el móvil y por la web)
 
@@ -636,13 +653,22 @@ revoke update, delete, truncate on public.auditoria from anon, authenticated;
 4. Tamaño máximo por evento (p. ej. 32 KB), controlado en API.
 5. La auditoría se escribe mediante **triggers `SECURITY DEFINER`** para cambios en tablas críticas y desde la API para acciones de negocio (aprobar, pagar).
 
-### D.4 Políticas de Seguridad a Nivel de Fila (RLS)
+### D.4 Políticas de Seguridad a Nivel de Fila (RLS opcional, defensa en profundidad)
+
+**Alcance de esta sección.** Con autenticación propia sobre PostgreSQL (Opción B, ADR-001), **la primera barrera de autorización es el backend** (rol + pertenencia verificados en cada endpoint, §E y §F.1). RLS se documenta aquí como **segunda capa opcional**: recomendada antes de producción, pero no bloqueante para empezar a codificar (puede activarse en la Fase 1 de §D.1.4 sin cambiar el esquema).
 
 **Principios**
 
 - **RLS activada en todas las tablas** del esquema `public` (`alter table ... enable row level security`). Sin política = sin acceso.
-- El rol se lee del claim **`app_metadata.rol`** del JWT (asignado solo por el administrador/servidor). **Nunca** de `user_metadata`, que el propio usuario puede editar.
-- **Las conexiones con `service_role` o `postgres` omiten RLS.** Como el backend usa `pg` (conexión directa), cada transacción debe asumir el rol del usuario con el JWT ya verificado: `set local role authenticated; select set_config('request.jwt.claims', '<claims>', true);`, de modo que `auth.uid()` y `auth.jwt()` funcionen en las políticas **\[VALIDAR\]**. Si se usa `supabase-js`, basta con crear el cliente con el token del usuario. Los accesos con privilegios se reservan para migraciones y tareas administrativas acotadas y sus credenciales nunca salen del servidor. *(Aplica a la Opción A del ADR-001.)*
+- El backend **no tiene un usuario de base de datos por persona**: usa un único rol de aplicación (`app_user`, sin privilegios de superusuario, cierra H-21/C-01) para todas las conexiones del *pool* `pg`. Por eso, para que RLS distinga entre trabajador, supervisor y administrador, **cada transacción que necesite RLS debe declarar quién es el usuario actual** después de verificar su JWT propio:
+
+  ```sql
+  -- Al inicio de cada transacción que requiera RLS, con los claims YA verificados por el backend:
+  select set_config('app.jwt_claims', '{"sub":"5b1c2d3e-…","rol":"supervisor"}', true);
+  ```
+
+  Las políticas leen ese valor con la función auxiliar `app.usuario_actual()` (equivalente casero a `auth.uid()`), nunca con un dato que el cliente pueda manipular directamente.
+- **El rol de aplicación (`app_user`) tiene los privilegios mínimos** que sus operaciones requieren; nunca se conecta con `postgres` ni con un rol de superusuario (cierra H-21/C-01).
 - Las funciones auxiliares usan `security definer` con `search_path` fijo para evitar recursión y suplantación.
 
 **Funciones auxiliares**
@@ -650,9 +676,19 @@ revoke update, delete, truncate on public.auditoria from anon, authenticated;
 ```sql
 create schema if not exists app;
 
+-- Lee los claims que el backend fijó con set_config() tras verificar su propio JWT.
+create or replace function app.jwt_claims() returns jsonb
+language sql stable security definer set search_path = ''
+as $$ select coalesce(nullif(current_setting('app.jwt_claims', true), ''), '{}')::jsonb $$;
+
 create or replace function app.rol_actual() returns text
 language sql stable security definer set search_path = ''
-as $$ select coalesce((select auth.jwt()) -> 'app_metadata' ->> 'rol', 'sin_rol') $$;
+as $$ select coalesce(app.jwt_claims() ->> 'rol', 'sin_rol') $$;
+
+-- Equivalente casero a auth.uid(): el id del perfil autenticado.
+create or replace function app.usuario_actual() returns uuid
+language sql stable security definer set search_path = ''
+as $$ select nullif(app.jwt_claims() ->> 'sub', '')::uuid $$;
 
 create or replace function app.supervisa_trabajador(p_trabajador uuid) returns boolean
 language sql stable security definer set search_path = ''
@@ -663,7 +699,7 @@ as $$
     join public.rutas r on r.id = a.ruta_id
     where a.trabajador_id = p_trabajador
       and a.activa
-      and r.supervisor_id = (select auth.uid())
+      and r.supervisor_id = app.usuario_actual()
   )
 $$;
 
@@ -672,7 +708,7 @@ language sql stable security definer set search_path = ''
 as $$
   select exists (
     select 1 from public.rutas r
-    where r.id = p_ruta and r.supervisor_id = (select auth.uid())
+    where r.id = p_ruta and r.supervisor_id = app.usuario_actual()
   )
 $$;
 ```
@@ -706,34 +742,37 @@ $$;
 ```sql
 alter table public.registros_tiempo enable row level security;
 
+-- "to app_user" porque todas las conexiones del backend usan ese único rol de aplicación;
+-- lo que distingue al trabajador del supervisor es app.jwt_claims(), fijado por transacción.
+
 create policy rt_trabajador_select on public.registros_tiempo
-  for select to authenticated
-  using (trabajador_id = (select auth.uid()));
+  for select to app_user
+  using (trabajador_id = app.usuario_actual());
 
 create policy rt_trabajador_insert on public.registros_tiempo
-  for insert to authenticated
+  for insert to app_user
   with check (
-    trabajador_id = (select auth.uid())
+    trabajador_id = app.usuario_actual()
     and app.rol_actual() = 'trabajador'
     and estado_validacion = 'PENDIENTE'
   );
 
 create policy rt_supervisor_select on public.registros_tiempo
-  for select to authenticated
+  for select to app_user
   using (app.rol_actual() = 'supervisor' and app.supervisa_trabajador(trabajador_id));
 
 create policy rt_supervisor_update on public.registros_tiempo
-  for update to authenticated
+  for update to app_user
   using      (app.rol_actual() = 'supervisor' and app.supervisa_trabajador(trabajador_id))
   with check (app.rol_actual() = 'supervisor' and app.supervisa_trabajador(trabajador_id));
 
 create policy rt_admin_all on public.registros_tiempo
-  for all to authenticated
+  for all to app_user
   using      (app.rol_actual() = 'administrador')
   with check (app.rol_actual() = 'administrador');
 ```
 
-**Pruebas de RLS (criterio de aceptación):** suite automatizada que, para cada tabla, ejecuta consultas con JWT de cada rol y verifica (a) lo permitido, (b) lo denegado y (c) que un supervisor **no** accede a datos de rutas ajenas. Se incluye en CI.
+**Pruebas de RLS (criterio de aceptación, si el equipo la activa):** suite automatizada que, para cada tabla, fija `app.jwt_claims` con cada rol y verifica (a) lo permitido, (b) lo denegado y (c) que un supervisor **no** accede a datos de rutas ajenas. Se incluye en CI.
 
 **Restricción de segregación de funciones en BD:**
 
@@ -755,7 +794,7 @@ alter table public.planillas add constraint planillas_segregacion check (
 | --- | --- |
 | Base URL | `/api/v1` (versionado en la ruta) |
 | Formato | `application/json; charset=utf-8` |
-| **Auth Web** | Cookies `HttpOnly` (`__Host-sb-access`, `__Secure-sb-refresh`) + cabecera `X-CSRF-Token` en métodos que modifican estado |
+| **Auth Web** | Cookies `HttpOnly` propias (`__Host-psis-access`, `__Secure-psis-refresh`) + cabecera `X-CSRF-Token` en métodos que modifican estado |
 | **Auth Móvil** | `Authorization: Bearer <JWT>` |
 | Idempotencia | `Idempotency-Key: <uuid>` en `POST` del móvil (además de `client_uuid` en el cuerpo) |
 | Trazabilidad | `X-Request-Id` (generado si no viene); se devuelve en toda respuesta |
@@ -763,7 +802,7 @@ alter table public.planillas add constraint planillas_segregacion check (
 | Fechas | ISO 8601 en UTC (`2026-09-21T13:05:00Z`) |
 | Paginación | `?page=1&page_size=50` → `{ data, page, page_size, total }` |
 | Dinero | Cadena decimal (`"1234.50"`) para evitar errores de punto flotante |
-| Autorización | Rol en JWT (`app_metadata.rol`) + verificación de pertenencia (ruta/trabajador) + RLS |
+| Autorización | Rol en el claim `rol` del JWT propio + verificación de pertenencia (ruta/trabajador) en la API + RLS opcional |
 
 **Códigos HTTP comunes:** `400` petición mal formada · `401` no autenticado/token vencido · `403` sin permiso · `404` no existe (o no visible por RLS) · `409` conflicto de estado/duplicado · `422` regla de negocio incumplida · `429` límite de tasa · `500`/`503` error del servidor.
 
@@ -772,7 +811,9 @@ alter table public.planillas add constraint planillas_segregacion check (
 | # | Verbo | Ruta | Actor / Rol | Cabeceras de Auth | Éxito | Errores |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | `POST` | `/auth/session` | Público | `Content-Type` (Web: recibe cookies `Set-Cookie`) | `200` | `400`, `401`, `423`, `429` |
+| 1b | `POST` | `/auth/refresh` | Autenticado (cookie/token de refresh) | Cookie de refresh (Web) / `refresh_token` en el cuerpo (Móvil) | `200` | `401` |
 | 2 | `POST` | `/auth/logout` | Autenticado | Cookie + `X-CSRF-Token` (Web) / `Bearer` (Móvil) | `204` | `401` |
+| 2b | `POST` | `/admin/usuarios` | Administrador | Cookie + `X-CSRF-Token` | `201` | `400`, `401`, `403`, `409`, `422` |
 | 3 | `GET` | `/me` | Autenticado | Cookie / `Bearer` | `200` | `401` |
 | 4 | `POST` | `/registros-tiempo/ingreso` | Trabajador | `Bearer` + `Idempotency-Key` | `201` (`200` si repetido) | `400`, `401`, `403`, `409`, `422` |
 | 5 | `POST` | `/registros-tiempo/{id}/descansos` | Trabajador | `Bearer` + `Idempotency-Key` | `201` | `400`, `401`, `403`, `404`, `409`, `422` |
@@ -798,6 +839,8 @@ alter table public.planillas add constraint planillas_segregacion check (
 { "email": "supervisor@empresa.com", "password": "********" }
 ```
 
+El backend busca `perfiles` por `email`, verifica `password_hash` con bcrypt/argon2, y si el rol es `administrador` y tiene MFA activo, exige un segundo paso (`mfa_token`) antes de emitir sesión (§F.1).
+
 **Respuesta `200`** (Web: los tokens viajan **solo** en `Set-Cookie`, no en el cuerpo)
 
 ```json
@@ -807,7 +850,43 @@ alter table public.planillas add constraint planillas_segregacion check (
 }
 ```
 
-Web: `Set-Cookie: __Host-sb-access=…; HttpOnly; Secure; SameSite=Lax; Path=/`. Móvil: enviar `X-Client-Type: mobile` para recibir `access_token`/`refresh_token` en el cuerpo (se guardan en Keychain/Keystore). **Errores:** `400` validación · `401` credenciales inválidas (mensaje genérico) · `423` cuenta bloqueada · `429` demasiados intentos.
+Web: `Set-Cookie: __Host-psis-access=…; HttpOnly; Secure; SameSite=Lax; Path=/` (JWT propio, firmado por el backend) y `Set-Cookie: __Secure-psis-refresh=…; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`. El backend guarda el *hash* del refresh token emitido en `sesiones_refresh`. Móvil: enviar `X-Client-Type: mobile` para recibir `access_token`/`refresh_token` en el cuerpo (se guardan en Keychain/Keystore). **Errores:** `400` validación · `401` credenciales inválidas (mensaje genérico, no revela si el correo existe) · `423` cuenta bloqueada por intentos fallidos · `429` demasiados intentos.
+
+#### E-1b · `POST /api/v1/auth/refresh` (renovar sesión)
+
+El cliente no envía el refresh token en el cuerpo si es Web (viaja en la cookie `__Secure-psis-refresh`); el móvil sí lo envía explícito.
+
+**Respuesta `200`**
+
+```json
+{ "access_token_emitido": true, "expira_en": 900 }
+```
+
+El backend: (1) busca el `token_hash` recibido en `sesiones_refresh`; (2) si está `revocado_at` o no existe, responde `401` y, si el token ya había sido reemplazado antes (indicio de robo/reúso), **revoca todas las sesiones del usuario**; (3) si es válido, emite un access token nuevo y **rota** el refresh (marca el actual como reemplazado y crea uno nuevo). **Errores:** `401` refresh inválido, expirado o revocado.
+
+#### E-2b · `POST /api/v1/admin/usuarios` (crear usuario)
+
+No hay registro público: el Administrador da de alta a cada trabajador/supervisor.
+
+**Solicitud**
+
+```json
+{
+  "email": "trabajador3@empresa.com",
+  "nombres": "Carlos",
+  "apellidos": "Pérez",
+  "rol": "trabajador",
+  "codigo_empleado": "EMP-0034"
+}
+```
+
+**Respuesta `201`**
+
+```json
+{ "id": "9a77…", "email": "trabajador3@empresa.com", "password_temporal": "X7f2-Km91", "debe_cambiar_password": true }
+```
+
+El backend genera una contraseña temporal aleatoria (nunca la elige el Administrador) y obliga a cambiarla en el primer inicio de sesión. **`409`** si el correo o el código de empleado ya existen. **`422`** si el rol no es válido.
 
 #### E-4 · `POST /api/v1/registros-tiempo/ingreso` (registrar ingreso)
 
@@ -984,9 +1063,9 @@ Un **supervisor** solo recibe trabajadores de sus rutas; los montos salariales r
 
 ## F. Plan de Seguridad y Mitigaciones OWASP
 
-### F.1 Estrategia de sesiones y autenticación (Supabase Auth + JWT en cookies seguras)
+### F.1 Estrategia de sesiones y autenticación (JWT propio en cookies seguras)
 
-> Aplica a la **Opción A** del ADR-001. Con la Opción B los mismos controles (cookies, rotación de refresh, MFA, límite de tasa) deben implementarse en el propio backend; ver el impacto en §0.4.4.
+> Decisión D-3 (ADR-001, §0.4.4): autenticación construida en el backend, sin proveedor externo.
 
 **Flujo Web**
 
@@ -994,19 +1073,21 @@ Un **supervisor** solo recibe trabajadores de sus rutas; los montos salariales r
 sequenceDiagram
   autonumber
   participant U as Navegador (SPA)
-  participant API as API REST
-  participant SA as Supabase Auth
+  participant API as API REST (módulo Auth)
+  participant DB as PostgreSQL
   U->>API: POST /auth/session (email, password)
-  API->>SA: signInWithPassword
-  SA-->>API: access_token (JWT) + refresh_token
+  API->>DB: SELECT perfil WHERE email
+  API->>API: verifica password_hash (bcrypt/argon2)
+  API->>API: firma access_token (JWT, secreto propio, vida corta)
+  API->>DB: INSERT sesiones_refresh (hash del refresh token)
   API-->>U: Set-Cookie HttpOnly Secure SameSite + csrf_token en cuerpo
   U->>API: GET /me (cookie automática)
-  API->>API: valida firma, exp, iss, aud; lee app_metadata.rol
+  API->>API: valida firma propia, exp, iss, aud; lee claim rol
   API-->>U: perfil y rol
   Note over U,API: Access token expira (corta vida)
   U->>API: 401 → POST /auth/refresh (cookie de refresh)
-  API->>SA: refresh (rotación)
-  SA-->>API: nuevos tokens
+  API->>DB: valida token_hash en sesiones_refresh (no revocado, no expirado)
+  API->>DB: marca sesión actual como reemplazada, crea una nueva (rotación)
   API-->>U: nuevas cookies
 ```
 
@@ -1014,17 +1095,21 @@ sequenceDiagram
 
 | Tema | Decisión | Justificación |
 | --- | --- | --- |
-| Emisión de tokens | Supabase Auth; la API **intermedia** el login web | La SPA nunca manipula tokens; JavaScript no puede leerlos. |
-| Cookies del access token | `__Host-` prefijo, `HttpOnly; Secure; SameSite=Lax; Path=/` sin atributo `Domain` | El prefijo `__Host-` impide que subdominios las sobrescriban. |
-| Cookie de refresh | `__Secure-` prefijo, `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth` | Solo viaja al endpoint de renovación; menor exposición. |
-| Vida de tokens | Access corto (≈15–60 min, configurable); refresh con **rotación** y detección de reutilización | Limita el daño de un robo de token. |
-| Verificación en API | Firma (JWKS o secreto del proyecto según configuración), `exp`, `iss`, `aud`; el rol se toma de `app_metadata` | Un JWT manipulado o de otro proyecto se rechaza. |
-| Revocación | Logout invalida refresh; cambio de rol o baja fuerza cierre de sesiones | El JWT sigue válido hasta su `exp`; por eso vida corta + comprobación de `activo`. |
-| MFA (TOTP) | **Obligatorio** para Administrador y para las acciones *aprobar* y *pagar* (reautenticación) | Acciones de mayor impacto financiero. |
-| Política de contraseña | Longitud mínima ≥ 12, verificación contra contraseñas filtradas, bloqueo progresivo | Reduce ataques de fuerza bruta y *credential stuffing*. |
+| Emisión de tokens | El propio backend firma los JWT (librería estándar, p. ej. `jsonwebtoken`), con un secreto (`JWT_SECRET`, HS256) o par de llaves (RS256) fuera del código, en variables de entorno | La SPA nunca manipula tokens; JavaScript no puede leerlos. Ningún proveedor externo emite ni valida credenciales. |
+| Hash de contraseñas | `bcrypt` o `argon2id` con costo adecuado (nunca hash propio ni reversible) | Estándar de la industria; resistente a fuerza bruta con hardware dedicado. |
+| Cookies del access token | `__Host-psis-access`, `HttpOnly; Secure; SameSite=Lax; Path=/` sin atributo `Domain` | El prefijo `__Host-` impide que subdominios las sobrescriban. |
+| Cookie de refresh | `__Secure-psis-refresh`, `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth` | Solo viaja al endpoint de renovación; menor exposición. |
+| Persistencia del refresh | Tabla `sesiones_refresh`: se guarda el **hash** del token (no el token), con `expira_at`, `revocado_at` y `reemplazado_por` para encadenar la rotación | Un volcado de la base no revela tokens utilizables; permite revocar sesiones individuales o todas las de un usuario. |
+| Vida de tokens | Access corto (≈15 min, configurable); refresh de vida más larga (p. ej. 7–14 días) con **rotación en cada uso** | Limita el daño de un robo de token. |
+| Detección de reúso | Si llega un refresh ya marcado `reemplazado_por`, se asume robo: se revocan **todas** las sesiones de ese usuario y se registra en `auditoria` | Un atacante que copie un refresh viejo dispara la alarma en el primer intento. |
+| Verificación en API | Firma con el secreto/llave propios, `exp`, `iss`, `aud`; el rol se toma del claim `rol` del propio JWT | Un JWT manipulado o firmado con otra clave se rechaza. |
+| Revocación | Logout marca la sesión como `revocado_at`; cambio de rol o baja del usuario fuerza cierre de sus sesiones activas | El access token sigue siendo válido hasta su `exp`; por eso su vida es corta y además se comprueba `perfiles.activo` en cada request. |
+| MFA (TOTP) | **Recomendado** para el Administrador y para reautenticar *aprobar planilla* y *pagar*; puede diferirse a una fase posterior sin bloquear el resto del sistema (decisión de equipo, §D.1.5) | Acciones de mayor impacto financiero; construirlo a mano (p. ej. con `otplib`) es poco código pero se prioriza después del login básico. |
+| Política de contraseña | Longitud mínima ≥ 12, verificación contra contraseñas filtradas, bloqueo progresivo tras intentos fallidos | Reduce ataques de fuerza bruta y *credential stuffing*; compensa no depender de un proveedor con estas protecciones ya integradas. |
+| Alta de usuarios | Sin registro público: el Administrador crea cada cuenta (E-2b) con contraseña temporal de un solo uso | Sistema interno, no orientado al público; reduce superficie de ataque. |
 | Móvil | `Bearer` en almacén seguro del SO (Keychain/Keystore); sin tokens en almacenamiento plano | No hay cookies, por lo que CSRF no aplica. |
-| Registro de accesos | `LOGIN`, fallos y cambios de rol a `auditoria` | Detección de anomalías. |
-| Autorización | 3 capas: guarda de UI (solo UX) → **autorización en API** (rol + pertenencia) → **RLS** | Defensa en profundidad. |
+| Registro de accesos | `LOGIN`, fallos, refresh con reúso detectado y cambios de rol a `auditoria` | Detección de anomalías, ahora sin el respaldo de un proveedor externo. |
+| Autorización | Guarda de UI (solo UX) → **autorización en API** (rol + pertenencia, primera barrera real) → **RLS opcional** (segunda barrera, §D.4) | Defensa en profundidad, adaptada a que la API es hoy la única barrera obligatoria. |
 
 ### F.2 Matriz de mitigación para la Web
 
@@ -1032,11 +1117,11 @@ sequenceDiagram
 | --- | --- | --- | --- |
 | **XSS almacenado** | Observaciones de planilla, nombres, descripciones de incidentes y `payload` JSONB enviados desde el móvil se muestran a supervisores | 1) **Escape por defecto** del framework (React/Vue/Angular); prohibido `innerHTML`, `dangerouslySetInnerHTML`, `v-html`, `bypassSecurityTrust*`. 2) Todo texto de usuario/JSONB se renderiza **como texto**. 3) Si se requiere texto enriquecido, **DOMPurify** con lista blanca estricta. 4) Validación y normalización de entrada en la API (esquemas Zod/JSON Schema, longitud máxima). 5) **Trusted Types** habilitado. | Regla ESLint (`no-danger`, `no-unsanitized`) en CI; pruebas con *payloads* XSS; revisión de PR |
 | **XSS reflejado / basado en DOM** | Parámetros de la URL (filtros, `?ruta=`) leídos por la SPA; History API | Parsear y **validar** *query params* contra una lista/esquema antes de usarlos; nunca insertar en el DOM como HTML; validar `next`/`redirect` (solo rutas internas, mismo origen) | Pruebas unitarias del *parser* de rutas; prueba de *open redirect* |
-| **Impacto de XSS (contención)** | Un XSS residual no debe robar sesión | Cookies `HttpOnly` (no exfiltrables); **CSP estricta** (abajo); sin tokens en `localStorage` | Escaneo de cabeceras (securityheaders); auditoría de almacenamiento |
+| **Impacto de XSS (contención)** | Un XSS residual no debe robar sesión | Cookies `HttpOnly` (no exfiltrables); **CSP estricta** (abajo); sin tokens en `localStorage`; refresh tokens revocables desde `sesiones_refresh` | Escaneo de cabeceras (securityheaders); auditoría de almacenamiento |
 | **CSRF** | Cookies de sesión se envían automáticamente a la API | 1) `SameSite=Lax/Strict`. 2) **Token CSRF** (sincronizador o *double-submit* firmado) en `X-CSRF-Token` para `POST/PUT/PATCH/DELETE`. 3) Validar `Origin`/`Referer` contra lista blanca. 4) CORS con **lista blanca** de orígenes y `credentials` solo para el dominio de la web. 5) Las mutaciones nunca usan `GET`. 6) Exigir `Content-Type: application/json`. | Pruebas: petición cruzada sin token → `403`; CORS con origen no permitido rechazado |
-| **Exposición de secretos** | Credenciales de BD escritas en el código (C-01), llave `service_role`, secretos JWT | 1) `SUPABASE_SERVICE_ROLE_KEY` y secretos **solo en el backend**, en variables de entorno del servidor o gestor de secretos; **jamás** en el bundle web ni en el móvil. 2) Al frontend solo llega la URL y la **llave pública (anon/publishable)**, aceptable únicamente porque **RLS está activa**; incluso así, la web habla con la API, no con la BD. 3) Prohibido prefijar secretos con `VITE_`/`NEXT_PUBLIC_`/`REACT_APP_` (se incrustan en el cliente). 4) `.env` en `.gitignore`; `.env.example` sin valores. 5) **Escaneo de secretos** en CI (gitleaks/GitHub secret scanning) y *pre-commit hook*. 6) Proyectos Supabase separados para dev/staging/prod; **rotación** ante cualquier sospecha. | Búsqueda de la llave en el bundle compilado; escaneo del historial de Git del repositorio |
-| **Control de acceso roto / IDOR** | Manipular IDs (`/planillas/{id}`, `/registros-tiempo/{id}`) | Autorización por objeto en API (pertenencia a ruta/trabajador) **+ RLS**; IDs `uuid`; respuesta `404` en lugar de `403` cuando el recurso no es visible | Suite de pruebas con JWT de roles cruzados (§D.4) |
-| **Inyección (SQL/NoSQL/JSONB)** | Filtros y payloads | Consultas parametrizadas / cliente Supabase; **nunca** concatenar SQL; validación de esquema; `jsonb_path` con parámetros, no con cadenas del usuario | SAST (Semgrep/CodeQL) en CI |
+| **Exposición de secretos** | Credenciales de BD escritas en el código (C-01), `JWT_SECRET`/llave de firma, contraseña del rol `app_user` | 1) `DATABASE_URL` (con el rol `app_user`, sin superusuario) y `JWT_SECRET` **solo en el backend**, en variables de entorno del servidor o gestor de secretos; **jamás** en el bundle web ni en el móvil ni en el repositorio. 2) La web y el móvil **nunca** tienen credenciales de base de datos: solo hablan con la API. 3) Prohibido prefijar secretos con `VITE_`/`NEXT_PUBLIC_`/`REACT_APP_` (se incrustan en el cliente). 4) `.env` en `.gitignore`; `.env.example` sin valores; si la contraseña actual estuvo versionada (C-01), **cambiarla** y limpiar el historial de Git. 5) **Escaneo de secretos** en CI (gitleaks/GitHub secret scanning) y *pre-commit hook*. 6) Bases de datos separadas para dev/staging/prod; **rotación** de `JWT_SECRET` y contraseñas ante cualquier sospecha (invalida todas las sesiones activas). | Búsqueda de la llave en el bundle compilado; escaneo del historial de Git del repositorio |
+| **Control de acceso roto / IDOR** | Manipular IDs (`/planillas/{id}`, `/registros-tiempo/{id}`) | Autorización por objeto en la API (pertenencia a ruta/trabajador), reforzada con **RLS opcional** si está activa; IDs `uuid`; respuesta `404` en lugar de `403` cuando el recurso no es visible | Suite de pruebas con JWT de roles cruzados (§D.4) |
+| **Inyección (SQL/NoSQL/JSONB)** | Filtros y payloads | Consultas **siempre parametrizadas** con `pg` (`pool.query(texto, [valores])`); **nunca** concatenar SQL (corrige el patrón usado hoy en la ruta `/api/registros`, que ya parametriza, y lo mantiene como estándar); validación de esquema; `jsonb_path` con parámetros, no con cadenas del usuario | SAST (Semgrep/CodeQL) en CI |
 | **Fallas de autenticación** | Fuerza bruta, credenciales filtradas | Límite de tasa en `/auth/session`, bloqueo progresivo, MFA, mensajes de error genéricos | Pruebas de límite de tasa |
 | **Configuración insegura** | Cabeceras, CORS, mensajes de error detallados | Cabeceras de seguridad (abajo); errores sin *stack traces* al cliente; *debug* apagado en producción | Revisión de configuración por entorno |
 | **Componentes vulnerables / cadena de suministro** | Dependencias npm | `npm audit`/Dependabot, *lockfile* obligatorio, SRI para recursos externos, mínimo de dependencias | Alertas semanales; bloqueo de PR con vulnerabilidades críticas |
@@ -1061,8 +1146,8 @@ Cross-Origin-Opener-Policy: same-origin
 
 | Área | Control |
 | --- | --- |
-| Transporte | HTTPS obligatorio con HSTS; TLS moderno en API y Supabase |
-| Datos personales | Minimización; acceso a salarios restringido por rol y RLS; enmascarar identificadores en listados |
+| Transporte | HTTPS obligatorio con HSTS; TLS moderno en la API y en la conexión a PostgreSQL (`sslmode=require` si la base se aloja de forma remota) |
+| Datos personales | Minimización; acceso a salarios restringido por rol en la API (y RLS si está activa); enmascarar identificadores en listados |
 | Copias y recuperación | *Backups* de BD y prueba de restauración periódica |
 | Móvil | Certificado *pinning* (opcional), detección de root/jailbreak (opcional), cifrado de la cola offline |
 | Ciclo de desarrollo seguro | Modelado de amenazas por módulo (planilla y pagos primero), revisión de PR con lista de verificación de seguridad, pruebas de seguridad antes de cada entrega |
