@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
@@ -9,13 +11,12 @@ app.use(cors());
 app.use(express.json());
 
 // --- 1. Configuracion de PostgreSQL ---
-const pool = new Pool({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'planilla_sis_db',
-    password: 'PSLsis2*',
-    port: 5432,
-});
+if (!process.env.DATABASE_URL) {
+    console.error('[ERROR] Falta DATABASE_URL. Copia .env.example a .env y complétalo.');
+    process.exit(1);
+}
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Ruta principal para verificar conexion desde el navegador
 app.get('/', (req, res) => {
