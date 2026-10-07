@@ -1039,7 +1039,7 @@ components:
           type: string
     EstadoValidacion:
       type: string
-      description: "[VALIDAR] Solo PENDIENTE aparece en el entregable; VALIDADO y RECHAZADO son propuestos."
+      description: "PENDIENTE al crear el registro. El supervisor lo cambia a VALIDADO o RECHAZADO. Solo los registros VALIDADO entran al cálculo de planilla."
       enum: [PENDIENTE, VALIDADO, RECHAZADO]
 
     # --- Autenticación -------------------------------------------------------
