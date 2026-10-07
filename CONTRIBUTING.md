@@ -116,3 +116,13 @@ Ejemplos:
 ## 7. Contrato de la API
 
 `docs/openapi.yaml` es la fuente única de verdad entre web, backend y móvil. Si cambias un endpoint, actualizas el contrato en el mismo PR.
+
+## 8. Primeros pasos (backend)
+
+1. Actualiza tu copia: `git checkout develop` y `git pull origin develop`.
+2. Instala las dependencias: entra a `backend/` y ejecuta `npm install`.
+3. Copia `backend/.env.example` a `backend/.env`.
+4. Edita `backend/.env` y completa `DATABASE_URL` con los datos de **tu base local**.
+5. Arranca el servidor desde `backend/` con `node index.js`. En `http://localhost:3000` debe aparecer "Servidor funcionando".
+
+Si falta `DATABASE_URL`, el servidor se detiene con un mensaje de error: es lo esperado.
