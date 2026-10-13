@@ -1,3 +1,6 @@
+-- Habilitar extensión para usar índices GiST con tipos de datos estándar
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
 -- 1. Tabla de Rutas
 CREATE TABLE IF NOT EXISTS public.rutas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -21,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.ruta_puntos (
     UNIQUE (ruta_id, orden)
 );
 
--- 3. Asignación de Trabajadores a Rutas
+-- 3. Asignación de Trabajadores a Rutas (Actualizada con EXCLUDE)
 CREATE TABLE IF NOT EXISTS public.asignaciones_ruta (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ruta_id UUID NOT NULL REFERENCES public.rutas(id),
@@ -30,7 +33,13 @@ CREATE TABLE IF NOT EXISTS public.asignaciones_ruta (
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE,
     activa BOOLEAN NOT NULL DEFAULT true,
-    creado_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    creado_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_fechas_asignacion CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio),
+    -- Esta es la regla RN que pide el contrato para evitar solapamiento
+    CONSTRAINT sin_solapamiento_asignaciones EXCLUDE USING gist (
+        trabajador_id WITH =,
+        daterange(fecha_inicio, COALESCE(fecha_fin, 'infinity'::date), '[]') WITH &&
+    )
 );
 
 -- 4. Catálogo de Turnos
