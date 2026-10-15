@@ -1,54 +1,46 @@
 openapi: 3.1.0
 info:
   title: API de planilla-sis
-  version: 0.1.0-borrador
-  description: |
-    Contrato de la API REST. Fuente única de verdad entre web, backend y móvil.
-    Despliegue solo en red local (HTTP, sin HTTPS).
+  version: 0.3.0-borrador
+  description: 'Contrato REST para LAN (HTTP). Fechas ISO 8601 UTC, importes como cadena decimal y errores application/problem+json.
 
-    Convenciones:
-    - Fechas y horas en ISO 8601, siempre en UTC.
-    - Dinero como cadena decimal con dos decimales (por ejemplo "1234.50").
-    - Errores en application/problem+json.
-    - Los puntos marcados como [VALIDAR] o [PROPUESTA] están pendientes de confirmación.
+    Adaptado a DECISIONES.md (M002–M007). Las operaciones y campos sin DDL o paquete de contrato verificable se
+    marcan [PROPUESTA]; no se consideran implementados.
+
+    '
 servers:
-  - url: http://{host}:{port}/api/v1
-    variables:
-      host:
-        default: localhost
-        description: IP o nombre del servidor en la red local
-      port:
-        default: "3000"
+- url: http://{host}:{port}/api/v1
+  variables:
+    host:
+      default: localhost
+    port:
+      default: '3000'
 tags:
-  - name: Autenticación
-  - name: Administración
-  - name: Registros de tiempo
-  - name: Eventos
-  - name: Rutas
-  - name: Planillas
-  - name: Catálogos
-
+- name: Autenticación
+- name: Administración
+- name: Registros de tiempo
+- name: Eventos
+- name: Rutas
+- name: Estados de trabajador
+- name: Contratos
+- name: Planillas
+- name: Catálogos
 paths:
-  # ---------------------------------------------------------------------------
-  # Autenticación
-  # ---------------------------------------------------------------------------
   /auth/session:
     post:
-      tags: [Autenticación]
+      tags:
+      - Autenticación
       operationId: iniciarSesion
       summary: Iniciar sesión
-      description: |
-        Web: los tokens viajan solo en Set-Cookie (psis_access y psis_refresh), no en el cuerpo.
-        Móvil: enviar X-Client-Type mobile para recibir access_token y refresh_token en el cuerpo.
-        El 401 usa un mensaje genérico que no revela si el correo existe.
       security: []
       parameters:
-        - name: X-Client-Type
-          in: header
-          required: false
-          schema:
-            type: string
-            enum: [mobile]
+      - name: X-Client-Type
+        in: header
+        required: false
+        schema:
+          type: string
+          enum:
+          - mobile
       requestBody:
         required: true
         content:
@@ -57,12 +49,7 @@ paths:
               $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
-          description: Sesión iniciada
-          headers:
-            Set-Cookie:
-              description: "Solo web. psis_access (HttpOnly, SameSite=Lax, Path=/) y psis_refresh (HttpOnly, SameSite=Strict, Path=/api/v1/auth). Sin Secure porque el despliegue es HTTP en LAN."
-              schema:
-                type: string
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -75,58 +62,54 @@ paths:
           $ref: '#/components/responses/Locked'
         '429':
           $ref: '#/components/responses/TooMany'
-
   /auth/refresh:
     post:
-      tags: [Autenticación]
+      tags:
+      - Autenticación
       operationId: renovarSesion
-      summary: Renovar sesión (rotación del refresh token)
-      description: |
-        Web: el refresh viaja en la cookie psis_refresh. Móvil: se envía en el cuerpo.
-        Si el refresh ya fue reemplazado (indicio de robo), se revocan todas las sesiones del usuario.
+      summary: Rotar refresh token
       security:
-        - refreshCookie: []
-        - {}
+      - refreshCookie: []
+      - {}
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/RefreshRequest'
       responses:
         '200':
-          description: Sesión renovada
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RefreshResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
-
   /auth/logout:
     post:
-      tags: [Autenticación]
+      tags:
+      - Autenticación
       operationId: cerrarSesion
-      summary: Cerrar sesión (revoca el refresh actual)
+      summary: Cerrar sesión
       security:
-        - cookieAuth: []
-          csrfToken: []
-        - bearerAuth: []
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
       responses:
         '204':
-          description: Sesión cerrada
+          description: Operación exitosa
         '401':
           $ref: '#/components/responses/Unauthorized'
-
   /auth/reauth:
     post:
-      tags: [Autenticación]
+      tags:
+      - Autenticación
       operationId: reautenticar
-      summary: Obtener token de reautenticación (vigencia corta)
-      description: Se usa en aprobar planilla, en la cabecera X-Reauth-Token.
+      summary: Emitir token de reautenticación
       security:
-        - cookieAuth: []
-          csrfToken: []
+      - cookieAuth: []
+        csrfToken: []
       requestBody:
         required: true
         content:
@@ -135,7 +118,7 @@ paths:
               $ref: '#/components/schemas/ReauthRequest'
       responses:
         '200':
-          description: Token emitido
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -148,17 +131,16 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooMany'
-
   /auth/password:
     post:
-      tags: [Autenticación]
+      tags:
+      - Autenticación
       operationId: cambiarPassword
-      summary: Cambiar la contraseña propia
-      description: Obligatorio en el primer inicio de sesión cuando debe_cambiar_password es true.
+      summary: Cambiar contraseña propia
       security:
-        - cookieAuth: []
-          csrfToken: []
-        - bearerAuth: []
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -167,41 +149,46 @@ paths:
               $ref: '#/components/schemas/CambioPasswordRequest'
       responses:
         '204':
-          description: Contraseña actualizada
+          description: Operación exitosa
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
-
   /me:
     get:
-      tags: [Autenticación]
+      tags:
+      - Autenticación
       operationId: obtenerPerfil
-      summary: Datos del usuario autenticado
+      summary: Perfil del usuario autenticado
       security:
-        - cookieAuth: []
-        - bearerAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
       responses:
         '200':
-          description: Perfil
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Usuario'
         '401':
           $ref: '#/components/responses/Unauthorized'
-
   /admin/usuarios:
     post:
-      tags: [Administración]
+      tags:
+      - Administración
       operationId: crearUsuario
-      summary: Crear usuario (solo Administrador)
-      description: La contraseña temporal la genera el backend, nunca el Administrador, y se devuelve una sola vez.
+      summary: Crear usuario
       security:
-        - cookieAuth: []
-          csrfToken: []
+      - cookieAuth: []
+        csrfToken: []
       requestBody:
         required: true
         content:
@@ -210,7 +197,7 @@ paths:
               $ref: '#/components/schemas/CrearUsuarioRequest'
       responses:
         '201':
-          description: Usuario creado
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -221,47 +208,47 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
-
-  # ---------------------------------------------------------------------------
-  # Registros de tiempo (móvil y supervisión)
-  # ---------------------------------------------------------------------------
   /registros-tiempo:
     get:
-      tags: [Registros de tiempo]
+      tags:
+      - Registros de tiempo
       operationId: listarRegistrosTiempo
-      summary: Listar registros de tiempo (Supervisor, Admin)
-      description: Un supervisor solo ve los registros de los trabajadores de sus rutas. Reemplaza al GET /api/jornadas actual.
+      summary: Listar registros
       security:
-        - cookieAuth: []
+      - cookieAuth: []
       parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PageSize'
-        - name: trabajador_id
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: desde
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: hasta
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: estado_validacion
-          in: query
-          schema:
-            $ref: '#/components/schemas/EstadoValidacion'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - name: trabajador_id
+        in: query
+        required: false
+        schema: &id002
+          type: string
+          format: uuid
+      - name: desde
+        in: query
+        required: false
+        schema: &id001
+          type: string
+          format: date
+      - name: hasta
+        in: query
+        required: false
+        schema: *id001
+      - name: estado_validacion
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/EstadoValidacion'
       responses:
         '200':
-          description: Página de registros
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -272,20 +259,22 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
   /registros-tiempo/ingreso:
     post:
-      tags: [Registros de tiempo]
+      tags:
+      - Registros de tiempo
       operationId: registrarIngreso
-      summary: Registrar ingreso (Trabajador)
-      description: |
-        El servidor no confía en la hora del dispositivo para el cálculo: guarda ingreso_at (cliente)
-        y recibido_en (servidor), y marca desviaciones grandes para revisión del supervisor.
-        Un reintento idéntico devuelve 200 con el recurso original (idempotencia).
+      summary: Registrar ingreso
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -300,7 +289,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/IngresoResponse'
         '200':
-          description: Reintento idéntico; se devuelve el recurso original
+          description: Reintento idéntico; se devuelve el recurso original (idempotencia)
           content:
             application/json:
               schema:
@@ -311,27 +300,26 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
-
   /registros-tiempo/{id}/descansos:
     post:
-      tags: [Registros de tiempo]
+      tags:
+      - Registros de tiempo
       operationId: registrarDescanso
-      summary: Registrar un descanso completo (Trabajador)
-      description: El descanso se envía completo (inicio y fin), porque el móvil sincroniza al regresar a la red local. No hay endpoint para cerrar un descanso abierto.
+      summary: Registrar descanso completo
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -340,7 +328,7 @@ paths:
               $ref: '#/components/schemas/DescansoRequest'
       responses:
         '201':
-          description: Descanso registrado
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -357,22 +345,20 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
-
   /registros-tiempo/{id}/salida:
     patch:
-      tags: [Registros de tiempo]
+      tags:
+      - Registros de tiempo
       operationId: registrarSalida
-      summary: Registrar salida (Trabajador)
+      summary: Registrar salida
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -381,7 +367,7 @@ paths:
               $ref: '#/components/schemas/SalidaRequest'
       responses:
         '200':
-          description: Salida registrada
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -398,23 +384,20 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
-
   /registros-tiempo/{id}/validacion:
     patch:
-      tags: [Registros de tiempo]
+      tags:
+      - Registros de tiempo
       operationId: validarRegistroTiempo
-      summary: Validar o rechazar un registro (Supervisor, Admin)
-      description: Las observaciones son obligatorias cuando el estado es RECHAZADO.
+      summary: Validar o rechazar registro
       security:
-        - cookieAuth: []
-          csrfToken: []
+      - cookieAuth: []
+        csrfToken: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - name: id
+        in: path
+        required: true
+        schema: *id002
       requestBody:
         required: true
         content:
@@ -423,7 +406,7 @@ paths:
               $ref: '#/components/schemas/ValidacionRequest'
       responses:
         '200':
-          description: Registro actualizado
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -438,20 +421,18 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-
-  # ---------------------------------------------------------------------------
-  # Eventos
-  # ---------------------------------------------------------------------------
+        '422':
+          $ref: '#/components/responses/Unprocessable'
   /eventos:batch:
     post:
-      tags: [Eventos]
+      tags:
+      - Eventos
       operationId: sincronizarEventos
-      summary: Sincronizar eventos móviles por lote (Trabajador)
-      description: Máximo 100 eventos y 256 KB por lote. Cada resultado se informa por separado (207).
+      summary: Sincronizar eventos por lote
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -460,7 +441,7 @@ paths:
               $ref: '#/components/schemas/EventosBatchRequest'
       responses:
         '207':
-          description: Resultado por evento
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -473,29 +454,20 @@ paths:
           $ref: '#/components/responses/PayloadTooLarge'
         '422':
           $ref: '#/components/responses/Unprocessable'
-
-  # ---------------------------------------------------------------------------
-  # Rutas y turnos
-  # ---------------------------------------------------------------------------
   /rutas/{rutaId}/asignaciones:
     post:
-      tags: [Rutas]
+      tags:
+      - Rutas
       operationId: crearAsignacion
-      summary: Asignar un trabajador a una ruta (Supervisor de la ruta, Admin)
-      description: |
-        Crea la asignación y un acuerdo de turno en estado PROPUESTO.
-        409 si el trabajador ya tiene una asignación solapada.
-        403 si el supervisor no es responsable de la ruta.
+      summary: Asignar trabajador a ruta
       security:
-        - cookieAuth: []
-          csrfToken: []
+      - cookieAuth: []
+        csrfToken: []
       parameters:
-        - name: rutaId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - name: rutaId
+        in: path
+        required: true
+        schema: *id002
       requestBody:
         required: true
         content:
@@ -504,7 +476,7 @@ paths:
               $ref: '#/components/schemas/AsignacionRequest'
       responses:
         '201':
-          description: Asignación creada
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -521,36 +493,63 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
-
+    get:
+      tags:
+      - Rutas
+      operationId: listarAsignacionesRuta
+      summary: Consultar asignaciones de ruta
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      description: '[PROPUESTA]'
+      parameters:
+      - name: rutaId
+        in: path
+        required: true
+        schema: *id002
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RutaAsignacionPagina'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
   /acuerdos-turno/{id}/respuesta:
     patch:
-      tags: [Rutas]
+      tags:
+      - Rutas
       operationId: responderAcuerdoTurno
-      summary: "[PROPUESTA] El trabajador acepta o rechaza el turno propuesto"
-      description: No existe en la matriz E.2 del entregable. Se agrega porque la política de seguridad por fila permite al trabajador pasar su acuerdo a ACEPTADO o RECHAZADO.
+      summary: Aceptar o rechazar turno
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - name: id
+        in: path
+        required: true
+        schema: *id002
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [estado]
-              properties:
-                estado:
-                  type: string
-                  enum: [ACEPTADO, RECHAZADO]
+              $ref: '#/components/schemas/AcuerdoRespuestaRequest'
       responses:
         '200':
-          description: Respuesta registrada
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -565,25 +564,25 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-
+        '422':
+          $ref: '#/components/responses/Unprocessable'
   /acuerdos-turno/{id}/confirmar:
     post:
-      tags: [Rutas]
+      tags:
+      - Rutas
       operationId: confirmarAcuerdoTurno
-      summary: Confirmar el acuerdo de turno (Supervisor, Admin)
+      summary: Confirmar acuerdo de turno
       security:
-        - cookieAuth: []
-          csrfToken: []
+      - cookieAuth: []
+        csrfToken: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - name: id
+        in: path
+        required: true
+        schema: *id002
       responses:
         '200':
-          description: Acuerdo confirmado
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -598,34 +597,28 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-
-  # ---------------------------------------------------------------------------
-  # Planillas
-  # ---------------------------------------------------------------------------
+        '422':
+          $ref: '#/components/responses/Unprocessable'
   /me/calculo:
     get:
-      tags: [Planillas]
+      tags:
+      - Planillas
       operationId: obtenerMiCalculo
-      summary: Horas calculadas del propio trabajador
-      description: "[VALIDAR] Estructura mínima propuesta. Se ajusta cuando se defina el motor de cálculo."
+      summary: Obtener horas propias
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: desde
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-        - name: hasta
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
+      - name: desde
+        in: query
+        required: true
+        schema: *id001
+      - name: hasta
+        in: query
+        required: true
+        schema: *id001
       responses:
         '200':
-          description: Cálculo del rango
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -636,27 +629,30 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
   /planillas/periodos/{periodoId}/calculo:
     get:
-      tags: [Planillas]
+      tags:
+      - Planillas
       operationId: obtenerCalculoPeriodo
-      summary: Obtener el cálculo de un período (Supervisor, Admin)
-      description: Un supervisor solo recibe trabajadores de sus rutas. Los montos salariales requieren rol autorizado.
+      summary: Obtener cálculo del período
       security:
-        - cookieAuth: []
+      - cookieAuth: []
       parameters:
-        - name: periodoId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PageSize'
+      - name: periodoId
+        in: path
+        required: true
+        schema: *id002
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
       responses:
         '200':
-          description: Cálculo del período
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -669,29 +665,33 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
   /planillas/{id}/calcular:
     post:
-      tags: [Planillas]
+      tags:
+      - Planillas
       operationId: calcularPlanilla
-      summary: Calcular la planilla (Supervisor, Admin)
+      summary: Calcular planilla
       security:
-        - cookieAuth: []
-          csrfToken: []
+      - cookieAuth: []
+        csrfToken: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - name: id
+        in: path
+        required: true
+        schema: *id002
       responses:
         '200':
-          description: Planilla calculada
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlanillaCalculada'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -702,25 +702,21 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
-
   /planillas/{id}/verificar:
     post:
-      tags: [Planillas]
+      tags:
+      - Planillas
       operationId: verificarPlanilla
-      summary: Verificar la planilla (Supervisor)
-      description: |
-        409 con code SEGREGACION_FUNCIONES si quien verifica calculó la planilla.
-        409 con code ESTADO_INVALIDO si no está CALCULADA.
+      summary: Verificar planilla
       security:
-        - cookieAuth: []
-          csrfToken: []
+      - cookieAuth: []
+        csrfToken: []
+      description: 'Segregación de funciones: quien calculó no puede verificar.'
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - name: id
+        in: path
+        required: true
+        schema: *id002
       requestBody:
         required: true
         content:
@@ -729,11 +725,13 @@ paths:
               $ref: '#/components/schemas/VerificarRequest'
       responses:
         '200':
-          description: Planilla verificada
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlanillaVerificada'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -744,27 +742,23 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
-
   /planillas/{id}/aprobar:
     post:
-      tags: [Planillas]
+      tags:
+      - Planillas
       operationId: aprobarPlanilla
-      summary: Aprobar la planilla (Administrador)
-      description: |
-        Requiere X-Reauth-Token vigente (se obtiene en POST /auth/reauth).
-        409 con code TOTAL_DESACTUALIZADO si total_esperado difiere del total actual.
-        Al aprobar, los montos quedan inmutables y se calcula hash_integridad.
+      summary: Aprobar planilla
       security:
-        - cookieAuth: []
-          csrfToken: []
+      - cookieAuth: []
+        csrfToken: []
+      description: Exige permiso planilla.aprobar y reautenticación; el permiso no está asignado a ningún rol por
+        defecto. Bloqueo de integridad y montos inmutables tras aprobación.
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - $ref: '#/components/parameters/ReauthToken'
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - $ref: '#/components/parameters/ReauthToken'
       requestBody:
         required: true
         content:
@@ -773,11 +767,13 @@ paths:
               $ref: '#/components/schemas/AprobarRequest'
       responses:
         '200':
-          description: Planilla aprobada
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlanillaAprobada'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -788,26 +784,24 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
-
   /planillas/{id}/pagos:
     post:
-      tags: [Planillas]
+      tags:
+      - Planillas
       operationId: registrarPagos
-      summary: Registrar pagos de una planilla aprobada (Administrador)
-      description: |
-        422 si el monto no coincide con el neto aprobado o la planilla no está APROBADA.
-        409 si el detalle ya fue pagado.
+      summary: Registrar pagos de planilla aprobada
       security:
-        - cookieAuth: []
-          csrfToken: []
+      - cookieAuth: []
+        csrfToken: []
+      description: Reautenticación obligatoria. No persistir ni auditar el token. Rechazar pagos duplicados, modificaciones
+        indebidas y montos que difieran del neto aprobado.
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - $ref: '#/components/parameters/IdempotencyKey'
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/ReauthToken'
       requestBody:
         required: true
         content:
@@ -816,11 +810,13 @@ paths:
               $ref: '#/components/schemas/PagosRequest'
       responses:
         '201':
-          description: Pagos registrados
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PagosResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -831,22 +827,18 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
-
-  # ---------------------------------------------------------------------------
-  # Catálogos
-  # ---------------------------------------------------------------------------
   /catalogos/tipos-descanso:
     get:
-      tags: [Catálogos]
+      tags:
+      - Catálogos
       operationId: listarTiposDescanso
-      summary: Catálogo de tipos de descanso
-      description: La app lo guarda al iniciar sesión para conocer los tipo_id válidos y cuáles son remunerados.
+      summary: Listar tipos de descanso
       security:
-        - bearerAuth: []
-        - cookieAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
       responses:
         '200':
-          description: Lista de tipos
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -855,43 +847,460 @@ paths:
                   $ref: '#/components/schemas/TipoDescanso'
         '401':
           $ref: '#/components/responses/Unauthorized'
-
+  /catalogos/estados-trabajador:
+    get:
+      tags:
+      - Estados de trabajador
+      operationId: listarEstadosTrabajador
+      summary: Listar estados de trabajador
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      description: '[PROPUESTA] Catálogo de seis estados de CU-03; códigos exactos pendientes de contraste con M007.'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EstadoTrabajador'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /trabajadores/{trabajadorId}/estado:
+    get:
+      tags:
+      - Estados de trabajador
+      operationId: obtenerEstadoTrabajador
+      summary: Consultar estado actual del trabajador
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: trabajadorId
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistorialEstadoTrabajador'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+    post:
+      tags:
+      - Estados de trabajador
+      operationId: cambiarEstadoTrabajador
+      summary: Registrar transición de estado
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      description: '[PROPUESTA] Validar transición, autorización y solapamiento de intervalos dentro de una transacción.'
+      parameters:
+      - name: trabajadorId
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambioEstadoTrabajadorRequest'
+      responses:
+        '201':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistorialEstadoTrabajador'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /trabajadores/{trabajadorId}/estados/historial:
+    get:
+      tags:
+      - Estados de trabajador
+      operationId: listarHistorialEstadoTrabajador
+      summary: Consultar historial de estados
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: trabajadorId
+        in: path
+        required: true
+        schema: *id002
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/Paginacion'
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/HistorialEstadoTrabajador'
+                  required:
+                  - items
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /admin/permisos:
+    get:
+      tags:
+      - Administración
+      operationId: listarPermisos
+      summary: Consultar catálogo RBAC
+      security:
+      - cookieAuth: []
+      description: '[PROPUESTA] Consulta de permisos; sin asignación automática.'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Permiso'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /admin/roles/{rol}/permisos:
+    get:
+      tags:
+      - Administración
+      operationId: listarPermisosRol
+      summary: Consultar permisos de rol
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: rol
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Rol'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RolPermiso'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /rutas:
+    get:
+      tags:
+      - Rutas
+      operationId: listarRutas
+      summary: Listar rutas
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      description: '[PROPUESTA] Confirmar contra paquete de cinco endpoints aprobado.'
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RutaPagina'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+    post:
+      tags:
+      - Rutas
+      operationId: crearRuta
+      summary: Crear ruta
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      description: '[PROPUESTA] Confirmar autorización y campos contra M003.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RutaRequest'
+      responses:
+        '201':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ruta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /rutas/{rutaId}:
+    get:
+      tags:
+      - Rutas
+      operationId: obtenerRuta
+      summary: Consultar ruta
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      description: '[PROPUESTA]'
+      parameters:
+      - name: rutaId
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ruta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+    patch:
+      tags:
+      - Rutas
+      operationId: actualizarRuta
+      summary: Actualizar ruta
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      description: '[PROPUESTA]'
+      parameters:
+      - name: rutaId
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RutaRequest'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ruta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /contratos/{id}:
+    get:
+      tags:
+      - Contratos
+      operationId: obtenerContrato
+      summary: Consultar contrato
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      description: '[PROPUESTA] Estados B, documento y fecha: verificar detalle aprobado.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contrato'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /contratos/{id}/correcciones:
+    post:
+      tags:
+      - Contratos
+      operationId: corregirContrato
+      summary: Registrar corrección de contrato
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      description: '[PROPUESTA] Registrar observaciones y auditoría; no inventar columnas en base de datos.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorreccionContratoRequest'
+      responses:
+        '201':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contrato'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
 components:
   securitySchemes:
     cookieAuth:
       type: apiKey
       in: cookie
       name: psis_access
-      description: "Web. Cookie HttpOnly emitida por /auth/session"
     refreshCookie:
       type: apiKey
       in: cookie
       name: psis_refresh
-      description: "Web. Cookie HttpOnly con Path=/api/v1/auth"
     csrfToken:
       type: apiKey
       in: header
       name: X-CSRF-Token
-      description: "Web. Obligatorio en POST, PUT, PATCH y DELETE"
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Móvil
-
   parameters:
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
-      schema:
-        type: string
-        format: uuid
+      schema: *id002
     ReauthToken:
       name: X-Reauth-Token
       in: header
       required: true
-      description: Token de reautenticación de vigencia corta (POST /auth/reauth)
+      description: No persistir ni registrar en auditoría en texto plano.
       schema:
         type: string
     Page:
@@ -909,7 +1318,6 @@ components:
         minimum: 1
         maximum: 100
         default: 50
-
   responses:
     BadRequest:
       description: Petición mal formada
@@ -918,13 +1326,13 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     Unauthorized:
-      description: No autenticado o token vencido
+      description: No autenticado
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
     Forbidden:
-      description: Sin permiso (también falta o error de CSRF)
+      description: Sin permiso o CSRF inválido
       content:
         application/problem+json:
           schema:
@@ -936,7 +1344,7 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     Conflict:
-      description: Conflicto de estado o duplicado
+      description: Conflicto de estado
       content:
         application/problem+json:
           schema:
@@ -948,40 +1356,41 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     TooMany:
-      description: Límite de tasa excedido
+      description: Límite de tasa
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
     Locked:
-      description: Cuenta bloqueada por intentos fallidos
+      description: Cuenta bloqueada
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
     PayloadTooLarge:
-      description: El lote excede 100 eventos o 256 KB
+      description: Lote demasiado grande
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
-
   schemas:
-    # --- Comunes -------------------------------------------------------------
     Rol:
       type: string
-      enum: [trabajador, supervisor, administrador]
+      enum:
+      - trabajador
+      - supervisor
+      - administrador
     Dinero:
       type: string
-      pattern: '^-?\d+\.\d{2}$'
-      examples: ["1234.50"]
+      pattern: ^-?\d+\.\d{2}$
+      examples:
+      - '1234.50'
     FechaHoraUTC:
       type: string
       format: date-time
-      examples: ["2026-09-21T13:00:12Z"]
+      description: Fecha y hora ISO 8601 normalizada a UTC
     Problem:
       type: object
-      required: [type, title, status, code, request_id]
       properties:
         type:
           type: string
@@ -993,7 +1402,6 @@ components:
           type: string
         code:
           type: string
-          examples: [SEGREGACION_FUNCIONES]
         request_id:
           type: string
         errors:
@@ -1005,9 +1413,14 @@ components:
                 type: string
               mensaje:
                 type: string
+      required:
+      - type
+      - title
+      - status
+      - code
+      - request_id
     Paginacion:
       type: object
-      required: [page, page_size, total]
       properties:
         page:
           type: integer
@@ -1015,9 +1428,12 @@ components:
           type: integer
         total:
           type: integer
+      required:
+      - page
+      - page_size
+      - total
     Ubicacion:
       type: object
-      required: [lat, lng]
       properties:
         lat:
           type: number
@@ -1030,6 +1446,9 @@ components:
         precision_m:
           type: number
           minimum: 0
+      required:
+      - lat
+      - lng
     Dispositivo:
       type: object
       properties:
@@ -1039,17 +1458,17 @@ components:
           type: string
     EstadoValidacion:
       type: string
-      description: "PENDIENTE al crear el registro. El supervisor lo cambia a VALIDADO o RECHAZADO. Solo los registros VALIDADO entran al cálculo de planilla."
-      enum: [PENDIENTE, VALIDADO, RECHAZADO]
-
-    # --- Autenticación -------------------------------------------------------
+      description: Alineado con el CHECK de registros_tiempo.estado_validacion (M004). PENDIENTE al crear; el supervisor
+        pasa a APROBADA o RECHAZADA. CORREGIDA es un estado resultante de una corrección (no se envía en /validacion).
+      enum:
+      - PENDIENTE
+      - APROBADA
+      - CORREGIDA
+      - RECHAZADA
     Usuario:
       type: object
-      required: [id, nombres, apellidos, rol]
       properties:
-        id:
-          type: string
-          format: uuid
+        id: *id002
         email:
           type: string
           format: email
@@ -1061,9 +1480,13 @@ components:
           $ref: '#/components/schemas/Rol'
         debe_cambiar_password:
           type: boolean
+      required:
+      - id
+      - nombres
+      - apellidos
+      - rol
     LoginRequest:
       type: object
-      required: [email, password]
       properties:
         email:
           type: string
@@ -1071,9 +1494,11 @@ components:
         password:
           type: string
           format: password
+      required:
+      - email
+      - password
     SesionResponse:
       type: object
-      required: [user]
       properties:
         user:
           $ref: '#/components/schemas/Usuario'
@@ -1088,8 +1513,8 @@ components:
           description: Solo móvil
         expira_en:
           type: integer
-          description: Segundos de vida del access token
-          examples: [900]
+      required:
+      - user
     RefreshRequest:
       type: object
       properties:
@@ -1098,38 +1523,40 @@ components:
           description: Solo móvil
     RefreshResponse:
       type: object
-      required: [access_token_emitido, expira_en]
       properties:
         access_token_emitido:
           type: boolean
         expira_en:
           type: integer
-          examples: [900]
         access_token:
           type: string
           description: Solo móvil
         refresh_token:
           type: string
-          description: Solo móvil (token rotado)
+          description: Solo móvil
+      required:
+      - access_token_emitido
+      - expira_en
     ReauthRequest:
       type: object
-      required: [password]
       properties:
         password:
           type: string
           format: password
+      required:
+      - password
     ReauthResponse:
       type: object
-      required: [reauth_token, expira_en]
       properties:
         reauth_token:
           type: string
         expira_en:
           type: integer
-          examples: [300]
+      required:
+      - reauth_token
+      - expira_en
     CambioPasswordRequest:
       type: object
-      required: [password_actual, password_nueva]
       properties:
         password_actual:
           type: string
@@ -1138,9 +1565,11 @@ components:
           type: string
           format: password
           minLength: 12
+      required:
+      - password_actual
+      - password_nueva
     CrearUsuarioRequest:
       type: object
-      required: [email, nombres, apellidos, rol]
       properties:
         email:
           type: string
@@ -1153,14 +1582,15 @@ components:
           $ref: '#/components/schemas/Rol'
         codigo_empleado:
           type: string
-          examples: [EMP-0034]
+      required:
+      - email
+      - nombres
+      - apellidos
+      - rol
     UsuarioCreado:
       type: object
-      required: [id, email, password_temporal, debe_cambiar_password]
       properties:
-        id:
-          type: string
-          format: uuid
+        id: *id002
         email:
           type: string
           format: email
@@ -1168,31 +1598,30 @@ components:
           type: string
         debe_cambiar_password:
           type: boolean
-
-    # --- Registros de tiempo -------------------------------------------------
+      required:
+      - id
+      - email
+      - password_temporal
+      - debe_cambiar_password
     IngresoRequest:
       type: object
-      required: [client_uuid, asignacion_id, ingreso_at]
       properties:
-        client_uuid:
-          type: string
-          format: uuid
-        asignacion_id:
-          type: string
-          format: uuid
-        ingreso_at:
+        client_uuid: *id002
+        asignacion_id: *id002
+        ingreso_at: &id003
           $ref: '#/components/schemas/FechaHoraUTC'
         ubicacion:
           $ref: '#/components/schemas/Ubicacion'
         dispositivo:
           $ref: '#/components/schemas/Dispositivo'
+      required:
+      - client_uuid
+      - asignacion_id
+      - ingreso_at
     IngresoResponse:
       type: object
-      required: [id, estado_validacion]
       properties:
-        id:
-          type: string
-          format: uuid
+        id: *id002
         estado_validacion:
           $ref: '#/components/schemas/EstadoValidacion'
         dentro_de_geocerca:
@@ -1202,153 +1631,164 @@ components:
           properties:
             nombre:
               type: string
-              examples: [Matutino]
             hora_inicio:
               type: string
-              examples: ["06:00"]
             hora_fin:
               type: string
-              examples: ["14:00"]
+      required:
+      - id
+      - estado_validacion
     DescansoRequest:
       type: object
-      required: [client_uuid, tipo_id, inicio_at, fin_at]
       properties:
-        client_uuid:
-          type: string
-          format: uuid
+        client_uuid: *id002
         tipo_id:
           type: integer
-        inicio_at:
-          $ref: '#/components/schemas/FechaHoraUTC'
-        fin_at:
-          $ref: '#/components/schemas/FechaHoraUTC'
+        inicio_at: *id003
+        fin_at: *id003
+      required:
+      - client_uuid
+      - tipo_id
+      - inicio_at
+      - fin_at
     DescansoResponse:
       type: object
-      required: [id, registro_tiempo_id, inicio_at, fin_at]
       properties:
-        id:
-          type: string
-          format: uuid
-        registro_tiempo_id:
-          type: string
-          format: uuid
-        inicio_at:
-          $ref: '#/components/schemas/FechaHoraUTC'
-        fin_at:
-          $ref: '#/components/schemas/FechaHoraUTC'
+        id: *id002
+        registro_tiempo_id: *id002
+        inicio_at: *id003
+        fin_at: *id003
+      required:
+      - id
+      - registro_tiempo_id
+      - inicio_at
+      - fin_at
     SalidaRequest:
       type: object
-      required: [salida_at]
       properties:
-        salida_at:
-          $ref: '#/components/schemas/FechaHoraUTC'
+        salida_at: *id003
         ubicacion:
           $ref: '#/components/schemas/Ubicacion'
         dispositivo:
           $ref: '#/components/schemas/Dispositivo'
+      required:
+      - salida_at
     SalidaResponse:
       type: object
-      required: [id, salida_at, estado_validacion]
       properties:
-        id:
-          type: string
-          format: uuid
-        salida_at:
-          $ref: '#/components/schemas/FechaHoraUTC'
+        id: *id002
+        salida_at: *id003
         estado_validacion:
           $ref: '#/components/schemas/EstadoValidacion'
+      required:
+      - id
+      - salida_at
+      - estado_validacion
     RegistroTiempoResumen:
       type: object
-      required: [id, trabajador_id, ingreso_at, estado_validacion]
       properties:
-        id:
-          type: string
-          format: uuid
-        trabajador_id:
-          type: string
-          format: uuid
-        asignacion_id:
-          type: string
-          format: uuid
-        ingreso_at:
-          $ref: '#/components/schemas/FechaHoraUTC'
+        id: *id002
+        trabajador_id: *id002
+        asignacion_id: *id002
+        ingreso_at: *id003
         salida_at:
-          type: [string, 'null']
+          type:
+          - string
+          - 'null'
           format: date-time
         estado_validacion:
           $ref: '#/components/schemas/EstadoValidacion'
         validado_por:
-          type: [string, 'null']
+          type:
+          - string
+          - 'null'
           format: uuid
         validado_at:
-          type: [string, 'null']
+          type:
+          - string
+          - 'null'
           format: date-time
+      required:
+      - id
+      - trabajador_id
+      - ingreso_at
+      - estado_validacion
     RegistrosTiempoPagina:
       allOf:
-        - $ref: '#/components/schemas/Paginacion'
-        - type: object
-          required: [items]
-          properties:
+      - $ref: '#/components/schemas/Paginacion'
+      - type: object
+        properties:
+          items:
+            type: array
             items:
-              type: array
-              items:
-                $ref: '#/components/schemas/RegistroTiempoResumen'
+              $ref: '#/components/schemas/RegistroTiempoResumen'
+        required:
+        - items
     ValidacionRequest:
       type: object
-      required: [estado_validacion]
       properties:
         estado_validacion:
           type: string
-          enum: [VALIDADO, RECHAZADO]
+          enum:
+          - APROBADA
+          - RECHAZADA
         observaciones:
           type: string
           maxLength: 1000
+      required:
+      - estado_validacion
+      description: Si RECHAZADA, observaciones es obligatorio (validación de negocio).
     ValidacionResponse:
       type: object
-      required: [id, estado_validacion, validado_por, validado_at]
       properties:
-        id:
-          type: string
-          format: uuid
+        id: *id002
         estado_validacion:
           $ref: '#/components/schemas/EstadoValidacion'
-        validado_por:
-          type: string
-          format: uuid
-        validado_at:
-          $ref: '#/components/schemas/FechaHoraUTC'
-
-    # --- Eventos -------------------------------------------------------------
+        validado_por: *id002
+        validado_at: *id003
+      required:
+      - id
+      - estado_validacion
+      - validado_por
+      - validado_at
     TipoEvento:
       type: string
-      enum: [EMERGENCIA, VISITA_FALLIDA, PROBLEMA_VEHICULO, CAMBIO_ESTADO, NOTA, OTRO]
+      enum:
+      - EMERGENCIA
+      - VISITA_FALLIDA
+      - PROBLEMA_VEHICULO
+      - CAMBIO_ESTADO
+      - NOTA
+      - OTRO
     EventoRequest:
       type: object
-      required: [client_uuid, tipo_evento, esquema_version, ocurrido_en]
       properties:
-        client_uuid:
-          type: string
-          format: uuid
+        client_uuid: *id002
         tipo_evento:
           $ref: '#/components/schemas/TipoEvento'
         esquema_version:
           type: integer
           minimum: 1
-        ocurrido_en:
-          $ref: '#/components/schemas/FechaHoraUTC'
-        registro_tiempo_id:
-          type: string
-          format: uuid
+        ocurrido_en: *id003
+        registro_tiempo_id: *id002
         latitud:
           type: number
+          minimum: -90
+          maximum: 90
         longitud:
           type: number
+          minimum: -180
+          maximum: 180
         payload:
           type: object
-          description: Datos variables según tipo_evento. Se muestra siempre como texto plano.
+          additionalProperties: true
+      required:
+      - client_uuid
+      - tipo_evento
+      - esquema_version
+      - ocurrido_en
     EventosBatchRequest:
       type: object
-      required: [eventos]
       properties:
         eventos:
           type: array
@@ -1356,292 +1796,473 @@ components:
           maxItems: 100
           items:
             $ref: '#/components/schemas/EventoRequest'
+      required:
+      - eventos
     EventoResultado:
       type: object
-      required: [client_uuid, estado]
       properties:
-        client_uuid:
-          type: string
-          format: uuid
+        client_uuid: *id002
         estado:
           type: string
-          enum: [CREADO, DUPLICADO, RECHAZADO]
-        id:
-          type: string
-          format: uuid
-          description: Solo cuando estado es CREADO
+          enum:
+          - CREADO
+          - DUPLICADO
+          - RECHAZADO
+        id: *id002
         code:
           type: string
-          description: Solo cuando estado es RECHAZADO
-          examples: [PAYLOAD_INVALIDO]
+      required:
+      - client_uuid
+      - estado
     EventosBatchResponse:
       type: object
-      required: [resultados]
       properties:
         resultados:
           type: array
           items:
             $ref: '#/components/schemas/EventoResultado'
-
-    # --- Rutas y turnos ------------------------------------------------------
+      required:
+      - resultados
     AsignacionRequest:
       type: object
-      required: [trabajador_id, fecha_inicio, turno_id]
       properties:
-        trabajador_id:
-          type: string
-          format: uuid
-        fecha_inicio:
-          type: string
-          format: date
+        trabajador_id: *id002
+        fecha_inicio: *id001
         fecha_fin:
-          type: [string, 'null']
+          type:
+          - string
+          - 'null'
           format: date
         turno_id:
           type: integer
+      required:
+      - trabajador_id
+      - fecha_inicio
+      - turno_id
     AcuerdoTurno:
       type: object
-      required: [id, estado]
       properties:
-        id:
-          type: string
-          format: uuid
+        id: *id002
         estado:
           type: string
-          enum: [PROPUESTO, ACEPTADO, RECHAZADO, CONFIRMADO]
+          enum:
+          - PROPUESTO
+          - ACEPTADO
+          - RECHAZADO
+          - CONFIRMADO
         confirmado_por:
-          type: [string, 'null']
+          type:
+          - string
+          - 'null'
           format: uuid
         confirmado_at:
-          type: [string, 'null']
+          type:
+          - string
+          - 'null'
           format: date-time
+      required:
+      - id
+      - estado
     AsignacionResponse:
       type: object
-      required: [id, ruta_id, trabajador_id, activa, acuerdo_turno]
       properties:
-        id:
-          type: string
-          format: uuid
-        ruta_id:
-          type: string
-          format: uuid
-        trabajador_id:
-          type: string
-          format: uuid
+        id: *id002
+        ruta_id: *id002
+        trabajador_id: *id002
         activa:
           type: boolean
         acuerdo_turno:
           $ref: '#/components/schemas/AcuerdoTurno'
-
-    # --- Planillas -----------------------------------------------------------
+      required:
+      - id
+      - ruta_id
+      - trabajador_id
+      - activa
+      - acuerdo_turno
     EstadoPlanilla:
       type: string
-      enum: [CALCULADA, VERIFICADA, APROBADA, PAGADA]
+      enum:
+      - CALCULADA
+      - VERIFICADA
+      - APROBADA
+      - PAGADA
     MiCalculoResponse:
       type: object
       properties:
-        desde:
-          type: string
-          format: date
-        hasta:
-          type: string
-          format: date
+        desde: *id001
+        hasta: *id001
         horas_ordinarias:
           type: string
-          examples: ["120.00"]
         horas_extra_diurnas:
           type: string
-          examples: ["6.50"]
         horas_extra_nocturnas:
           type: string
-          examples: ["2.00"]
     DetalleCalculo:
       type: object
       properties:
-        trabajador_id:
-          type: string
-          format: uuid
+        trabajador_id: *id002
         horas_ordinarias:
           type: string
         horas_extra_diurnas:
           type: string
         horas_extra_nocturnas:
           type: string
-        monto_bruto:
+        monto_bruto: &id004
           $ref: '#/components/schemas/Dinero'
-        total_bonificaciones:
-          $ref: '#/components/schemas/Dinero'
-        total_deducciones:
-          $ref: '#/components/schemas/Dinero'
-        neto:
-          $ref: '#/components/schemas/Dinero'
+        total_bonificaciones: *id004
+        total_deducciones: *id004
+        neto: *id004
         alertas:
           type: array
           items:
             type: string
-            examples: [VARIACION_MAYOR_20_PORCIENTO]
     CalculoPeriodoResponse:
       allOf:
-        - $ref: '#/components/schemas/Paginacion'
-        - type: object
-          properties:
-            periodo:
-              type: object
-              properties:
-                id:
-                  type: string
-                  format: uuid
-                desde:
-                  type: string
-                  format: date
-                hasta:
-                  type: string
-                  format: date
-                estado:
-                  type: string
-                  description: "[VALIDAR] Solo ABIERTO aparece en el entregable"
-                  examples: [ABIERTO]
-            planilla:
-              type: object
-              properties:
-                id:
-                  type: string
-                  format: uuid
-                estado:
-                  $ref: '#/components/schemas/EstadoPlanilla'
-                calculada_por:
-                  type: string
-                  format: uuid
-            resumen:
-              type: object
-              properties:
-                trabajadores:
-                  type: integer
-                horas_ordinarias:
-                  type: string
-                horas_extra:
-                  type: string
-                total_bruto:
-                  $ref: '#/components/schemas/Dinero'
-            detalle:
-              type: array
-              items:
-                $ref: '#/components/schemas/DetalleCalculo'
+      - $ref: '#/components/schemas/Paginacion'
+      - type: object
+        properties:
+          periodo:
+            type: object
+            properties:
+              id: *id002
+              desde: *id001
+              hasta: *id001
+              estado:
+                type: string
+          planilla:
+            type: object
+            properties:
+              id: *id002
+              estado:
+                $ref: '#/components/schemas/EstadoPlanilla'
+              calculada_por: *id002
+          resumen:
+            type: object
+            properties:
+              trabajadores:
+                type: integer
+              horas_ordinarias:
+                type: string
+              horas_extra:
+                type: string
+              total_bruto: *id004
+          detalle:
+            type: array
+            items:
+              $ref: '#/components/schemas/DetalleCalculo'
     PlanillaCalculada:
       type: object
-      required: [id, estado, calculada_por, calculada_at]
       properties:
-        id:
-          type: string
-          format: uuid
+        id: *id002
         estado:
           type: string
-          enum: [CALCULADA]
-        calculada_por:
-          type: string
-          format: uuid
-        calculada_at:
-          $ref: '#/components/schemas/FechaHoraUTC'
+          enum:
+          - CALCULADA
+        calculada_por: *id002
+        calculada_at: *id003
+      required:
+      - id
+      - estado
+      - calculada_por
+      - calculada_at
     VerificarRequest:
       type: object
-      required: [observaciones]
       properties:
         observaciones:
           type: string
           maxLength: 1000
         excepciones_revisadas:
           type: array
-          items:
-            type: string
-            format: uuid
+          items: *id002
+      required:
+      - observaciones
     PlanillaVerificada:
       type: object
-      required: [id, estado, verificada_por, verificada_at]
       properties:
-        id:
-          type: string
-          format: uuid
+        id: *id002
         estado:
           type: string
-          enum: [VERIFICADA]
-        verificada_por:
-          type: string
-          format: uuid
-        verificada_at:
-          $ref: '#/components/schemas/FechaHoraUTC'
+          enum:
+          - VERIFICADA
+        verificada_por: *id002
+        verificada_at: *id003
+      required:
+      - id
+      - estado
+      - verificada_por
+      - verificada_at
     AprobarRequest:
       type: object
-      required: [total_esperado]
       properties:
         comentario:
           type: string
           maxLength: 1000
-        total_esperado:
-          $ref: '#/components/schemas/Dinero'
+        total_esperado: *id004
+      required:
+      - total_esperado
     PlanillaAprobada:
       type: object
-      required: [id, estado, aprobada_por, aprobada_at, hash_integridad]
       properties:
-        id:
-          type: string
-          format: uuid
+        id: *id002
         estado:
           type: string
-          enum: [APROBADA]
-        aprobada_por:
-          type: string
-          format: uuid
-        aprobada_at:
-          $ref: '#/components/schemas/FechaHoraUTC'
+          enum:
+          - APROBADA
+        aprobada_por: *id002
+        aprobada_at: *id003
         hash_integridad:
           type: string
-          examples: ["sha256:9c1f…"]
+      required:
+      - id
+      - estado
+      - aprobada_por
+      - aprobada_at
+      - hash_integridad
     PagosRequest:
       type: object
-      required: [metodo_id, fecha_pago, pagos]
       properties:
         metodo_id:
           type: integer
-        fecha_pago:
-          type: string
-          format: date
+        fecha_pago: *id001
         pagos:
           type: array
           minItems: 1
           items:
             type: object
-            required: [detalle_id, monto]
             properties:
-              detalle_id:
-                type: string
-                format: uuid
-              monto:
-                $ref: '#/components/schemas/Dinero'
+              detalle_id: *id002
+              monto: *id004
               referencia:
                 type: string
+            required:
+            - detalle_id
+            - monto
+      required:
+      - metodo_id
+      - fecha_pago
+      - pagos
     PagosResponse:
       type: object
-      required: [planilla_id, estado, pagos_registrados, total_pagado]
       properties:
-        planilla_id:
-          type: string
-          format: uuid
+        planilla_id: *id002
         estado:
           $ref: '#/components/schemas/EstadoPlanilla'
         pagos_registrados:
           type: integer
-        total_pagado:
-          $ref: '#/components/schemas/Dinero'
-
-    # --- Catálogos -----------------------------------------------------------
+        total_pagado: *id004
+      required:
+      - planilla_id
+      - estado
+      - pagos_registrados
+      - total_pagado
     TipoDescanso:
       type: object
-      required: [id, nombre, remunerado]
       properties:
         id:
           type: integer
         nombre:
           type: string
-          examples: [Almuerzo]
         remunerado:
           type: boolean
+      required:
+      - id
+      - nombre
+      - remunerado
+    EstadoTrabajador:
+      type: object
+      properties:
+        id:
+          type: integer
+        codigo:
+          type: string
+        nombre:
+          type: string
+      required:
+      - id
+      - codigo
+      - nombre
+      description: Alineado con estados_trabajador (M007).
+    HistorialEstadoTrabajador:
+      type: object
+      properties:
+        id: *id002
+        trabajador_id: *id002
+        estado:
+          $ref: '#/components/schemas/EstadoTrabajador'
+        inicio_at: *id003
+        fin_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        motivo:
+          type:
+          - string
+          - 'null'
+        cambiado_por:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      required:
+      - id
+      - trabajador_id
+      - estado
+      - inicio_at
+      description: Alineado con historial_estado_trabajador (M007); estado se expande desde estado_id.
+    CambioEstadoTrabajadorRequest:
+      type: object
+      properties:
+        estado_codigo:
+          type: string
+        inicio_at: *id003
+        motivo:
+          type: string
+          maxLength: 1000
+      required:
+      - estado_codigo
+      - inicio_at
+      description: '[PROPUESTA] El servicio cierra el intervalo abierto y crea el nuevo en una transacción.'
+    Permiso:
+      type: object
+      properties:
+        codigo:
+          type: string
+        descripcion:
+          type: string
+      required:
+      - codigo
+      description: '[PROPUESTA] Exposición de permisos; la BD no asigna permisos automáticamente.'
+    RolPermiso:
+      type: object
+      properties:
+        rol:
+          $ref: '#/components/schemas/Rol'
+        permiso_codigo:
+          type: string
+      required:
+      - rol
+      - permiso_codigo
+    Ruta:
+      type: object
+      properties:
+        id: *id002
+        codigo:
+          type: string
+          maxLength: 50
+        nombre:
+          type: string
+          maxLength: 100
+        descripcion:
+          type:
+          - string
+          - 'null'
+        supervisor_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        activa:
+          type: boolean
+        creado_at: *id003
+      required:
+      - id
+      - codigo
+      - nombre
+      - activa
+      description: Alineado con la tabla rutas (M003).
+    RutaRequest:
+      type: object
+      properties:
+        codigo:
+          type: string
+          maxLength: 50
+        nombre:
+          type: string
+          maxLength: 100
+        descripcion:
+          type: string
+        supervisor_id:
+          type: string
+          format: uuid
+        activa:
+          type: boolean
+      required:
+      - codigo
+      - nombre
+      description: 'Alineado con rutas (M003). En POST, codigo y nombre son obligatorios (codigo es UNIQUE: 409 si existe).
+        En PATCH se envía solo lo que cambia; la baja es lógica con activa=false.'
+    RutaAsignacionPagina:
+      allOf:
+      - $ref: '#/components/schemas/Paginacion'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/AsignacionResponse'
+        required:
+        - items
+    RutaPagina:
+      allOf:
+      - $ref: '#/components/schemas/Paginacion'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Ruta'
+        required:
+        - items
+    AcuerdoRespuestaRequest:
+      type: object
+      properties:
+        estado:
+          type: string
+          enum:
+          - ACEPTADO
+          - RECHAZADO
+      required:
+      - estado
+    ContratoDocumento:
+      type: object
+      properties:
+        nombre_archivo:
+          type: string
+        referencia:
+          type: string
+        fecha_documento: *id001
+      required:
+      - nombre_archivo
+      - referencia
+      description: '[PROPUESTA] Metadatos, sin asumir almacenamiento de archivos en BD.'
+    CorreccionContratoRequest:
+      type: object
+      properties:
+        observaciones:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        fecha_correccion: *id001
+        documento:
+          $ref: '#/components/schemas/ContratoDocumento'
+      required:
+      - observaciones
+      - fecha_correccion
+      description: '[PROPUESTA] Registrar corrección y auditoría sin sobrescribir historial.'
+    Contrato:
+      type: object
+      properties:
+        id: *id002
+        estado:
+          type: string
+        fecha: *id001
+        documento:
+          $ref: '#/components/schemas/ContratoDocumento'
+        observaciones:
+          type: string
+      required:
+      - id
+      - estado
+      description: '[PROPUESTA] Los estados B exactos no constan en DECISIONES.md; validar catálogo/DDL antes de
+        implementar.'
