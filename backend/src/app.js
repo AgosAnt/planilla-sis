@@ -1,33 +1,26 @@
-const express = require('express');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
-
-const authRoutes = require('./modules/auth/auth.routes');
-const rutasRoutes = require('./modules/rutas/rutas.routes');
-const registrosRoutes = require('./modules/registros/registros.routes');
-const planillasRoutes = require('./modules/planillas/planillas.routes');
-const errorHandler = require('./middlewares/error.middleware');
+import express from 'express';
+import authRoutes from './modules/auth/auth.routes.js';
+import registrosRoutes from './modules/registros/registros.routes.js';
+import rutasRoutes from './modules/rutas/rutas.routes.js';
+import planillasRoutes from './modules/planillas/planillas.routes.js';
+import eventosRoutes from './modules/eventos/eventos.routes.js'; // <- Importar eventos
+import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
 
 app.use(express.json());
-app.use(cookieParser());
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true
-}));
 
-app.get('/', (req, res) => {
-  res.send('Servidor funcionando');
-});
+// Rutas específicas primero
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/registros-tiempo', registrosRoutes);
+app.use('/api/v1/rutas', rutasRoutes);
+app.use('/api/v1/planillas', planillasRoutes);
+app.use('/api/v1/eventos', eventosRoutes); // <- Registrar ruta de eventos
 
-// Rutas versionadas de la API
-app.use('/api/v1', authRoutes);
-app.use('/api/v1', rutasRoutes);
-app.use('/api/v1', registrosRoutes);
-app.use('/api/v1', planillasRoutes);
+// Ruta base/general al final
+app.use('/api/v1', authRoutes); // Para endpoint GET /api/v1/me
 
-// Manejador central de errores
+// Middleware global de manejo de errores
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

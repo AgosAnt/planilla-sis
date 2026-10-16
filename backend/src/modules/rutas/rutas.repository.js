@@ -1,36 +1,61 @@
-const db = require('../../config/db');
+import pool from '../../config/db.js';
 
-class RutasRepository {
-  async crearAsignacion({ ruta_id, trabajador_id, fecha_inicio, fecha_fin, asignado_por }) {
-    const query = `
-      INSERT INTO asignaciones_ruta (ruta_id, trabajador_id, fecha_inicio, fecha_fin, asignado_por, activa)
-      VALUES ($1, $2, $3, $4, $5, true)
-      RETURNING id, ruta_id, trabajador_id, activa;
-    `;
-    const { rows } = await db.query(query, [ruta_id, trabajador_id, fecha_inicio, fecha_fin, asignado_por]);
-    return rows[0];
-  }
+export const obtenerRegistros = async () => {
+  const query = `
+    SELECT id_jornada, id_usuario, id_ruta, fecha, hora_entrada, hora_salida, estado 
+    FROM jornadas 
+    ORDER BY id_jornada DESC 
+    LIMIT 20;
+  `;
+  const { rows } = await pool.query(query);
+  return rows;
+};
 
-  async crearAcuerdoTurno({ asignacion_id, turno_id, fecha }) {
-    const query = `
-      INSERT INTO acuerdos_turno (asignacion_id, turno_id, fecha, estado)
-      VALUES ($1, $2, $3, 'PROPUESTO')
-      RETURNING id, estado;
-    `;
-    const { rows } = await db.query(query, [asignacion_id, turno_id, fecha]);
-    return rows[0];
-  }
+export const buscarJornadaPorId = async (idJornada) => {
+  const query = `SELECT * FROM jornadas WHERE id_jornada = $1;`;
+  const { rows } = await pool.query(query, [parseInt(idJornada, 10)]);
+  return rows[0];
+};
 
-  async confirmarAcuerdo(acuerdoId, confirmadoPor) {
-    const query = `
-      UPDATE acuerdos_turno
-      SET estado = 'CONFIRMADO', confirmado_por = $2, confirmado_at = NOW()
-      WHERE id = $1
-      RETURNING id, estado, confirmado_at;
-    `;
-    const { rows } = await db.query(query, [acuerdoId, confirmadoPor]);
-    return rows[0];
-  }
-}
+export const buscarJornadaActivaPorUsuario = async (usuarioId) => {
+  const query = `
+    SELECT * FROM jornadas 
+    WHERE id_usuario = $1 AND estado = 'ACTIVA' 
+    LIMIT 1;
+  `;
+  const { rows } = await pool.query(query, [parseInt(usuarioId, 10)]);
+  return rows[0];
+};
 
-module.exports = new RutasRepository();
+export const crearIngreso = async (usuarioId) => {
+  const query = `
+    INSERT INTO jornadas (id_usuario, fecha, hora_entrada, estado)
+    VALUES ($1, CURRENT_DATE, CURRENT_TIMESTAMP, 'ACTIVA')
+    RETURNING id_jornada, id_usuario, fecha, hora_entrada, estado;
+  `;
+  const { rows } = await pool.query(query, [parseInt(usuarioId, 10)]);
+  return rows[0];
+};
+
+export const registrarSalida = async (idJornada) => {
+  const query = `
+    UPDATE jornadas 
+    SET hora_salida = CURRENT_TIMESTAMP, 
+        estado = 'FINALIZADA'
+    WHERE id_jornada = $1
+    RETURNING id_jornada, id_usuario, id_ruta, fecha, hora_entrada, hora_salida, estado;
+  `;
+  const { rows } = await pool.query(query, [parseInt(idJornada, 10)]);
+  return rows[0];
+};
+
+export const actualizarRutaEnJornada = async (idJornada, idRuta) => {
+  const query = `
+    UPDATE jornadas 
+    SET id_ruta = $2
+    WHERE id_jornada = $1
+    RETURNING id_jornada, id_usuario, id_ruta, fecha, hora_entrada, hora_salida, estado;
+  `;
+  const { rows } = await pool.query(query, [parseInt(idJornada, 10), parseInt(idRuta, 10)]);
+  return rows[0];
+};

@@ -1,77 +1,67 @@
-const registrosRepository = require('./registros.repository');
+import * as registrosService from './registros.service.js';
 
-class RegistrosController {
-  async ingreso(req, res, next) {
-    try {
-      const { client_uuid, asignacion_id, ingreso_at, ubicacion } = req.body;
-      const result = await registrosRepository.registrarIngreso({
-        trabajador_id: req.user.id,
-        asignacion_id,
-        ingreso_at,
-        client_uuid,
-        lat: ubicacion?.lat,
-        lng: ubicacion?.lng,
-      });
-
-      const statusCode = result.repetido ? 200 : 201;
-      return res.status(statusCode).json(result.data);
-    } catch (error) {
-      next(error);
-    }
+export const obtenerRegistros = async (req, res) => {
+  try {
+    const registros = await registrosService.listarRegistros();
+    res.status(200).json(registros);
+  } catch (error) {
+    console.error('[Error obtenerRegistros]:', error);
+    res.status(500).json({ error: 'Error al consultar registros', detalle: error.message });
   }
+};
 
-  async descanso(req, res, next) {
-    try {
-      const { id } = req.params;
-      const { tipo_id, inicio_at, fin_at } = req.body;
-      const descanso = await registrosRepository.registrarDescanso({ registro_tiempo_id: id, tipo_id, inicio_at, fin_at });
-      return res.status(201).json(descanso);
-    } catch (error) {
-      next(error);
+export const crearRegistro = async (req, res) => {
+  try {
+    const { usuarioId } = req.body;
+
+    if (!usuarioId) {
+      return res.status(400).json({ error: 'Falta el campo usuarioId en el body' });
     }
-  }
 
-  async salida(req, res, next) {
-    try {
-      const { id } = req.params;
-      const { salida_at } = req.body;
-      const registro = await registrosRepository.registrarSalida({ id, salida_at });
-      return res.status(200).json(registro);
-    } catch (error) {
-      next(error);
+    const nuevoRegistro = await registrosService.registrarIngreso(usuarioId);
+    res.status(201).json(nuevoRegistro);
+  } catch (error) {
+    console.error('[Error crearRegistro]:', error);
+    const status = error.status || 500;
+    res.status(status).json({ 
+      error: 'Error al registrar ingreso', 
+      detalle: error.message 
+    });
+  }
+};
+
+export const marcarSalida = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const registro = await registrosService.registrarSalida(id);
+    res.status(200).json(registro);
+  } catch (error) {
+    console.error('[Error marcarSalida]:', error);
+    const status = error.status || 500;
+    res.status(status).json({ 
+      error: 'Error al registrar salida', 
+      detalle: error.message 
+    });
+  }
+};
+
+export const asignarRuta = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rutaId } = req.body;
+
+    if (!rutaId) {
+      return res.status(400).json({ error: 'Falta el campo rutaId en el body' });
     }
+
+    const registro = await registrosService.asignarRutaAJornada(id, rutaId);
+    res.status(200).json(registro);
+  } catch (error) {
+    console.error('[Error asignarRuta]:', error);
+    const status = error.status || 500;
+    res.status(status).json({ 
+      error: 'Error al asignar la ruta a la jornada', 
+      detalle: error.message 
+    });
   }
-
-  async syncBatch(req, res, next) {
-    try {
-      const { eventos } = req.body;
-      if (!Array.isArray(eventos) || eventos.length > 100) {
-        return res.status(413).json({ title: 'Lote demasiado grande (máximo 100 eventos)', status: 413 });
-      }
-
-      const resultados = [];
-      for (const evt of eventos) {
-        try {
-          const resEvt = await registrosRepository.guardarEventoBatch({
-            trabajador_id: req.user.id,
-            client_uuid: evt.client_uuid,
-            tipo_evento: evt.tipo_evento,
-            ocurrido_en: evt.ocurrido_en,
-            latitud: evt.latitud,
-            longitud: evt.longitud,
-            payload: evt.payload,
-          });
-          resultados.push(resEvt);
-        } catch (err) {
-          resultados.push({ client_uuid: evt.client_uuid, estado: 'RECHAZADO', code: 'PAYLOAD_INVALIDO' });
-        }
-      }
-
-      return res.status(207).json({ resultados });
-    } catch (error) {
-      next(error);
-    }
-  }
-}
-
-module.exports = new RegistrosController();
+};

@@ -1,11 +1,10 @@
-const express = require('express');
-const router = express.Router();
-const planillasController = require('./planillas.controller');
-const authenticate = require('../../middlewares/auth.middleware');
+import { Router } from 'express';
+import { generarPlanilla, obtenerPlanillas, cambiarEstado } from './planillas.controller.js';
 
-router.post('/planillas/:id/calcular', authenticate, (req, res, next) => planillasController.calcular(req, res, next));
-router.post('/planillas/:id/verificar', authenticate, (req, res, next) => planillasController.verificar(req, res, next));
-router.post('/planillas/:id/aprobar', authenticate, (req, res, next) => planillasController.aprobar(req, res, next));
-router.post('/planillas/:id/pagos', authenticate, (req, res, next) => planillasController.registrarPagos(req, res, next));
+const router = Router();
 
-module.exports = router;
+router.get('/', obtenerPlanillas);
+router.post('/generar', generarPlanilla);
+router.patch('/:id/estado', cambiarEstado);
+
+export default router;

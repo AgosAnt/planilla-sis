@@ -1,79 +1,44 @@
-const planillasRepository = require('./planillas.repository');
-const { calcularJornada } = require('./motorCalculo.service');
+import * as motorCalculoService from './motorCalculo.service.js';
 
-class PlanillasController {
-  async calcular(req, res, next) {
-    try {
-      const { id } = req.params;
-      const registros = await planillasRepository.obtenerDatosCalculo(id);
-
-      const detalleCalculado = registros.map((r) => {
-        const resMotor = calcularJornada({
-          ingreso_at: r.ingreso_at,
-          salida_at: r.salida_at,
-          tarifa_hora: r.tarifa_hora,
-        });
-
-        return {
-          trabajador_id: r.trabajador_id,
-          horas_ordinarias: resMotor.horas_ordinarias,
-          horas_extra_diurnas: resMotor.horas_extra_diurnas,
-          horas_extra_nocturnas: resMotor.horas_extra_nocturnas,
-          neto: resMotor.neto,
-          calculo_detalle: resMotor,
-        };
-      });
-
-      const resultado = await planillasRepository.guardarCalculo(id, req.user.id, detalleCalculado);
-      return res.status(200).json(resultado);
-    } catch (error) {
-      next(error);
-    }
+export const generarPlanilla = async (req, res) => {
+  try {
+    const resultado = await motorCalculoService.calcularYGenerarPlanilla(req.body);
+    res.status(201).json(resultado);
+  } catch (error) {
+    console.error('[Error generarPlanilla]:', error);
+    const status = error.status || 500;
+    res.status(status).json({
+      error: 'Error al generar la planilla',
+      detalle: error.message,
+    });
   }
+};
 
-  async verificar(req, res, next) {
-    try {
-      const { id } = req.params;
-      const resVerif = await planillasRepository.verificarPlanilla(id, req.user.id);
-      if (!resVerif) {
-        return res.status(409).json({
-          title: 'Violación de segregación de funciones o estado inválido',
-          code: 'SEGREGACION_FUNCIONES',
-          status: 409,
-        });
-      }
-      return res.status(200).json(resVerif);
-    } catch (error) {
-      next(error);
-    }
+export const obtenerPlanillas = async (req, res) => {
+  try {
+    const planillas = await motorCalculoService.listarPlanillas();
+    res.status(200).json(planillas);
+  } catch (error) {
+    console.error('[Error obtenerPlanillas]:', error);
+    res.status(500).json({
+      error: 'Error al consultar las planillas',
+      detalle: error.message,
+    });
   }
+};
 
-  async aprobar(req, res, next) {
-    try {
-      const { id } = req.params;
-      const resAprobar = await planillasRepository.aprobarPlanilla(id, req.user.id);
-      if (!resAprobar) {
-        return res.status(409).json({
-          title: 'Violación de segregación de funciones o estado inválido',
-          code: 'SEGREGACION_FUNCIONES',
-          status: 409,
-        });
-      }
-      return res.status(200).json({ ...resAprobar, hash_integridad: 'sha256:' + Date.now() });
-    } catch (error) {
-      next(error);
-    }
+export const cambiarEstado = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body;
+    const resultado = await motorCalculoService.cambiarEstadoPlanilla(id, estado);
+    res.status(200).json(resultado);
+  } catch (error) {
+    console.error('[Error cambiarEstado]:', error);
+    const status = error.status || 500;
+    res.status(status).json({
+      error: 'Error al actualizar el estado de la planilla',
+      detalle: error.message,
+    });
   }
-
-  async registrarPagos(req, res, next) {
-    try {
-      const { id } = req.params;
-      const resPago = await planillasRepository.registrarPago(id, req.body);
-      return res.status(201).json(resPago);
-    } catch (error) {
-      next(error);
-    }
-  }
-}
-
-module.exports = new PlanillasController();
+};
