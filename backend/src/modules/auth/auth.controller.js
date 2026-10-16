@@ -3,7 +3,7 @@ import * as authService from './auth.service.js';
 export const iniciarSesion = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const resultado = await authService.login(email, password);
+    const resultado = await authService.iniciarSesion(email, password);
     return res.status(200).json(resultado);
   } catch (error) {
     next(error);

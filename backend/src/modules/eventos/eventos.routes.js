@@ -6,7 +6,7 @@ import { autenticarToken } from '../../middlewares/auth.js';
 const router = Router();
 
 // Blindamos todas las rutas de eventos
-//router.use(autenticarToken);
+router.use(autenticarToken);
 
 router.get('/', obtenerEventos);
 router.get('/jornada/:idJornada', obtenerEventosPorJornada);
