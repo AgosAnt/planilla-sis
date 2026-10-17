@@ -25,8 +25,8 @@ export const iniciarSesion = async (email, password) => {
         throw crearError(400, 'CREDENCIALES_REQUERIDAS', 'email y password son obligatorios');
     }
 
-    // 1. Buscar al usuario activo en perfiles
-    const fila = await authRepo.buscarActivoPorEmail(email);
+    // 1. Buscar al usuario activo en perfiles (los correos se guardan en minúsculas, ver usuarios.service)
+    const fila = await authRepo.buscarActivoPorEmail(email.trim().toLowerCase());
 
     // 2. Mismo mensaje y mismo trabajo para correo inexistente y contraseña incorrecta
     const esValida = await bcrypt.compare(password, fila?.password_hash ?? HASH_RELLENO);
