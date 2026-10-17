@@ -1,30 +1,39 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import pool from '../../config/db.js'; // <-- Ajusta esta ruta a donde tengas tu conexión a PostgreSQL
+import pool from '../../config/db.js';
+import { jwtConfig } from '../../config/jwt.js';
+import { crearError } from '../../middlewares/errorHandler.js';
 
 export const iniciarSesion = async (email, password) => {
-    // 1. Buscar al usuario en la tabla perfiles
-    const result = await pool.query('SELECT * FROM perfiles WHERE email = $1', [email]);
+    if (!email || !password) {
+        throw crearError(400, 'CREDENCIALES_REQUERIDAS', 'email y password son obligatorios');
+    }
+
+    // 1. Buscar al usuario activo en perfiles; el nombre del rol vive en la tabla roles (M002)
+    const result = await pool.query(
+        `SELECT p.id, p.email, p.password_hash, r.nombre AS rol
+         FROM perfiles p
+         JOIN roles r ON r.id = p.rol_id
+         WHERE p.email = $1 AND p.activo`,
+        [email]
+    );
     const usuario = result.rows[0];
-    
-    if (!usuario) {
-        throw new Error('Credenciales inválidas');
-    }
 
-    // 2. Verificar que el hash coincida con "123"
-    const esValida = await bcrypt.compare(password, usuario.password_hash);
+    // 2. Mismo mensaje para correo inexistente y contraseña incorrecta (E-1: no revelar si el correo existe)
+    const esValida = usuario && await bcrypt.compare(password, usuario.password_hash);
     if (!esValida) {
-        throw new Error('Credenciales inválidas');
+        throw crearError(401, 'CREDENCIALES_INVALIDAS', 'Credenciales inválidas');
     }
 
-    // 3. Generar el JWT con el secreto de tu .env
+    // 3. Generar el JWT: sub = perfiles.id, como esperan app.usuario_actual() y la RLS de M008
     const token = jwt.sign(
-        { id: usuario.id, email: usuario.email, rol: usuario.rol },
-        process.env.JWT_SECRET,
-        { 
+        { sub: usuario.id, email: usuario.email, rol: usuario.rol },
+        jwtConfig.secret,
+        {
+            algorithm: jwtConfig.algorithm,
             expiresIn: '2h',
-            issuer: process.env.JWT_ISSUER,
-            audience: process.env.JWT_AUDIENCE
+            issuer: jwtConfig.issuer,
+            audience: jwtConfig.audience
         }
     );
 
