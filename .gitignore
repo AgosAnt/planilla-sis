@@ -1,33 +1,4 @@
-# Secretos y configuraciÃ³n local (.env.example sÃ­ se versiona)
+﻿node_modules/
+backend/node_modules/
 .env
-.env.*
-!.env.example
-keystore.properties
-
-# Dependencias
-node_modules/
-
-# Salidas de compilaciÃ³n y pruebas
-dist/
-build/
-coverage/
-
-# Logs
-*.log
-npm-debug.log*
-
-# Claves y certificados
-*.pem
-*.key
-*.p12
-*.jks
-*.keystore
-
-# Copias de seguridad de la base de datos
-*.dump
-*.bak
-
-# Editor y sistema operativo
-.idea/
-.DS_Store
-Thumbs.db
+backend/.env
