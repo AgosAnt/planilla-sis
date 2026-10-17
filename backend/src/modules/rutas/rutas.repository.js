@@ -1,61 +1,75 @@
-import pool from '../../config/db.js';
+// Todas las funciones reciben el client de la transacción abierta por conClaims.
 
-export const obtenerRegistros = async () => {
+const COLUMNAS = 'r.id, r.codigo, r.nombre, r.descripcion, r.supervisor_id, r.activa, r.creado_at';
+
+// Visibilidad por rol (D.4): administrador ve todas; supervisor, las que supervisa;
+// trabajador, las rutas donde tiene una asignación activa. $1 = rol, $2 = perfiles.id
+const VISIBLE_PARA = `
+  ($1 = 'administrador'
+   OR ($1 = 'supervisor' AND r.supervisor_id = $2)
+   OR ($1 = 'trabajador' AND EXISTS (
+         SELECT 1 FROM asignaciones_ruta a
+         WHERE a.ruta_id = r.id AND a.trabajador_id = $2 AND a.activa)))
+`;
+
+export const contarRutas = async (client, { rol, usuarioId }) => {
+  const query = `SELECT count(*)::int AS total FROM rutas r WHERE ${VISIBLE_PARA};`;
+  const { rows } = await client.query(query, [rol, usuarioId]);
+  return rows[0].total;
+};
+
+export const listarRutas = async (client, { rol, usuarioId, limite, desplazamiento }) => {
   const query = `
-    SELECT id_jornada, id_usuario, id_ruta, fecha, hora_entrada, hora_salida, estado 
-    FROM jornadas 
-    ORDER BY id_jornada DESC 
-    LIMIT 20;
+    SELECT ${COLUMNAS}
+    FROM rutas r
+    WHERE ${VISIBLE_PARA}
+    ORDER BY r.codigo
+    LIMIT $3 OFFSET $4;
   `;
-  const { rows } = await pool.query(query);
+  const { rows } = await client.query(query, [rol, usuarioId, limite, desplazamiento]);
   return rows;
 };
 
-export const buscarJornadaPorId = async (idJornada) => {
-  const query = `SELECT * FROM jornadas WHERE id_jornada = $1;`;
-  const { rows } = await pool.query(query, [parseInt(idJornada, 10)]);
+// bloquear = true para leer antes de un UPDATE dentro de la misma transacción.
+export const buscarRuta = async (client, { rol, usuarioId, rutaId, bloquear = false }) => {
+  const query = `
+    SELECT ${COLUMNAS}
+    FROM rutas r
+    WHERE r.id = $3 AND ${VISIBLE_PARA}
+    ${bloquear ? 'FOR UPDATE' : ''};
+  `;
+  const { rows } = await client.query(query, [rol, usuarioId, rutaId]);
   return rows[0];
 };
 
-export const buscarJornadaActivaPorUsuario = async (usuarioId) => {
+export const esSupervisorActivo = async (client, perfilId) => {
   const query = `
-    SELECT * FROM jornadas 
-    WHERE id_usuario = $1 AND estado = 'ACTIVA' 
-    LIMIT 1;
+    SELECT 1
+    FROM perfiles p
+    JOIN roles ro ON ro.id = p.rol_id
+    WHERE p.id = $1 AND p.activo AND ro.nombre = 'supervisor';
   `;
-  const { rows } = await pool.query(query, [parseInt(usuarioId, 10)]);
+  const { rowCount } = await client.query(query, [perfilId]);
+  return rowCount > 0;
+};
+
+export const crearRuta = async (client, { codigo, nombre, descripcion, supervisorId, activa }) => {
+  const query = `
+    INSERT INTO rutas (codigo, nombre, descripcion, supervisor_id, activa)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING id, codigo, nombre, descripcion, supervisor_id, activa, creado_at;
+  `;
+  const { rows } = await client.query(query, [codigo, nombre, descripcion, supervisorId, activa]);
   return rows[0];
 };
 
-export const crearIngreso = async (usuarioId) => {
+export const actualizarRuta = async (client, rutaId, { codigo, nombre, descripcion, supervisorId, activa }) => {
   const query = `
-    INSERT INTO jornadas (id_usuario, fecha, hora_entrada, estado)
-    VALUES ($1, CURRENT_DATE, CURRENT_TIMESTAMP, 'ACTIVA')
-    RETURNING id_jornada, id_usuario, fecha, hora_entrada, estado;
+    UPDATE rutas
+    SET codigo = $2, nombre = $3, descripcion = $4, supervisor_id = $5, activa = $6
+    WHERE id = $1
+    RETURNING id, codigo, nombre, descripcion, supervisor_id, activa, creado_at;
   `;
-  const { rows } = await pool.query(query, [parseInt(usuarioId, 10)]);
-  return rows[0];
-};
-
-export const registrarSalida = async (idJornada) => {
-  const query = `
-    UPDATE jornadas 
-    SET hora_salida = CURRENT_TIMESTAMP, 
-        estado = 'FINALIZADA'
-    WHERE id_jornada = $1
-    RETURNING id_jornada, id_usuario, id_ruta, fecha, hora_entrada, hora_salida, estado;
-  `;
-  const { rows } = await pool.query(query, [parseInt(idJornada, 10)]);
-  return rows[0];
-};
-
-export const actualizarRutaEnJornada = async (idJornada, idRuta) => {
-  const query = `
-    UPDATE jornadas 
-    SET id_ruta = $2
-    WHERE id_jornada = $1
-    RETURNING id_jornada, id_usuario, id_ruta, fecha, hora_entrada, hora_salida, estado;
-  `;
-  const { rows } = await pool.query(query, [parseInt(idJornada, 10), parseInt(idRuta, 10)]);
+  const { rows } = await client.query(query, [rutaId, codigo, nombre, descripcion, supervisorId, activa]);
   return rows[0];
 };
