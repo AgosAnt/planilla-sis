@@ -42,19 +42,6 @@ export const cerrarSesion = async (req, res, next) => {
   }
 };
 
-// B.4: el token CSRF vive solo en memoria de la web; al recargar la página se rehidrata desde aquí.
-// Otro sitio no puede leer esta respuesta (política de mismo origen), así que no sirve para un ataque CSRF.
-export const obtenerCsrf = async (req, res, next) => {
-  try {
-    if (!req.usuario.sesionId) {
-      throw crearError(401, 'TOKEN_INVALIDO', 'La sesión no tiene identificador; vuelve a iniciar sesión.');
-    }
-    return res.status(200).json({ csrf_token: generarTokenCsrf(req.usuario.sesionId) });
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const obtenerPerfil = async (req, res, next) => {
   try {
     const usuario = await authService.obtenerPerfil(req.usuario.id);

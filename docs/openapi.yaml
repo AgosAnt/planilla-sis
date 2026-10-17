@@ -101,30 +101,6 @@ paths:
           description: Operación exitosa
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /auth/csrf:
-    get:
-      tags:
-      - Autenticación
-      operationId: obtenerCsrf
-      summary: Obtener el token CSRF de la sesión web
-      description: 'B.4: la web guarda el token CSRF solo en memoria; al recargar la página lo rehidrata con este endpoint.
-        Otro origen no puede leer la respuesta, así que no habilita ataques CSRF.'
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          description: Operación exitosa
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  csrf_token:
-                    type: string
-                required:
-                - csrf_token
-        '401':
-          $ref: '#/components/responses/Unauthorized'
   /auth/reauth:
     post:
       tags:
