@@ -3,12 +3,13 @@ export const crearError = (status, code, mensaje) => {
   const error = new Error(mensaje);
   error.status = status;
   error.code = code;
+  error.publico = true; // mensaje pensado para el cliente, aunque el status sea 5xx (ej. 501)
   return error;
 };
 
 export const errorHandler = (err, req, res, next) => {
   const status = err.status || 500;
-  const interno = status >= 500;
+  const interno = status >= 500 && !err.publico;
 
   // Los errores internos (BD, bugs) se registran en el servidor y no se exponen al cliente.
   if (interno) {
