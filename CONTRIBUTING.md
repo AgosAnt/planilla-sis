@@ -119,10 +119,25 @@ Ejemplos:
 
 ## 8. Primeros pasos (backend)
 
-1. Actualiza tu copia: `git checkout develop` y `git pull origin develop`.
-2. Instala las dependencias: entra a `backend/` y ejecuta `npm install`.
-3. Copia `backend/.env.example` a `backend/.env`.
-4. Edita `backend/.env` y completa `DATABASE_URL` con los datos de **tu base local**.
-5. Arranca el servidor desde `backend/` con `node index.js`. En `http://localhost:3000` debe aparecer "Servidor funcionando".
+### 8.1 Base de datos local
 
-Si falta `DATABASE_URL`, el servidor se detiene con un mensaje de error: es lo esperado.
+1. Crea una base vacía en tu PostgreSQL (por ejemplo `planilla_sis_dev`, desde pgAdmin o con `createdb`).
+2. Aplica las migraciones M002 a M008 en orden, con un usuario administrador. Ver `Database/migrations/README.md`.
+3. Asigna una contraseña local a `app_user`: `ALTER ROLE app_user WITH PASSWORD '...';`
+4. Carga los datos de prueba con una contraseña de al menos 12 caracteres para los usuarios de prueba:
+   `psql -v ON_ERROR_STOP=1 -v password='...' -1 -d planilla_sis_dev -f Database/seeds/S001_datos_desarrollo.sql`
+   Crea `admin@local.test`, `supervisor@local.test` y `trabajador@local.test`.
+
+### 8.2 Backend
+
+1. Actualiza tu copia: `git checkout develop` y `git pull origin develop`.
+2. Instala las dependencias: entra a `backend/` y ejecuta `npm ci` (instala exactamente las versiones de `package-lock.json`).
+3. Copia `backend/.env.example` a `backend/.env`.
+4. Completa `backend/.env`:
+   - `DATABASE_URL`: tu base local conectando como **`app_user`**, no como `postgres` (un superusuario se salta la RLS y no pruebas lo real).
+   - `JWT_SECRET`: genera el tuyo con `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`. **No se comparte**: cada integrante tiene su propia base y su propio secreto.
+   - `JWT_ISSUER=planilla-sis` y `JWT_AUDIENCE=planilla-sis-api` (iguales para todo el equipo; no son secretos).
+5. Arranca el servidor desde `backend/` con `node index.js`. En la consola debe aparecer "Servidor corriendo en http://localhost:3000".
+6. Prueba el login: `POST http://localhost:3000/api/v1/auth/session` con `{"email": "trabajador@local.test", "password": "<la del paso 8.1.4>"}`.
+
+Si falta `DATABASE_URL` o alguna variable `JWT_*`, el servidor se detiene con un mensaje de error: es lo esperado.
