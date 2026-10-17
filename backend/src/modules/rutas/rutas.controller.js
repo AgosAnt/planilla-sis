@@ -1,25 +1,37 @@
 import * as rutasService from './rutas.service.js';
 
-export const obtenerRutas = async (req, res) => {
+export const obtenerRutas = async (req, res, next) => {
   try {
-    const rutas = await rutasService.listarRutas();
-    res.status(200).json(rutas);
+    const pagina = await rutasService.listarRutas(req.usuario, req.paginacion);
+    res.status(200).json(pagina);
   } catch (error) {
-    console.error('[Error obtenerRutas]:', error);
-    res.status(500).json({ error: 'Error al consultar rutas', detalle: error.message });
+    next(error);
   }
 };
 
-export const crearRuta = async (req, res) => {
+export const obtenerRuta = async (req, res, next) => {
   try {
-    const nuevaRuta = await rutasService.crearRuta(req.body);
+    const ruta = await rutasService.obtenerRuta(req.usuario, req.params.rutaId);
+    res.status(200).json(ruta);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const crearRuta = async (req, res, next) => {
+  try {
+    const nuevaRuta = await rutasService.crearRuta(req.usuario, req.body);
     res.status(201).json(nuevaRuta);
   } catch (error) {
-    console.error('[Error crearRuta]:', error);
-    const status = error.status || 500;
-    res.status(status).json({ 
-      error: 'Error al crear la ruta', 
-      detalle: error.message 
-    });
+    next(error);
+  }
+};
+
+export const actualizarRuta = async (req, res, next) => {
+  try {
+    const ruta = await rutasService.actualizarRuta(req.usuario, req.params.rutaId, req.body);
+    res.status(200).json(ruta);
+  } catch (error) {
+    next(error);
   }
 };
