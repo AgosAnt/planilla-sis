@@ -333,6 +333,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DescansoResponse'
+        '200':
+          description: Reintento idéntico (mismo client_uuid); se devuelve el recurso original (idempotencia)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescansoResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
