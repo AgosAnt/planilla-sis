@@ -1074,7 +1074,8 @@ paths:
       security:
       - cookieAuth: []
       - bearerAuth: []
-      description: '[PROPUESTA] Confirmar contra paquete de cinco endpoints aprobado.'
+      description: 'Cada rol ve solo lo suyo (D.4): administrador todas; supervisor las que supervisa; trabajador
+        las rutas con una asignación activa propia. Ordenado por codigo.'
       parameters:
       - $ref: '#/components/parameters/Page'
       - $ref: '#/components/parameters/PageSize'
@@ -1105,7 +1106,8 @@ paths:
       security:
       - cookieAuth: []
         csrfToken: []
-      description: '[PROPUESTA] Confirmar autorización y campos contra M003.'
+      description: 'Administrador o supervisor (C.2). Un supervisor solo crea rutas a su cargo: si omite supervisor_id
+        queda como supervisor, y otro valor responde 403. supervisor_id debe ser un supervisor activo (422).'
       requestBody:
         required: true
         content:
@@ -1140,7 +1142,7 @@ paths:
       security:
       - cookieAuth: []
       - bearerAuth: []
-      description: '[PROPUESTA]'
+      description: 'Misma visibilidad que el listado; una ruta no visible para el rol responde 404.'
       parameters:
       - name: rutaId
         in: path
@@ -1173,7 +1175,8 @@ paths:
       security:
       - cookieAuth: []
         csrfToken: []
-      description: '[PROPUESTA]'
+      description: 'Administrador o supervisor dueño de la ruta (ruta ajena: 404). Solo cambia los campos enviados;
+        la baja es lógica con activa=false. Un supervisor no puede reasignar la ruta a otro supervisor (403).'
       parameters:
       - name: rutaId
         in: path
