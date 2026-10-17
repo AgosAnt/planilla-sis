@@ -59,8 +59,8 @@ export const autenticarToken = (req, res, next) => {
     });
   }
 
-  // 4. Inyectar la identidad en la request (sub = perfiles.id)
-  req.usuario = { id: decodificado.sub, email: decodificado.email, rol: decodificado.rol };
+  // 4. Inyectar la identidad en la request (sub = perfiles.id; jti = id de la sesión, base del CSRF)
+  req.usuario = { id: decodificado.sub, email: decodificado.email, rol: decodificado.rol, sesionId: decodificado.jti };
 
   // 5. Continuar con el siguiente middleware o controlador
   next();
