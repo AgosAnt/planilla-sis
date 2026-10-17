@@ -1615,11 +1615,19 @@ components:
           $ref: '#/components/schemas/Rol'
         codigo_empleado:
           type: string
+          maxLength: 50
+        documento:
+          type: string
+          maxLength: 50
       required:
       - email
       - nombres
       - apellidos
       - rol
+      - codigo_empleado
+      - documento
+      description: 'codigo_empleado y documento son obligatorios y únicos (perfiles, M002). El correo se guarda en
+        minúsculas. 409 con code EMAIL_DUPLICADO, CODIGO_EMPLEADO_DUPLICADO o DOCUMENTO_DUPLICADO.'
     UsuarioCreado:
       type: object
       properties:

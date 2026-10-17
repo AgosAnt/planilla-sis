@@ -9,6 +9,7 @@ import rutasRoutes from './modules/rutas/rutas.routes.js';
 import planillasRoutes from './modules/planillas/planillas.routes.js';
 import eventosDescansoRoutes from './modules/eventos_descanso/eventos_descanso.routes.js';
 import eventosRutaRoutes from './modules/eventos_ruta/eventos_ruta.routes.js';
+import usuariosRoutes from './modules/usuarios/usuarios.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { cabecerasSeguridad, cabecerasWeb, origenesPermitidos } from './middlewares/seguridad.js';
 
@@ -42,6 +43,7 @@ app.use(express.json());
 // Rutas específicas primero
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/me', perfilRouter);
+app.use('/api/v1/admin/usuarios', usuariosRoutes);
 app.use('/api/v1/registros-tiempo/:id/descansos', eventosDescansoRoutes);
 app.use('/api/v1/registros-tiempo', registrosRoutes);
 app.use('/api/v1/rutas', rutasRoutes);
