@@ -3,7 +3,6 @@ import authRoutes from './modules/auth/auth.routes.js';
 import registrosRoutes from './modules/registros/registros.routes.js';
 import rutasRoutes from './modules/rutas/rutas.routes.js';
 import planillasRoutes from './modules/planillas/planillas.routes.js';
-import eventosRoutes from './modules/eventos/eventos.routes.js'; // <- Importar eventos
 import eventosDescansoRoutes from './modules/eventos_descanso/eventos_descanso.routes.js';
 import eventosRutaRoutes from './modules/eventos_ruta/eventos_ruta.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
@@ -22,7 +21,6 @@ app.use('/api/v1/registros-tiempo', registrosRoutes);
 app.use('/api/v1/rutas', rutasRoutes);
 app.use('/api/v1/planillas', planillasRoutes);
 app.use('/api/v1/eventos\\:batch', eventosRutaRoutes);
-app.use('/api/v1/eventos', eventosRoutes); // <- Registrar ruta de eventos
 
 // Ruta base/general al final
 app.use('/api/v1', authRoutes); // Para endpoint GET /api/v1/me
