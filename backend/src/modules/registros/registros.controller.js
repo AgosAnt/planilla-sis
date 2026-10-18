@@ -1,52 +1,35 @@
 import * as registrosService from './registros.service.js';
-import { crearError } from '../../middlewares/errorHandler.js';
-
-// Los errores pasan a errorHandler: problem+json y sin detalles internos en los 500.
 
 export const obtenerRegistros = async (req, res, next) => {
   try {
-    const registros = await registrosService.listarRegistros();
-    res.status(200).json(registros);
+    const pagina = await registrosService.listarRegistros(req.usuario, req.filtros, req.paginacion);
+    res.status(200).json(pagina);
   } catch (error) {
     next(error);
   }
 };
 
-export const crearRegistro = async (req, res, next) => {
+export const registrarIngreso = async (req, res, next) => {
   try {
-    const { usuarioId } = req.body;
-
-    if (!usuarioId) {
-      throw crearError(400, 'VALIDACION', 'Falta el campo usuarioId en el body');
-    }
-
-    const nuevoRegistro = await registrosService.registrarIngreso(usuarioId);
-    res.status(201).json(nuevoRegistro);
+    const { registro, creado } = await registrosService.registrarIngreso(req.usuario, req.body);
+    res.status(creado ? 201 : 200).json(registro);
   } catch (error) {
     next(error);
   }
 };
 
-export const marcarSalida = async (req, res, next) => {
+export const registrarSalida = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const registro = await registrosService.registrarSalida(id);
+    const registro = await registrosService.registrarSalida(req.usuario, req.params.id, req.body);
     res.status(200).json(registro);
   } catch (error) {
     next(error);
   }
 };
 
-export const asignarRuta = async (req, res, next) => {
+export const validarRegistro = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { rutaId } = req.body;
-
-    if (!rutaId) {
-      throw crearError(400, 'VALIDACION', 'Falta el campo rutaId en el body');
-    }
-
-    const registro = await registrosService.asignarRutaAJornada(id, rutaId);
+    const registro = await registrosService.validarRegistro(req.usuario, req.params.id, req.body);
     res.status(200).json(registro);
   } catch (error) {
     next(error);
