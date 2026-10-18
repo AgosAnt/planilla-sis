@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { conClaims } from '../../config/db.js';
 import { crearError } from '../../middlewares/errorHandler.js';
 import * as usuariosRepo from './usuarios.repository.js';
+import { registrarAuditoria } from '../auditoria/auditoria.repository.js';
 
 // Restricciones UNIQUE de perfiles (M002) -> código de conflicto para el cliente
 const DUPLICADOS = {
@@ -42,7 +43,7 @@ export const crearUsuario = (admin, datos) =>
       throw error;
     }
 
-    await usuariosRepo.registrarAuditoria(client, {
+    await registrarAuditoria(client, {
       actor: admin,
       entidad: 'perfiles',
       entidadId: perfil.id,
