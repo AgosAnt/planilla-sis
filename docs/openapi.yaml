@@ -244,8 +244,12 @@ paths:
       - Registros de tiempo
       operationId: listarRegistrosTiempo
       summary: Listar registros
+      description: 'Cada rol ve solo lo suyo (C.2): administrador todos; supervisor los de trabajadores con asignación
+        activa en una ruta suya; trabajador los propios (CU-13, también desde el móvil con Bearer). desde y hasta son
+        fechas de calendario en la zona de operación (America/Guatemala). Ordenado por ingreso_at descendente.'
       security:
       - cookieAuth: []
+      - bearerAuth: []
       parameters:
       - $ref: '#/components/parameters/Page'
       - $ref: '#/components/parameters/PageSize'
@@ -295,6 +299,11 @@ paths:
       - Registros de tiempo
       operationId: registrarIngreso
       summary: Registrar ingreso
+      description: 'Solo rol trabajador. 422 ASIGNACION_NO_ACTIVA si la asignación no es propia, activa y vigente en la
+        fecha local; 409 REGISTRO_ABIERTO si ya hay un ingreso sin salida; 422 SOLAPA_JORNADA_ANTERIOR si es anterior a
+        la última salida; 422 FECHA_FUTURA si ingreso_at está más de 5 min adelantado; 409 CLIENT_UUID_REUTILIZADO si el
+        client_uuid ya se usó con otros datos. turno se incluye si hay acuerdo ACEPTADO o CONFIRMADO para esa fecha;
+        dentro_de_geocerca solo si se envía ubicacion y la ruta tiene puntos.'
       security:
       - bearerAuth: []
       parameters:
@@ -381,6 +390,9 @@ paths:
       - Registros de tiempo
       operationId: registrarSalida
       summary: Registrar salida
+      description: 'Solo el trabajador dueño (otro: 404). Un reintento con la misma salida_at devuelve 200; otra hora,
+        409 SALIDA_YA_REGISTRADA. 409 ESTADO_INVALIDO si el registro ya fue validado; 422 RANGO_INVALIDO si no es
+        posterior al ingreso; 422 DESCANSO_POSTERIOR_A_SALIDA si un descanso termina después; 422 FECHA_FUTURA.'
       security:
       - bearerAuth: []
       parameters:
@@ -420,6 +432,9 @@ paths:
       - Registros de tiempo
       operationId: validarRegistroTiempo
       summary: Validar o rechazar registro
+      description: 'Supervisor del trabajador o administrador (otro supervisor: 404). 409 REGISTRO_ABIERTO si la jornada
+        no tiene salida; 409 ESTADO_INVALIDO si no está PENDIENTE o CORREGIDA; 422 OBSERVACIONES_REQUERIDAS al rechazar
+        sin motivo. Registra APROBAR o RECHAZAR en auditoria.'
       security:
       - cookieAuth: []
         csrfToken: []
