@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router'
-import { RutaProtegida } from '@/componentes/RutaProtegida'
+import { RutaProtegida } from '@/components/RutaProtegida'
 import { AccesoDenegado } from '@/paginas/AccesoDenegado'
 import { Login } from '@/paginas/Login'
 import { NoEncontrada } from '@/paginas/NoEncontrada'
