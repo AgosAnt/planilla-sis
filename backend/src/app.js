@@ -1,6 +1,7 @@
 import express from 'express';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import authRoutes, { perfilRouter } from './modules/auth/auth.routes.js';
@@ -13,8 +14,12 @@ import usuariosRoutes from './modules/usuarios/usuarios.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { cabecerasSeguridad, cabecerasWeb, origenesPermitidos } from './middlewares/seguridad.js';
 
-// Web (prototipo en planilla-sis/web). Mismo origen que la API: la cookie de sesión funciona sin CORS.
-const WEB_DIR = fileURLToPath(new URL('../../web', import.meta.url));
+// Web: mismo origen que la API, así la cookie de sesión funciona sin CORS.
+// Se sirve la compilación de React (web/dist) si existe; si no, el prototipo (web-prototipo)
+// para que la demostración nunca quede en blanco. La elección se hace al arrancar el servidor.
+const WEB_DIST = fileURLToPath(new URL('../../web/dist', import.meta.url));
+const WEB_PROTOTIPO = fileURLToPath(new URL('../../web-prototipo', import.meta.url));
+const WEB_DIR = existsSync(join(WEB_DIST, 'index.html')) ? WEB_DIST : WEB_PROTOTIPO;
 
 const app = express();
 
@@ -64,6 +69,7 @@ app.use('/api', (req, res) => {
 
 // Archivos de la web y fallback a index.html para los deep links de la History API (B.3)
 if (existsSync(WEB_DIR)) {
+  console.log(`[planilla-sis] Web servida desde ${WEB_DIR}`);
   app.use(cabecerasWeb);
   app.use(express.static(WEB_DIR));
   app.get('*', (req, res) => res.sendFile('index.html', { root: WEB_DIR }));
