@@ -10,7 +10,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.security.GeneralSecurityException;
@@ -126,14 +125,9 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NonNull Call<JsonObject> call, @NonNull Response<JsonObject> response) {
                 DatabaseHelper cola = new DatabaseHelper(LoginActivity.this);
-                if (response.isSuccessful() && response.body() != null && cola.jornadaAbierta(perfil.id) == null) {
-                    for (JsonElement elemento : response.body().getAsJsonArray("items")) {
-                        JsonObject registro = elemento.getAsJsonObject();
-                        if (registro.get("salida_at").isJsonNull()) {
-                            cola.registrarJornadaDelServidor(perfil.id, registro.get("id").getAsString());
-                            break;
-                        }
-                    }
+                String registroId = response.isSuccessful() ? ClasificadorRespuesta.jornadaAbierta(response.body()) : null;
+                if (registroId != null && cola.jornadaAbierta(perfil.id) == null) {
+                    cola.registrarJornadaDelServidor(perfil.id, registroId);
                 }
                 abrirPrincipal();
             }

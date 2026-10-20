@@ -2,6 +2,7 @@ package com.planillasis.app;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assume.assumeTrue;
 
 import com.google.gson.JsonArray;
@@ -9,7 +10,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import org.junit.Before;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -22,6 +25,7 @@ import retrofit2.Response;
 // Prueba el ApiService de la app contra un backend real (rutas, cabeceras y cuerpos del contrato).
 // Se omite si no se definen PLANILLA_API, PLANILLA_EMAIL y PLANILLA_PASS. Usa un trabajador con
 // asignación activa (por ejemplo trabajador@local.test del seed S001) y deja una jornada completa.
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ApiIntegracionTest {
 
     private ApiService api;
@@ -115,10 +119,51 @@ public class ApiIntegracionTest {
         assertEquals("PENDIENTE", fin.body().get("estado_validacion").getAsString());
     }
 
+    // Prueba de rechazo: el teléfono marcó la entrada sin conexión y, mientras tanto, la jornada se abrió
+    // desde otro equipo. Al sincronizar, la entrada del teléfono se rechaza y la app recupera la otra.
+    // Corre después de jornadaCompletaComoLaApp (orden por nombre) y usa horas posteriores a su salida.
+    @Test
+    public void rechazoSiLaJornadaSeAbrioEnOtroEquipo() throws Exception {
+        Perfil perfil = api.perfil().execute().body();
+        assertNotNull(perfil.asignacionActiva);
+
+        // Otro equipo (por ejemplo Postman) abre la jornada primero
+        Response<JsonObject> otroEquipo = api.ingreso(uuid(), ingreso(perfil, hace(4))).execute();
+        assertEquals(201, otroEquipo.code());
+        String jornadaDelServidor = otroEquipo.body().get("id").getAsString();
+
+        // Llega la entrada que el teléfono tenía en cola: rechazada, no enviada, y con su código
+        JsonObject delTelefono = ingreso(perfil, hace(3));
+        Response<JsonObject> rechazo = api.ingreso(delTelefono.get("client_uuid").getAsString(), delTelefono).execute();
+        assertEquals(ClasificadorRespuesta.Resultado.RECHAZADO, ClasificadorRespuesta.clasificar(rechazo.code()));
+        assertEquals("REGISTRO_ABIERTO", ClasificadorRespuesta.problema(rechazo.errorBody().string())[0]);
+
+        // La app recupera la jornada abierta del servidor (Sincronizador.recuperarJornadaAbierta)
+        assertEquals(jornadaDelServidor, ClasificadorRespuesta.jornadaAbierta(api.registros(5).execute().body()));
+
+        // La salida que marca el trabajador después va a esa jornada
+        JsonObject salida = new JsonObject();
+        salida.addProperty("salida_at", hace(1));
+        assertEquals(200, api.salida(jornadaDelServidor, uuid(), salida).execute().code());
+        assertNull(ClasificadorRespuesta.jornadaAbierta(api.registros(5).execute().body()));
+    }
+
     @Test
     public void sinTokenElServidorPideLogin() throws Exception {
         token = null;
         assertEquals(ClasificadorRespuesta.Resultado.REQUIERE_LOGIN, ClasificadorRespuesta.clasificar(api.perfil().execute().code()));
+    }
+
+    private static JsonObject ingreso(Perfil perfil, String ingresoAt) {
+        JsonObject ingreso = new JsonObject();
+        ingreso.addProperty("client_uuid", uuid());
+        ingreso.addProperty("asignacion_id", perfil.asignacionActiva.id);
+        ingreso.addProperty("ingreso_at", ingresoAt);
+        JsonObject ubicacion = new JsonObject();
+        ubicacion.addProperty("lat", 14.6349);
+        ubicacion.addProperty("lng", -90.5069);
+        ingreso.add("ubicacion", ubicacion);
+        return ingreso;
     }
 
     private static String uuid() {

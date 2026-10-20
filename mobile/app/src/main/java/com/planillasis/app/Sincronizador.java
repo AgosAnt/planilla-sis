@@ -158,14 +158,9 @@ public final class Sincronizador {
     private static void recuperarJornadaAbierta(DatabaseHelper cola, ApiService api, String trabajadorId) throws IOException {
         if (cola.jornadaAbierta(trabajadorId) != null) return;
         Response<JsonObject> respuesta = api.registros(5).execute();
-        if (!respuesta.isSuccessful() || respuesta.body() == null) return;
-        for (JsonElement elemento : respuesta.body().getAsJsonArray("items")) {
-            JsonObject registro = elemento.getAsJsonObject();
-            if (registro.get("salida_at").isJsonNull()) {
-                cola.registrarJornadaDelServidor(trabajadorId, registro.get("id").getAsString());
-                return;
-            }
-        }
+        if (!respuesta.isSuccessful()) return;
+        String registroId = ClasificadorRespuesta.jornadaAbierta(respuesta.body());
+        if (registroId != null) cola.registrarJornadaDelServidor(trabajadorId, registroId);
     }
 
     private static ClasificadorRespuesta.Resultado registrarEvento(DatabaseHelper cola, DatabaseHelper.ItemCola item,

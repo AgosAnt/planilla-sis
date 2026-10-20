@@ -3,6 +3,9 @@ package com.planillasis.app;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
 import org.junit.Test;
 
 public class ClasificadorRespuestaTest {
@@ -50,6 +53,17 @@ public class ClasificadorRespuestaTest {
         assertEquals("Ya tienes un ingreso sin salida", problema[1]);
         assertNull(ClasificadorRespuesta.problema("<html>error</html>"));
         assertNull(ClasificadorRespuesta.problema(null));
+    }
+
+    @Test
+    public void encuentraLaJornadaAbierta() {
+        JsonObject registros = new Gson().fromJson("{\"items\":["
+                + "{\"id\":\"b2\",\"salida_at\":null},"
+                + "{\"id\":\"a1\",\"salida_at\":\"2026-10-19T23:00:00.000Z\"}]}", JsonObject.class);
+        assertEquals("b2", ClasificadorRespuesta.jornadaAbierta(registros));
+        assertNull(ClasificadorRespuesta.jornadaAbierta(new Gson().fromJson(
+                "{\"items\":[{\"id\":\"a1\",\"salida_at\":\"2026-10-19T23:00:00.000Z\"}]}", JsonObject.class)));
+        assertNull(ClasificadorRespuesta.jornadaAbierta(null));
     }
 
     @Test

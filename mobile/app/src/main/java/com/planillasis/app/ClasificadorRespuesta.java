@@ -1,6 +1,7 @@
 package com.planillasis.app;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 // Decide qué hacer con cada respuesta de la API al sincronizar la cola (sin dependencias de Android,
@@ -30,6 +31,18 @@ public final class ClasificadorRespuesta {
         if ("CREADO".equals(estado) || "DUPLICADO".equals(estado)) return Resultado.ENVIADO;
         if ("RECHAZADO".equals(estado)) return Resultado.RECHAZADO;
         return Resultado.REINTENTAR;
+    }
+
+    // De la respuesta de GET /registros-tiempo, el id de la jornada sin salida; null si no hay
+    public static String jornadaAbierta(JsonObject respuestaRegistros) {
+        if (respuestaRegistros == null || !respuestaRegistros.has("items")) return null;
+        for (JsonElement elemento : respuestaRegistros.getAsJsonArray("items")) {
+            JsonObject registro = elemento.getAsJsonObject();
+            if (registro.has("salida_at") && registro.get("salida_at").isJsonNull()) {
+                return registro.get("id").getAsString();
+            }
+        }
+        return null;
     }
 
     // Lee code y detail de un application/problem+json; null si el cuerpo no lo es
