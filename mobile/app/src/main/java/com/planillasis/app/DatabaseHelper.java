@@ -2,23 +2,44 @@ package com.planillasis.app;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.database.Cursor;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
+
+// Cola local (offline-first): cada marca se guarda primero aquí y se envía al servidor de la oficina
+// cuando hay conexión, de a una y en orden (Sincronizador). Versión 2: la tabla "registros" de la
+// versión 1 no se borra, pero ya no se usa (su endpoint /api/registros dejó de existir).
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "PlanillaLocal.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
-    // Nombre de la tabla y columnas
-    public static final String TABLE_REGISTROS = "registros";
-    public static final String COL_ID = "id";
-    public static final String COL_TIPO = "tipo_registro"; // ENTRADA, SALIDA, EMERGENCIA
-    public static final String COL_FECHA = "fecha_hora";
-    public static final String COL_LATITUD = "latitud";
-    public static final String COL_LONGITUD = "longitud";
-    public static final String COL_SINCRONIZADO = "sincronizado"; // 0 = Offline, 1 = Enviado
+    public static final String TIPO_INGRESO = "INGRESO";
+    public static final String TIPO_SALIDA = "SALIDA";
+    public static final String TIPO_DESCANSO = "DESCANSO";
+    public static final String TIPO_EVENTO = "EVENTO";
+
+    public static final String PENDIENTE = "PENDIENTE";
+    public static final String ENVIADO = "ENVIADO";
+    public static final String RECHAZADO = "RECHAZADO";
+
+    private static final String CREAR_COLA = "CREATE TABLE IF NOT EXISTS cola (" +
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            "trabajador_id TEXT NOT NULL, " +           // dueño de la marca: solo la envía su propia sesión
+            "tipo TEXT NOT NULL, " +                    // INGRESO, SALIDA, DESCANSO o EVENTO
+            "client_uuid TEXT NOT NULL UNIQUE, " +      // idempotencia: también va como Idempotency-Key
+            "cuerpo TEXT NOT NULL, " +                  // JSON listo para enviar
+            "ingreso_local_id INTEGER, " +              // fila INGRESO de la que depende (salida, descanso, evento)
+            "registro_servidor_id TEXT, " +             // id del registro de tiempo en el servidor
+            "estado TEXT NOT NULL DEFAULT 'PENDIENTE', " +
+            "codigo_error TEXT, detalle_error TEXT, " +
+            "intentos INTEGER NOT NULL DEFAULT 0, " +
+            "creado_at TEXT NOT NULL)";
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -26,64 +47,119 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        // Crear la tabla local
-        String createTable = "CREATE TABLE " + TABLE_REGISTROS + " (" +
-                COL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                COL_TIPO + " TEXT, " +
-                COL_FECHA + " TEXT, " +
-                COL_LATITUD + " REAL, " +
-                COL_LONGITUD + " REAL, " +
-                COL_SINCRONIZADO + " INTEGER DEFAULT 0)";
-        db.execSQL(createTable);
+        db.execSQL(CREAR_COLA);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_REGISTROS);
-        onCreate(db);
+        if (oldVersion < 2) db.execSQL(CREAR_COLA);
     }
 
-    // Método para guardar un registro
-    public boolean insertarRegistro(String tipo, String fecha, double lat, double lon) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(COL_TIPO, tipo);
-        contentValues.put(COL_FECHA, fecha);
-        contentValues.put(COL_LATITUD, lat);
-        contentValues.put(COL_LONGITUD, lon);
-
-        long result = db.insert(TABLE_REGISTROS, null, contentValues);
-        return result != -1; // Retorna true si se guardó correctamente
+    public static class ItemCola {
+        public long id;
+        public String tipo;
+        public String clientUuid;
+        public String cuerpo;
+        public Long ingresoLocalId;
+        public String registroServidorId;
+        public String estado;
+        public String detalleError;
     }
 
-    // Método para obtener los registros que aún no se han enviado (Modo Offline)
-    public Cursor obtenerRegistrosPendientes() {
-        SQLiteDatabase db = this.getReadableDatabase();
-        // Busca todos los registros donde la columna SINCRONIZADO sea igual a 0
-        return db.rawQuery("SELECT * FROM " + TABLE_REGISTROS + " WHERE " + COL_SINCRONIZADO + " = 0", null);
+    public long encolar(String trabajadorId, String tipo, String clientUuid, String cuerpo,
+                        Long ingresoLocalId, String registroServidorId) {
+        ContentValues valores = new ContentValues();
+        valores.put("trabajador_id", trabajadorId);
+        valores.put("tipo", tipo);
+        valores.put("client_uuid", clientUuid);
+        valores.put("cuerpo", cuerpo);
+        if (ingresoLocalId != null) valores.put("ingreso_local_id", ingresoLocalId);
+        if (registroServidorId != null) valores.put("registro_servidor_id", registroServidorId);
+        valores.put("creado_at", ahora());
+        return getWritableDatabase().insert("cola", null, valores);
     }
 
-    // Método para marcar un registro como enviado y que no se vuelva a enviar
-    public void marcarComoSincronizado(int id) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(COL_SINCRONIZADO, 1);
-        db.update(TABLE_REGISTROS, values, COL_ID + " = ?", new String[]{String.valueOf(id)});
+    // La jornada se abrió en el servidor sin una fila local (reinstalación u otro teléfono): se agrega
+    // como INGRESO ya enviado para que la salida y los descansos sepan a qué registro van.
+    public long registrarJornadaDelServidor(String trabajadorId, String registroServidorId) {
+        ContentValues valores = new ContentValues();
+        valores.put("trabajador_id", trabajadorId);
+        valores.put("tipo", TIPO_INGRESO);
+        valores.put("client_uuid", "servidor-" + registroServidorId);
+        valores.put("cuerpo", "{}");
+        valores.put("registro_servidor_id", registroServidorId);
+        valores.put("estado", ENVIADO);
+        valores.put("creado_at", ahora());
+        return getWritableDatabase().insertWithOnConflict("cola", null, valores, SQLiteDatabase.CONFLICT_IGNORE);
     }
 
-    // Devuelve el tipo del último registro (ENTRADA o SALIDA), ignorando emergencias
-    public String obtenerUltimoEstado() {
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery(
-                "SELECT " + COL_TIPO + " FROM " + TABLE_REGISTROS +
-                        " WHERE " + COL_TIPO + " != 'EMERGENCIA'" +
-                        " ORDER BY " + COL_ID + " DESC LIMIT 1", null);
+    public ItemCola siguientePendiente(String trabajadorId) {
+        return uno("SELECT * FROM cola WHERE trabajador_id = ? AND estado = ? ORDER BY id LIMIT 1",
+                trabajadorId, PENDIENTE);
+    }
 
-        String ultimoTipo = null;
-        if (cursor != null && cursor.moveToFirst()) {
-            ultimoTipo = cursor.getString(cursor.getColumnIndex(COL_TIPO));
+    // Último INGRESO no rechazado sin una SALIDA posterior no rechazada: la jornada abierta
+    public ItemCola jornadaAbierta(String trabajadorId) {
+        ItemCola ultimo = uno("SELECT * FROM cola WHERE trabajador_id = ? AND tipo IN (?, ?) AND estado <> ? " +
+                "ORDER BY id DESC LIMIT 1", trabajadorId, TIPO_INGRESO, TIPO_SALIDA, RECHAZADO);
+        return ultimo != null && TIPO_INGRESO.equals(ultimo.tipo) ? ultimo : null;
+    }
+
+    public ItemCola porId(long id) {
+        return uno("SELECT * FROM cola WHERE id = ?", String.valueOf(id));
+    }
+
+    public ItemCola ultimoRechazado(String trabajadorId) {
+        return uno("SELECT * FROM cola WHERE trabajador_id = ? AND estado = ? ORDER BY id DESC LIMIT 1",
+                trabajadorId, RECHAZADO);
+    }
+
+    public int contar(String trabajadorId, String estado) {
+        try (Cursor c = getReadableDatabase().rawQuery(
+                "SELECT count(*) FROM cola WHERE trabajador_id = ? AND estado = ?", new String[] { trabajadorId, estado })) {
+            return c.moveToFirst() ? c.getInt(0) : 0;
         }
-        if (cursor != null) cursor.close();
-        return ultimoTipo; // "ENTRADA", "SALIDA", o null si nunca ha marcado nada
+    }
+
+    public void marcarEnviado(long id, String registroServidorId) {
+        ContentValues valores = new ContentValues();
+        valores.put("estado", ENVIADO);
+        if (registroServidorId != null) valores.put("registro_servidor_id", registroServidorId);
+        getWritableDatabase().update("cola", valores, "id = ?", new String[] { String.valueOf(id) });
+    }
+
+    public void marcarRechazado(long id, String codigo, String detalle) {
+        ContentValues valores = new ContentValues();
+        valores.put("estado", RECHAZADO);
+        valores.put("codigo_error", codigo);
+        valores.put("detalle_error", detalle);
+        getWritableDatabase().update("cola", valores, "id = ?", new String[] { String.valueOf(id) });
+    }
+
+    public void sumarIntento(long id) {
+        getWritableDatabase().execSQL("UPDATE cola SET intentos = intentos + 1 WHERE id = ?", new Object[] { id });
+    }
+
+    private ItemCola uno(String sql, String... argumentos) {
+        try (Cursor c = getReadableDatabase().rawQuery(sql, argumentos)) {
+            if (!c.moveToFirst()) return null;
+            ItemCola item = new ItemCola();
+            item.id = c.getLong(c.getColumnIndexOrThrow("id"));
+            item.tipo = c.getString(c.getColumnIndexOrThrow("tipo"));
+            item.clientUuid = c.getString(c.getColumnIndexOrThrow("client_uuid"));
+            item.cuerpo = c.getString(c.getColumnIndexOrThrow("cuerpo"));
+            int ingreso = c.getColumnIndexOrThrow("ingreso_local_id");
+            item.ingresoLocalId = c.isNull(ingreso) ? null : c.getLong(ingreso);
+            item.registroServidorId = c.getString(c.getColumnIndexOrThrow("registro_servidor_id"));
+            item.estado = c.getString(c.getColumnIndexOrThrow("estado"));
+            item.detalleError = c.getString(c.getColumnIndexOrThrow("detalle_error"));
+            return item;
+        }
+    }
+
+    private static String ahora() {
+        SimpleDateFormat formato = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+        formato.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return formato.format(new Date());
     }
 }

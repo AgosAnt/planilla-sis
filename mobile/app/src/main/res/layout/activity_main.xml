@@ -32,16 +32,50 @@
         app:layout_constraintTop_toBottomOf="@+id/tvTitulo" />
 
     <TextView
+        android:id="@+id/btnSalir"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        android:text="Salir"
+        android:textColor="@color/slate_500"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/tvTitulo" />
+
+    <!-- Trabajador y ruta del día (GET /me) -->
+    <TextView
+        android:id="@+id/tvTrabajador"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textColor="@color/slate_900"
+        android:textSize="16sp"
+        android:fontFamily="sans-serif-medium"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvSubtitulo" />
+
+    <TextView
+        android:id="@+id/tvRuta"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textColor="@color/slate_500"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvTrabajador" />
+
+    <TextView
         android:id="@+id/tvFechaHoraActual"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="24dp"
         android:text="Cargando hora..."
         android:textColor="@color/slate_900"
         android:textSize="22sp"
         android:fontFamily="sans-serif-medium"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tvSubtitulo" />
+        app:layout_constraintTop_toBottomOf="@+id/tvRuta" />
 
     <!-- Tarjeta de estado -->
     <androidx.cardview.widget.CardView
@@ -115,6 +149,34 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btnEntrada" />
+
+    <!-- Descanso: el primer toque marca el inicio y el segundo el fin (se envía completo) -->
+    <Button
+        android:id="@+id/btnDescanso"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="12dp"
+        android:enabled="false"
+        android:text="Iniciar descanso"
+        android:textAllCaps="false"
+        android:textSize="16sp"
+        app:cornerRadius="14dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnSalida" />
+
+    <!-- Estado de la cola: pendientes de enviar y rechazos del servidor -->
+    <TextView
+        android:id="@+id/tvSincronizacion"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="80dp"
+        android:textColor="@color/slate_500"
+        android:textSize="13sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnDescanso" />
 
     <!-- Botón de emergencia: circular, esquina inferior derecha -->
     <Button
