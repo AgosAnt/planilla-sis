@@ -7,6 +7,12 @@ import { Login } from '@/paginas/Login'
 import { NoEncontrada } from '@/paginas/NoEncontrada'
 import { Panel } from '@/paginas/Panel'
 
+// Importación de tus pantallas
+// Importación de tus pantallas
+import Rutas from './pages/rutas/Rutas'
+import Supervision from './pages/supervision/Supervision'
+import Planillas from './pages/planillas/Planillas'
+
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
   {
@@ -21,10 +27,10 @@ export const router = createBrowserRouter([
             children: [
               { path: '/', element: <Navigate to="/panel" replace /> },
               { path: '/panel', element: <Panel /> },
-              { path: '/rutas', element: <EnConstruccion titulo="Rutas" /> },
+              { path: '/rutas', element: <Rutas /> },
               { path: '/turnos', element: <EnConstruccion titulo="Turnos" /> },
-              { path: '/supervision', element: <EnConstruccion titulo="Supervisión" /> },
-              { path: '/planillas', element: <EnConstruccion titulo="Planillas" /> },
+              { path: '/supervision', element: <Supervision /> },
+              { path: '/planillas', element: <Planillas /> },
               {
                 element: <RutaProtegida roles={['administrador']} />,
                 children: [
