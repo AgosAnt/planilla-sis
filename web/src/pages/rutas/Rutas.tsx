@@ -12,21 +12,22 @@ export default function Rutas() {
   const [nombreInput, setNombreInput] = useState('');
 
   useEffect(() => {
-    cargarRutas();
+    let activo = true;
+    rutasService
+      .getRutas()
+      .then((data) => {
+        if (activo) setRutas(data);
+      })
+      .catch((err) => {
+        if (activo) setErrorMsg(err instanceof Error ? err.message : 'Error al cargar las rutas');
+      })
+      .finally(() => {
+        if (activo) setIsLoading(false);
+      });
+    return () => {
+      activo = false;
+    };
   }, []);
-
-  const cargarRutas = async () => {
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
-      const data = await rutasService.getRutas();
-      setRutas(data);
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Error al cargar las rutas');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleOpenCreateModal = () => {
     setEditingRuta(null);
