@@ -1,32 +1,75 @@
-# Web: prototipo navegable
+# React + TypeScript + Vite
 
-> **Prototipo temporal.** Cubre lo mínimo para demostrar la arquitectura de la web (sección B del entregable) y
-> **se reemplaza por la web definitiva** que construyen Samuel y Stefany con el stack que validen (B.2 propone
-> React + TypeScript + Vite). No es la base de la web final: tomen lo que sirva como referencia.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Cómo verlo
+Currently, two official plugins are available:
 
-El backend sirve esta carpeta en el mismo origen que la API, así que la cookie de sesión funciona sin CORS:
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-1. Levanta el backend (`backend/`, ver CONTRIBUTING §8) con la base que tiene M002–M008 y el seed S001.
-2. Abre `http://localhost:3000` e inicia sesión con `admin@local.test` o `supervisor@local.test` y la contraseña que usaste en el seed.
+## React Compiler
 
-No requiere build ni dependencias: HTML, CSS y JavaScript con módulos ES.
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Qué demuestra
+## Expanding the ESLint configuration
 
-| Punto | Dónde |
-|---|---|
-| Maquetación HTML5/CSS3 | `index.html` (header, nav, main, footer), `css/estilos.css` con tema claro y oscuro |
-| SPA con History API (B.3) | `js/router.js`: `pushState`/`replaceState`, `popstate`, enlaces `data-link`, guardas por sesión y rol, `?siguiente=` sin open redirect. El backend devuelve `index.html` en cualquier ruta que no sea `/api`, para que funcionen los deep links y el refresco |
-| Estado (B.4) | `js/estado.js`: preferencias en `localStorage` con prefijo `psis:v1:` (tema y filas por página); sesión en la cookie `psis_access` (HttpOnly, SameSite=Lax), que JavaScript no lee; perfil y token CSRF solo en memoria, rehidratados desde `/me` y `/auth/csrf` |
-| Consumo de la API | `js/api.js`: `fetch` con `credentials` y `X-CSRF-Token` en escrituras. Vistas: login, panel, listado paginado de rutas desde PostgreSQL, detalle (baja y reactivación) y alta de rutas |
-| XSS (F.2) | `js/dom.js`: todo se construye con `createElement` y texto; nunca `innerHTML`. La CSP de la web no permite scripts ni estilos en línea |
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-## Lo que queda para la web definitiva
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-- Diseño visual, componentes reutilizables, responsive y accesibilidad completos.
-- Vistas de supervisión, turnos, planillas, pagos, administración de usuarios y auditoría (mapa de rutas de B.3).
-- Router del framework con carga diferida y aviso al salir de formularios con cambios sin guardar.
-- `sessionStorage` para borradores y pasos de asistentes, y limpieza completa al cerrar sesión.
-- Manejo de errores y estados de carga en toda la interfaz.
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+
+```
+
+You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+
+```
