@@ -1,75 +1,53 @@
-# React + TypeScript + Vite
+# Web de planilla-sis
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación web (SPA) para administradores y supervisores. Usa React, TypeScript, Vite, Tailwind CSS v4 y shadcn/ui.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js 18 o superior.
+- Backend local corriendo en `http://localhost:3000` (ver `CONTRIBUTING.md`, sección 8).
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Instalación
 
 ```
+npm ci
+```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Desarrollo
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. En una terminal, levanta el backend desde `backend/`:
 
 ```
+npm run dev
+```
+
+2. En otra terminal, desde `web/`:
+
+```
+npm run dev
+```
+
+3. Abre `http://localhost:5173`. Vite reenvía las peticiones de `/api` al backend en el puerto 3000, así que la web y la API quedan en el mismo origen y la cookie de sesión funciona sin CORS.
+
+Usuarios de prueba: `admin@local.test`, `supervisor@local.test` y `trabajador@local.test`, con la contraseña que usaste al cargar el seed. Los trabajadores usan la aplicación móvil, por lo que la web les muestra "Acceso denegado".
+
+## Compilación de producción
+
+```
+npm run build
+```
+
+Genera `web/dist/`. El backend sirve esa carpeta en `http://localhost:3000`; si no existe, usa `web-prototipo/`.
+
+## Antes de abrir un pull request
+
+```
+npm run build
+npm run lint
+```
+
+## Reglas de seguridad
+
+- Sin tokens en `localStorage` ni `sessionStorage`.
+- Prohibido `innerHTML` y `dangerouslySetInnerHTML`.
+- Ninguna variable sensible con prefijo `VITE_`.

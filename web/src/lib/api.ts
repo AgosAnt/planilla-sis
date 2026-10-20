@@ -9,6 +9,7 @@ export interface Usuario {
   nombres: string
   apellidos: string
   rol: Rol
+  debe_cambiar_password: boolean
 }
 
 interface Problema {
