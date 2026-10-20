@@ -25,6 +25,7 @@ public final class Sincronizador {
         public boolean sinConexion;
         public boolean requiereLogin;
         public String mensaje; // detalle del último rechazo o datos del ingreso (turno, geocerca)
+        String ultimoCodigo;   // code del último rechazo (problem+json)
     }
 
     public interface Escucha {
@@ -61,6 +62,12 @@ public final class Sincronizador {
         while ((item = cola.siguientePendiente(perfil.id)) != null) {
             try {
                 ClasificadorRespuesta.Resultado resultado = enviar(cola, api, item, resumen);
+                // El servidor ya tenía una jornada abierta (por ejemplo, marcada desde otro teléfono):
+                // se recupera para que la salida y los descansos vayan a esa jornada
+                if (resultado == ClasificadorRespuesta.Resultado.RECHAZADO
+                        && DatabaseHelper.TIPO_INGRESO.equals(item.tipo) && "REGISTRO_ABIERTO".equals(resumen.ultimoCodigo)) {
+                    recuperarJornadaAbierta(cola, api, perfil.id);
+                }
                 if (resultado == ClasificadorRespuesta.Resultado.REQUIERE_LOGIN) {
                     sesion.invalidarToken();
                     resumen.requiereLogin = true;
@@ -143,8 +150,22 @@ public final class Sincronizador {
             cola.marcarRechazado(item.id, codigo, detalle);
             resumen.rechazados++;
             resumen.mensaje = detalle;
+            resumen.ultimoCodigo = codigo;
         }
         return resultado;
+    }
+
+    private static void recuperarJornadaAbierta(DatabaseHelper cola, ApiService api, String trabajadorId) throws IOException {
+        if (cola.jornadaAbierta(trabajadorId) != null) return;
+        Response<JsonObject> respuesta = api.registros(5).execute();
+        if (!respuesta.isSuccessful() || respuesta.body() == null) return;
+        for (JsonElement elemento : respuesta.body().getAsJsonArray("items")) {
+            JsonObject registro = elemento.getAsJsonObject();
+            if (registro.get("salida_at").isJsonNull()) {
+                cola.registrarJornadaDelServidor(trabajadorId, registro.get("id").getAsString());
+                return;
+            }
+        }
     }
 
     private static ClasificadorRespuesta.Resultado registrarEvento(DatabaseHelper cola, DatabaseHelper.ItemCola item,

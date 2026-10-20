@@ -4,6 +4,10 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -55,6 +59,17 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean procesandoRegistro = false;
 
+    // Envío automático de pendientes: al volver el WiFi de la oficina y, mientras queden, cada 30 s
+    private static final long REINTENTO_MS = 30_000;
+    private ConnectivityManager.NetworkCallback escuchaRed;
+    private final Runnable reintentoPeriodico = new Runnable() {
+        @Override
+        public void run() {
+            if (dbHelper.contar(perfil.id, DatabaseHelper.PENDIENTE) > 0) sincronizar();
+            handler.postDelayed(this, REINTENTO_MS);
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -91,6 +106,10 @@ public class MainActivity extends AppCompatActivity {
         btnEmergencia.setOnClickListener(v -> procesarRegistro(DatabaseHelper.TIPO_EVENTO, true));
         btnDescanso.setOnClickListener(v -> alternarDescanso());
         findViewById(R.id.btnSalir).setOnClickListener(v -> confirmarSalida());
+        tvSincronizacion.setOnClickListener(v -> {
+            mostrarMensaje("Reintentando el envío...");
+            sincronizar();
+        });
     }
 
     @Override
@@ -99,6 +118,38 @@ public class MainActivity extends AppCompatActivity {
         if (perfil == null) return;
         actualizarPerfil();
         sincronizar();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (perfil == null) return;
+        escucharWifi();
+        handler.postDelayed(reintentoPeriodico, REINTENTO_MS);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (perfil == null) return;
+        handler.removeCallbacks(reintentoPeriodico);
+        if (escuchaRed != null) {
+            ((ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE)).unregisterNetworkCallback(escuchaRed);
+            escuchaRed = null;
+        }
+    }
+
+    // El servidor está en la LAN de la oficina: al conectarse a un WiFi se intenta enviar lo pendiente
+    private void escucharWifi() {
+        ConnectivityManager conectividad = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        NetworkRequest soloWifi = new NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
+        escuchaRed = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network red) {
+                runOnUiThread(() -> sincronizar());
+            }
+        };
+        conectividad.registerNetworkCallback(soloWifi, escuchaRed);
     }
 
     private String obtenerHoraActual() {
@@ -180,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
         int rechazados = dbHelper.contar(perfil.id, DatabaseHelper.RECHAZADO);
         StringBuilder texto = new StringBuilder();
         texto.append(pendientes == 0 ? "Todo enviado al servidor."
-                : "Pendientes de enviar: " + pendientes + ". Se envían al conectarte a la red de la oficina.");
+                : "Pendientes de enviar: " + pendientes + ". Se envían solos al conectarte a la red de la oficina (toca aquí para reintentar).");
         if (rechazados > 0) {
             DatabaseHelper.ItemCola ultimo = dbHelper.ultimoRechazado(perfil.id);
             texto.append("\nRechazados por el servidor: ").append(rechazados);
