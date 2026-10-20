@@ -192,6 +192,8 @@ paths:
       - Autenticación
       operationId: obtenerPerfil
       summary: Perfil del usuario autenticado
+      description: 'Para un trabajador incluye su asignación activa y vigente hoy (con la ruta y el turno acordado del
+        día): la app móvil la usa para registrar el ingreso. Para otros roles, o sin asignación, asignacion_activa es null.'
       security:
       - cookieAuth: []
       - bearerAuth: []
@@ -201,7 +203,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Usuario'
+                $ref: '#/components/schemas/Perfil'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /admin/usuarios:
@@ -1533,6 +1535,61 @@ components:
       - nombres
       - apellidos
       - rol
+    Perfil:
+      allOf:
+      - $ref: '#/components/schemas/Usuario'
+      - type: object
+        properties:
+          asignacion_activa:
+            oneOf:
+            - $ref: '#/components/schemas/AsignacionActiva'
+            - type: 'null'
+        required:
+        - asignacion_activa
+    AsignacionActiva:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fecha_inicio:
+          type: string
+          format: date
+        fecha_fin:
+          type:
+          - string
+          - 'null'
+          format: date
+        ruta:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            codigo:
+              type: string
+            nombre:
+              type: string
+          required:
+          - id
+          - codigo
+          - nombre
+        turno_hoy:
+          type:
+          - object
+          - 'null'
+          properties:
+            nombre:
+              type: string
+            hora_inicio:
+              type: string
+            hora_fin:
+              type: string
+      required:
+      - id
+      - fecha_inicio
+      - ruta
+      - turno_hoy
     LoginRequest:
       type: object
       properties:
