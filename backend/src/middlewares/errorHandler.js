@@ -16,6 +16,11 @@ export const errorHandler = (err, req, res, next) => {
     console.error(`[Error ${req.method} ${req.originalUrl}]:`, err);
   }
 
+  // Cabeceras propias del error, por ejemplo Retry-After en un bloqueo por intentos fallidos
+  if (!interno && err.headers) {
+    res.set(err.headers);
+  }
+
   // Especificación OpenAPI: Errores en formato application/problem+json
   return res.status(status).type('application/problem+json').json({
     type: 'about:blank',

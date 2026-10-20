@@ -55,6 +55,28 @@ export const obtenerCsrf = async (req, res, next) => {
   }
 };
 
+// POST /auth/reauth: confirma la contraseña y entrega un token corto para aprobar planillas y registrar pagos.
+export const reautenticar = async (req, res, next) => {
+  try {
+    const resultado = await authService.reautenticar(req.usuario, req.body?.password);
+    return res.status(200).json(resultado);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /auth/password: después del cambio se vuelve a iniciar sesión, porque el token actual puede llevar
+// la marca de contraseña temporal. En la web se borra la cookie; el móvil descarta su token.
+export const cambiarPassword = async (req, res, next) => {
+  try {
+    await authService.cambiarPassword(req.usuario, req.body);
+    res.clearCookie(COOKIE_ACCESS, opcionesCookieAccess);
+    return res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const obtenerPerfil = async (req, res, next) => {
   try {
     const usuario = await authService.obtenerPerfil(req.usuario.id);

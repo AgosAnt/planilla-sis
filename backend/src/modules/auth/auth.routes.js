@@ -8,6 +8,8 @@ router.post('/session', authController.iniciarSesion);
 router.post('/refresh', authController.renovarSesion);
 router.post('/logout', autenticarToken, authController.cerrarSesion);
 router.get('/csrf', autenticarToken, authController.obtenerCsrf);
+router.post('/reauth', autenticarToken, authController.reautenticar);
+router.post('/password', autenticarToken, authController.cambiarPassword);
 
 // GET /api/v1/me: se monta aparte para no exponer /session, /refresh y /logout también bajo /api/v1
 export const perfilRouter = Router();

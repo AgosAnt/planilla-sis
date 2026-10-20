@@ -1,15 +1,71 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
+import pool, { conClaims } from '../../config/db.js';
 import { jwtConfig } from '../../config/jwt.js';
-import { DURACION_ACCESS_SEG } from '../../config/sesion.js';
+import {
+    DURACION_ACCESS_SEG,
+    DURACION_REAUTH_SEG,
+    INTENTOS_ANTES_DE_BLOQUEO,
+    BLOQUEO_MAXIMO_MIN,
+} from '../../config/sesion.js';
 import { ZONA_OPERACION } from '../../config/negocio.js';
 import { crearError } from '../../middlewares/errorHandler.js';
+import { registrarAuditoria } from '../auditoria/auditoria.repository.js';
 import * as authRepo from './auth.repository.js';
+import { motivoPasswordDebil } from './politicaPassword.js';
 
 // Hash de relleno: si el correo no existe se compara igual, para no revelar por tiempo de respuesta
 // qué correos están registrados (E-1).
 const HASH_RELLENO = bcrypt.hashSync(randomUUID(), 10);
+
+// Correos que no existen: se cuentan en memoria con la misma regla que perfiles.intentos_fallidos, para que
+// el bloqueo (423) tampoco revele qué correos están registrados. Se reinicia con el backend.
+const fallosCorreoDesconocido = new Map();
+const MAX_CORREOS_DESCONOCIDOS = 10000;
+
+const minutosDeBloqueo = (intentos) =>
+    intentos < INTENTOS_ANTES_DE_BLOQUEO
+        ? 0
+        : Math.min(2 ** Math.min(intentos - INTENTOS_ANTES_DE_BLOQUEO, 10), BLOQUEO_MAXIMO_MIN);
+
+const registrarFalloCorreoDesconocido = (email) => {
+    if (fallosCorreoDesconocido.size >= MAX_CORREOS_DESCONOCIDOS) fallosCorreoDesconocido.clear();
+    const intentos = (fallosCorreoDesconocido.get(email)?.intentos ?? 0) + 1;
+    const minutos = minutosDeBloqueo(intentos);
+    fallosCorreoDesconocido.set(email, {
+        intentos,
+        bloqueadoHasta: minutos ? new Date(Date.now() + minutos * 60000) : null,
+    });
+};
+
+// Suma el intento en perfiles y, si la cuenta queda bloqueada, lo deja en la auditoría (sin contraseñas).
+const registrarFallo = async (perfilId, rol) => {
+    const resultado = await authRepo.registrarIntentoFallido(perfilId, INTENTOS_ANTES_DE_BLOQUEO, BLOQUEO_MAXIMO_MIN);
+    if (resultado && resultado.intentos_fallidos >= INTENTOS_ANTES_DE_BLOQUEO) {
+        await registrarAuditoria(pool, {
+            actor: { id: perfilId, rol },
+            entidad: 'perfiles',
+            entidadId: perfilId,
+            accion: 'LOGIN',
+            datosDespues: {
+                resultado: 'BLOQUEADO',
+                intentos_fallidos: resultado.intentos_fallidos,
+                bloqueado_hasta: resultado.bloqueado_hasta,
+            },
+        });
+    }
+};
+
+const estaBloqueado = (hasta) => Boolean(hasta) && new Date(hasta) > new Date();
+
+// Login: 423 (cuenta bloqueada). Reauth y cambio de contraseña: 429. Ambos con Retry-After en segundos.
+const errorDeBloqueo = (status, code, hasta) => {
+    const segundos = Math.max(1, Math.ceil((new Date(hasta).getTime() - Date.now()) / 1000));
+    const error = crearError(status, code, `Demasiados intentos fallidos. Intenta de nuevo en ${Math.ceil(segundos / 60)} min.`);
+    error.headers = { 'Retry-After': String(segundos) };
+    return error;
+};
 
 const aUsuario = (fila) => ({
     id: fila.id,
@@ -27,18 +83,32 @@ export const iniciarSesion = async (email, password) => {
     }
 
     // 1. Buscar al usuario activo en perfiles (los correos se guardan en minúsculas, ver usuarios.service)
-    const fila = await authRepo.buscarActivoPorEmail(email.trim().toLowerCase());
+    const correo = email.trim().toLowerCase();
+    const fila = await authRepo.buscarActivoPorEmail(correo);
 
-    // 2. Mismo mensaje y mismo trabajo para correo inexistente y contraseña incorrecta
-    const esValida = await bcrypt.compare(password, fila?.password_hash ?? HASH_RELLENO);
-    if (!fila || !esValida) {
-        throw crearError(401, 'CREDENCIALES_INVALIDAS', 'Credenciales inválidas');
+    // 2. Cuenta bloqueada por intentos fallidos (ADR-001): ni siquiera se revisa la contraseña
+    const bloqueadoHasta = fila ? fila.bloqueado_hasta : fallosCorreoDesconocido.get(correo)?.bloqueadoHasta;
+    if (estaBloqueado(bloqueadoHasta)) {
+        throw errorDeBloqueo(423, 'CUENTA_BLOQUEADA', bloqueadoHasta);
     }
 
-    // 3. Generar el JWT: sub = perfiles.id (RLS de M008); jti identifica la sesión para el token CSRF
+    // 3. Mismo mensaje y mismo trabajo para correo inexistente y contraseña incorrecta
+    const esValida = await bcrypt.compare(password, fila?.password_hash ?? HASH_RELLENO);
+    if (!fila || !esValida) {
+        if (fila) {
+            await registrarFallo(fila.id, fila.rol);
+        } else {
+            registrarFalloCorreoDesconocido(correo);
+        }
+        throw crearError(401, 'CREDENCIALES_INVALIDAS', 'Credenciales inválidas');
+    }
+    await authRepo.reiniciarIntentos(fila.id);
+
+    // 4. Generar el JWT: sub = perfiles.id (RLS de M008); jti identifica la sesión para el token CSRF.
+    //    dcp marca una contraseña temporal: hasta cambiarla, autenticarToken solo permite /me y /auth/password.
     const jti = randomUUID();
     const token = jwt.sign(
-        { sub: fila.id, email: fila.email, rol: fila.rol },
+        { sub: fila.id, email: fila.email, rol: fila.rol, ...(fila.debe_cambiar_password && { dcp: true }) },
         jwtConfig.secret,
         {
             algorithm: jwtConfig.algorithm,
@@ -50,6 +120,71 @@ export const iniciarSesion = async (email, password) => {
     );
 
     return { usuario: aUsuario(fila), token, jti, expiraEn: DURACION_ACCESS_SEG };
+};
+
+// Confirma la contraseña del usuario de la sesión. Un error cuenta como intento fallido; responde 403 y no 401,
+// porque la web interpreta 401 como sesión vencida y sacaría al usuario.
+const verificarPasswordPropia = async (usuario, password) => {
+    if (typeof password !== 'string' || !password) {
+        throw crearError(400, 'PASSWORD_REQUERIDA', 'Escribe tu contraseña actual');
+    }
+    const credenciales = await authRepo.buscarCredencialesPorId(usuario.id);
+    if (!credenciales) {
+        throw crearError(401, 'PERFIL_INACTIVO', 'El usuario no existe o está desactivado');
+    }
+    if (estaBloqueado(credenciales.bloqueado_hasta)) {
+        throw errorDeBloqueo(429, 'DEMASIADOS_INTENTOS', credenciales.bloqueado_hasta);
+    }
+    if (!(await bcrypt.compare(password, credenciales.password_hash))) {
+        await registrarFallo(usuario.id, usuario.rol);
+        throw crearError(403, 'PASSWORD_INCORRECTA', 'La contraseña no es correcta');
+    }
+    await authRepo.reiniciarIntentos(usuario.id);
+    return credenciales;
+};
+
+// POST /auth/reauth: token corto para aprobar planillas y registrar pagos (middleware requerirReautenticacion).
+// Queda atado a la sesión actual (sid) y tiene su propia audiencia, así que no sirve como access token.
+export const reautenticar = async (usuario, password) => {
+    await verificarPasswordPropia(usuario, password);
+    const reauthToken = jwt.sign(
+        { sub: usuario.id, tipo: 'reauth', sid: usuario.sesionId },
+        jwtConfig.secret,
+        {
+            algorithm: jwtConfig.algorithm,
+            expiresIn: DURACION_REAUTH_SEG,
+            issuer: jwtConfig.issuer,
+            audience: jwtConfig.audienceReauth,
+            jwtid: randomUUID()
+        }
+    );
+    return { reauth_token: reauthToken, expira_en: DURACION_REAUTH_SEG };
+};
+
+// POST /auth/password: cambia la contraseña propia con la política de ADR-001 y quita la marca de temporal.
+export const cambiarPassword = async (usuario, datos) => {
+    const { password_actual: actual, password_nueva: nueva } = datos ?? {};
+    if (typeof nueva !== 'string' || !nueva) {
+        throw crearError(400, 'PASSWORD_REQUERIDA', 'password_actual y password_nueva son obligatorias');
+    }
+    const credenciales = await verificarPasswordPropia(usuario, actual);
+
+    const motivo = motivoPasswordDebil(nueva, { actual, email: credenciales.email });
+    if (motivo) {
+        throw crearError(422, 'PASSWORD_DEBIL', motivo);
+    }
+
+    const passwordHash = await bcrypt.hash(nueva, 10);
+    await conClaims(usuario, async (client) => {
+        await authRepo.actualizarPassword(client, usuario.id, passwordHash);
+        await registrarAuditoria(client, {
+            actor: usuario,
+            entidad: 'perfiles',
+            entidadId: usuario.id,
+            accion: 'UPDATE',
+            datosDespues: { campo: 'password' },
+        });
+    });
 };
 
 const aAsignacion = (fila) => ({

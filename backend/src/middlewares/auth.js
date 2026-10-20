@@ -5,11 +5,23 @@ import { esCsrfValido } from './csrf.js';
 
 const METODOS_SEGUROS = ['GET', 'HEAD', 'OPTIONS'];
 
+// Con contraseña temporal (E-2b) solo se puede ver el perfil, cambiar la contraseña o salir
+const RUTAS_CON_PASSWORD_TEMPORAL = ['/api/v1/me', '/api/v1/auth/csrf', '/api/v1/auth/logout', '/api/v1/auth/password'];
+
 const responderNoAutenticado = (res, detalle, code) =>
   res.status(401).type('application/problem+json').json({
     type: 'about:blank',
     title: 'No autenticado',
     status: 401,
+    detail: detalle,
+    code,
+  });
+
+const responderProhibido = (res, detalle, code) =>
+  res.status(403).type('application/problem+json').json({
+    type: 'about:blank',
+    title: 'Acceso denegado',
+    status: 403,
     detail: detalle,
     code,
   });
@@ -27,6 +39,9 @@ const extraerToken = (req) => {
   }
   return {};
 };
+
+// Ruta completa sin la barra final: /api/v1/me/ y /api/v1/me cuentan igual
+const rutaDe = (req) => (req.baseUrl + req.path).replace(/\/+$/, '');
 
 export const autenticarToken = (req, res, next) => {
   // 1. Obtener el token del encabezado o de la cookie de sesión
@@ -50,32 +65,66 @@ export const autenticarToken = (req, res, next) => {
 
   // 3. La cookie viaja sola en cada petición: las escrituras exigen el token CSRF (F.2)
   if (viaCookie && !METODOS_SEGUROS.includes(req.method) && !esCsrfValido(decodificado.jti, req.get('X-CSRF-Token'))) {
-    return res.status(403).type('application/problem+json').json({
-      type: 'about:blank',
-      title: 'Acceso denegado',
-      status: 403,
-      detail: 'Falta la cabecera X-CSRF-Token o no corresponde a la sesión.',
-      code: 'CSRF_INVALIDO',
-    });
+    return responderProhibido(res, 'Falta la cabecera X-CSRF-Token o no corresponde a la sesión.', 'CSRF_INVALIDO');
   }
 
-  // 4. Inyectar la identidad en la request (sub = perfiles.id; jti = id de la sesión, base del CSRF)
+  // 4. Contraseña temporal: hasta cambiarla no se puede usar el resto del sistema
+  if (decodificado.dcp && !RUTAS_CON_PASSWORD_TEMPORAL.includes(rutaDe(req))) {
+    return responderProhibido(res, 'Debes cambiar tu contraseña temporal antes de continuar.', 'DEBE_CAMBIAR_PASSWORD');
+  }
+
+  // 5. Inyectar la identidad en la request (sub = perfiles.id; jti = id de la sesión, base del CSRF)
   req.usuario = { id: decodificado.sub, email: decodificado.email, rol: decodificado.rol, sesionId: decodificado.jti };
 
-  // 5. Continuar con el siguiente middleware o controlador
+  // 6. Continuar con el siguiente middleware o controlador
   next();
 };
 
 // Usar después de autenticarToken. Responde 403 si el rol del token no está permitido.
 export const requerirRol = (...roles) => (req, res, next) => {
   if (!roles.includes(req.usuario?.rol)) {
-    return res.status(403).type('application/problem+json').json({
-      type: 'about:blank',
-      title: 'Acceso denegado',
-      status: 403,
-      detail: 'Tu rol no tiene permiso para esta operación.',
-      code: 'ROL_NO_PERMITIDO',
-    });
+    return responderProhibido(res, 'Tu rol no tiene permiso para esta operación.', 'ROL_NO_PERMITIDO');
   }
+  next();
+};
+
+// Tokens de reautenticación ya usados: jti -> exp (segundos). El backend corre en un solo proceso en la LAN,
+// así que basta la memoria; si se reinicia, un token vigente podría usarse otra vez hasta su exp (5 min).
+const reauthUsados = new Map();
+
+// Usar después de autenticarToken en operaciones críticas (aprobar planilla, registrar pagos).
+// Exige el header X-Reauth-Token de POST /auth/reauth: de este usuario, de esta sesión y sin usar.
+// Nunca se registra ni se audita el token.
+export const requerirReautenticacion = (req, res, next) => {
+  const ahora = Math.floor(Date.now() / 1000);
+  for (const [jti, exp] of reauthUsados) {
+    if (exp <= ahora) reauthUsados.delete(jti);
+  }
+
+  let datos = null;
+  try {
+    const token = req.get('X-Reauth-Token');
+    if (token) {
+      datos = jwt.verify(token, jwtConfig.secret, {
+        algorithms: [jwtConfig.algorithm],
+        issuer: jwtConfig.issuer,
+        audience: jwtConfig.audienceReauth,
+      });
+    }
+  } catch (error) {
+    datos = null;
+  }
+
+  const valido = datos
+    && datos.tipo === 'reauth'
+    && datos.sub === req.usuario?.id
+    && datos.sid === req.usuario?.sesionId
+    && datos.jti
+    && !reauthUsados.has(datos.jti);
+  if (!valido) {
+    return responderProhibido(res, 'Confirma tu contraseña para realizar esta operación.', 'REAUTENTICACION_REQUERIDA');
+  }
+
+  reauthUsados.set(datos.jti, datos.exp);
   next();
 };

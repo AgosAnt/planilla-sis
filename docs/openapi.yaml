@@ -32,6 +32,10 @@ paths:
       - Autenticación
       operationId: iniciarSesion
       summary: Iniciar sesión
+      description: Desde el 5.º intento fallido la cuenta se bloquea 1, 2, 4, 8 y hasta 15 minutos (423 CUENTA_BLOQUEADA
+        con header Retry-After), también para correos que no existen. Si el usuario tiene contraseña temporal, el
+        token solo permite GET /me, GET /auth/csrf, POST /auth/logout y POST /auth/password; el resto responde 403
+        DEBE_CAMBIAR_PASSWORD.
       security: []
       parameters:
       - name: X-Client-Type
@@ -131,6 +135,10 @@ paths:
       - Autenticación
       operationId: reautenticar
       summary: Emitir token de reautenticación
+      description: Confirma la contraseña del usuario de la sesión y entrega un token de un solo uso, válido 5 minutos
+        y solo para esta sesión, que se envía en X-Reauth-Token al aprobar una planilla o registrar pagos. Contraseña
+        incorrecta = 403 PASSWORD_INCORRECTA (no 401, para no cerrar la sesión web) y cuenta como intento fallido;
+        con la cuenta bloqueada = 429 DEMASIADOS_INTENTOS con Retry-After.
       security:
       - cookieAuth: []
         csrfToken: []
@@ -161,6 +169,10 @@ paths:
       - Autenticación
       operationId: cambiarPassword
       summary: Cambiar contraseña propia
+      description: 'Política (ADR-001): mínimo 12 caracteres, distinta de la actual, sin el correo y fuera de la lista
+        de contraseñas comunes; si no se cumple, 422 PASSWORD_DEBIL con el motivo. Contraseña actual incorrecta = 403
+        PASSWORD_INCORRECTA. Al cambiarla se quita la marca de contraseña temporal y se borra la cookie de sesión:
+        hay que volver a iniciar sesión (el móvil descarta su token).'
       security:
       - cookieAuth: []
         csrfToken: []
@@ -186,6 +198,8 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/TooMany'
   /me:
     get:
       tags:
@@ -1350,7 +1364,8 @@ components:
       name: X-Reauth-Token
       in: header
       required: true
-      description: No persistir ni registrar en auditoría en texto plano.
+      description: Token de POST /auth/reauth. Un solo uso, 5 minutos, ligado a la sesión que lo pidió. Faltante,
+        vencido, ya usado o de otra sesión = 403 REAUTENTICACION_REQUERIDA. No persistir ni registrar en auditoría.
       schema:
         type: string
     Page:

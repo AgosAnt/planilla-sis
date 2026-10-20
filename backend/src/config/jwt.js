@@ -9,9 +9,13 @@ const requerida = (nombre) => {
 };
 
 // ADR-001: el backend firma y verifica sus JWT con secreto, emisor y audiencia propios.
+const audience = requerida('JWT_AUDIENCE');
+
 export const jwtConfig = {
   secret: requerida('JWT_SECRET'),
   issuer: requerida('JWT_ISSUER'),
-  audience: requerida('JWT_AUDIENCE'),
+  audience,
+  // Audiencia propia del token de reautenticación: así no se puede usar como access token ni al revés
+  audienceReauth: `${audience}:reauth`,
   algorithm: 'HS256',
 };
