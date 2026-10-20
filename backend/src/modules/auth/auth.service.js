@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
 import { jwtConfig } from '../../config/jwt.js';
 import { DURACION_ACCESS_SEG } from '../../config/sesion.js';
+import { ZONA_OPERACION } from '../../config/negocio.js';
 import { crearError } from '../../middlewares/errorHandler.js';
 import * as authRepo from './auth.repository.js';
 
@@ -51,11 +52,25 @@ export const iniciarSesion = async (email, password) => {
     return { usuario: aUsuario(fila), token, jti, expiraEn: DURACION_ACCESS_SEG };
 };
 
+const aAsignacion = (fila) => ({
+    id: fila.id,
+    fecha_inicio: fila.fecha_inicio,
+    fecha_fin: fila.fecha_fin,
+    ruta: { id: fila.ruta_id, codigo: fila.ruta_codigo, nombre: fila.ruta_nombre },
+    turno_hoy: fila.turno_nombre
+        ? { nombre: fila.turno_nombre, hora_inicio: fila.turno_hora_inicio, hora_fin: fila.turno_hora_fin }
+        : null,
+});
+
 // GET /me: datos frescos de la BD; un perfil desactivado después del login deja de ser válido.
+// Para un trabajador incluye su asignación activa: la app móvil necesita su id para registrar el ingreso.
 export const obtenerPerfil = async (usuarioId) => {
     const fila = await authRepo.buscarActivoPorId(usuarioId);
     if (!fila) {
         throw crearError(401, 'PERFIL_INACTIVO', 'El usuario no existe o está desactivado');
     }
-    return aUsuario(fila);
+    const asignacion = fila.rol === 'trabajador'
+        ? await authRepo.buscarAsignacionVigente(usuarioId, ZONA_OPERACION)
+        : null;
+    return { ...aUsuario(fila), asignacion_activa: asignacion ? aAsignacion(asignacion) : null };
 };
