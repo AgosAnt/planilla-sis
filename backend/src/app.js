@@ -11,12 +11,15 @@ import planillasRoutes from './modules/planillas/planillas.routes.js';
 import eventosDescansoRoutes from './modules/eventos_descanso/eventos_descanso.routes.js';
 import eventosRutaRoutes from './modules/eventos_ruta/eventos_ruta.routes.js';
 import usuariosRoutes from './modules/usuarios/usuarios.routes.js';
+import {
+  asignacionesDeRutaRouter, asignacionesRouter, acuerdosTurnoRouter, catalogosRouter,
+} from './modules/asignaciones/asignaciones.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { cabecerasSeguridad, cabecerasWeb, origenesPermitidos } from './middlewares/seguridad.js';
 
-// Web: mismo origen que la API, asÃ­ la cookie de sesiÃ³n funciona sin CORS.
-// Se sirve la compilaciÃ³n de React (web/dist) si existe; si no, el prototipo (web-prototipo)
-// para que la demostraciÃ³n nunca quede en blanco. La elecciÃ³n se hace al arrancar el servidor.
+// Web: mismo origen que la API, así la cookie de sesión funciona sin CORS.
+// Se sirve la compilación de React (web/dist) si existe; si no, el prototipo (web-prototipo)
+// para que la demostración nunca quede en blanco. La elección se hace al arrancar el servidor.
 const WEB_DIST = fileURLToPath(new URL('../../web/dist', import.meta.url));
 const WEB_PROTOTIPO = fileURLToPath(new URL('../../web-prototipo', import.meta.url));
 const WEB_DIR = existsSync(join(WEB_DIST, 'index.html')) ? WEB_DIST : WEB_PROTOTIPO;
@@ -27,7 +30,7 @@ const app = express();
 app.disable('x-powered-by');
 app.use(cabecerasSeguridad);
 
-// CORS con lista blanca y credenciales (cookies) solo para los orÃ­genes de CORS_ORIGINS
+// CORS con lista blanca y credenciales (cookies) solo para los orígenes de CORS_ORIGINS
 const origenes = origenesPermitidos();
 if (origenes.length > 0) {
   app.use(cors({
@@ -40,22 +43,26 @@ if (origenes.length > 0) {
 
 app.use(cookieParser());
 
-// Lote de eventos del mÃ³vil: hasta 256 KB (contrato E-7). Va antes del parser global (100 KB).
-// El ":" va escapado para que Express no lo tome como parÃ¡metro de ruta.
+// Lote de eventos del móvil: hasta 256 KB (contrato E-7). Va antes del parser global (100 KB).
+// El ":" va escapado para que Express no lo tome como parámetro de ruta.
 app.use('/api/v1/eventos\\:batch', express.json({ limit: '256kb' }));
 app.use(express.json());
 
-// Rutas especÃ­ficas primero
+// Rutas específicas primero
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/me', perfilRouter);
 app.use('/api/v1/admin/usuarios', usuariosRoutes);
 app.use('/api/v1/registros-tiempo/:id/descansos', eventosDescansoRoutes);
 app.use('/api/v1/registros-tiempo', registrosRoutes);
-app.use('/api/v1', rutasRoutes);
+app.use('/api/v1/rutas/:rutaId/asignaciones', asignacionesDeRutaRouter);
+app.use('/api/v1/rutas', rutasRoutes);
+app.use('/api/v1/asignaciones', asignacionesRouter);
+app.use('/api/v1/acuerdos-turno', acuerdosTurnoRouter);
+app.use('/api/v1/catalogos', catalogosRouter);
 app.use('/api/v1/planillas', planillasRoutes);
 app.use('/api/v1/eventos\\:batch', eventosRutaRoutes);
 
-// Ruta de API inexistente: 404 en problem+json, no la pÃ¡gina HTML por defecto de Express
+// Ruta de API inexistente: 404 en problem+json, no la página HTML por defecto de Express
 app.use('/api', (req, res) => {
   res.status(404).type('application/problem+json').json({
     type: 'about:blank',

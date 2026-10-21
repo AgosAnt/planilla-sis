@@ -1,16 +1,18 @@
-﻿import express from 'express';
-import * as controller from './rutas.controller.js';
-import { autenticarToken } from '../../middlewares/auth.js';
+import { Router } from 'express';
+import { obtenerRutas, obtenerRuta, crearRuta, actualizarRuta } from './rutas.controller.js';
+import { autenticarToken, requerirRol } from '../../middlewares/auth.js';
+import { validarPaginacion } from '../../middlewares/validarPaginacion.js';
+import { validarRutaId, validarCrearRuta, validarActualizarRuta } from '../../middlewares/validarRuta.js';
 
-const router = express.Router();
+const router = Router();
 
-// PATCH /api/v1/asignaciones/:id
-router.patch('/asignaciones/:id', autenticarToken, controller.cerrarAsignacion);
+// Blindamos todas las rutas del módulo
+router.use(autenticarToken);
 
-// POST /api/v1/asignaciones/:id/acuerdos
-router.post('/asignaciones/:id/acuerdos', autenticarToken, controller.proponerAcuerdoTurno);
-
-// GET /api/v1/catalogos/turnos
-router.get('/catalogos/turnos', autenticarToken, controller.listarTurnos);
+// Lectura: cada rol ve solo lo suyo (filtro en el servicio). Escritura: administrador y supervisor (C.2).
+router.get('/', validarPaginacion, obtenerRutas);
+router.post('/', requerirRol('administrador', 'supervisor'), validarCrearRuta, crearRuta);
+router.get('/:rutaId', validarRutaId, obtenerRuta);
+router.patch('/:rutaId', requerirRol('administrador', 'supervisor'), validarRutaId, validarActualizarRuta, actualizarRuta);
 
 export default router;

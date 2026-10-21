@@ -521,9 +521,14 @@ paths:
       - Rutas
       operationId: crearAsignacion
       summary: Asignar trabajador a ruta
+      description: Administrador, o supervisor de la ruta (otra ruta = 404). Crea la asignación y el acuerdo de turno
+        PROPUESTO para fecha_inicio. Trabajador inexistente o sin rol trabajador = 422 TRABAJADOR_INVALIDO; ruta
+        inactiva = 422 RUTA_INACTIVA; turno inexistente = 422 TURNO_INVALIDO; fechas que se cruzan con otra
+        asignación del trabajador = 409 ASIGNACION_SOLAPADA.
       security:
       - cookieAuth: []
         csrfToken: []
+      - bearerAuth: []
       parameters:
       - name: rutaId
         in: path
@@ -562,7 +567,8 @@ paths:
       security:
       - cookieAuth: []
       - bearerAuth: []
-      description: '[PROPUESTA]'
+      description: Administrador, o supervisor de la ruta. Activas primero. Cada asignación trae su acuerdo de turno
+        más relevante (el de hoy o el próximo; si no hay, el último) o null.
       parameters:
       - name: rutaId
         in: path
@@ -595,6 +601,7 @@ paths:
       - Rutas
       operationId: responderAcuerdoTurno
       summary: Aceptar o rechazar turno
+      description: Solo el trabajador de la asignación (otro = 404) y solo desde PROPUESTO (si no, 409 TRANSICION_INVALIDA).
       security:
       - bearerAuth: []
       parameters:
@@ -633,9 +640,12 @@ paths:
       - Rutas
       operationId: confirmarAcuerdoTurno
       summary: Confirmar acuerdo de turno
+      description: Administrador, o supervisor de la ruta (otra ruta = 404). Solo desde ACEPTADO (si no, 409
+        TRANSICION_INVALIDA). Guarda confirmado_por y confirmado_at.
       security:
       - cookieAuth: []
         csrfToken: []
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -660,6 +670,128 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
+  /asignaciones/{id}:
+    patch:
+      tags:
+      - Rutas
+      operationId: actualizarAsignacion
+      summary: Cerrar o desactivar una asignación
+      description: Administrador, o supervisor de la ruta (otra ruta = 404). fecha_fin anterior a fecha_inicio = 422
+        FECHAS_INVALIDAS; reactivar una asignación que se cruza con otra = 409 ASIGNACION_SOLAPADA. La respuesta
+        trae acuerdo_turno en null.
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarAsignacionRequest'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsignacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /asignaciones/{id}/acuerdos:
+    post:
+      tags:
+      - Rutas
+      operationId: proponerAcuerdoTurno
+      summary: Proponer el turno de un día
+      description: Administrador, o supervisor de la ruta (otra ruta = 404). La fecha debe estar dentro de la vigencia
+        de una asignación activa (si no, 422 FECHA_FUERA_DE_ASIGNACION); un día ya acordado = 409 ACUERDO_EXISTENTE.
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProponerAcuerdoRequest'
+      responses:
+        '201':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcuerdoTurno'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /acuerdos-turno:
+    get:
+      tags:
+      - Rutas
+      operationId: listarAcuerdosTurno
+      summary: Consultar acuerdos de turno
+      description: El trabajador ve los suyos (la app móvil los usa para aceptar o rechazar); el supervisor, los de sus
+        rutas; el administrador, todos. Ordenados por fecha.
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: estado
+        in: query
+        schema:
+          type: string
+          enum:
+          - PROPUESTO
+          - ACEPTADO
+          - RECHAZADO
+          - CONFIRMADO
+      - name: desde
+        in: query
+        schema: *id001
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcuerdoTurnoPagina'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /me/calculo:
     get:
       tags:
@@ -906,6 +1038,26 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TipoDescanso'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /catalogos/turnos:
+    get:
+      tags:
+      - Catálogos
+      operationId: listarTurnos
+      summary: Listar turnos
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Turno'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /catalogos/estados-trabajador:
@@ -1951,6 +2103,64 @@ components:
             $ref: '#/components/schemas/EventoResultado'
       required:
       - resultados
+    ActualizarAsignacionRequest:
+      type: object
+      description: Al menos uno de los dos campos.
+      properties:
+        fecha_fin:
+          type:
+          - string
+          - 'null'
+          format: date
+        activa:
+          type: boolean
+    ProponerAcuerdoRequest:
+      type: object
+      properties:
+        fecha: *id001
+        turno_id:
+          type: integer
+      required:
+      - fecha
+      - turno_id
+    Turno:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        hora_inicio:
+          type: string
+          example: '06:00'
+        hora_fin:
+          type: string
+          example: '14:00'
+        minutos_descanso:
+          type: integer
+        es_nocturno:
+          type: boolean
+      required:
+      - id
+      - nombre
+      - hora_inicio
+      - hora_fin
+    AcuerdoTurnoPagina:
+      allOf:
+      - $ref: '#/components/schemas/Paginacion'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              allOf:
+              - $ref: '#/components/schemas/AcuerdoTurno'
+              - type: object
+                properties:
+                  trabajador_id: *id002
+                  ruta_id: *id002
+        required:
+        - items
     AsignacionRequest:
       type: object
       properties:
@@ -1971,6 +2181,10 @@ components:
       type: object
       properties:
         id: *id002
+        asignacion_id: *id002
+        fecha: *id001
+        turno:
+          $ref: '#/components/schemas/Turno'
         estado:
           type: string
           enum:
@@ -1997,10 +2211,20 @@ components:
         id: *id002
         ruta_id: *id002
         trabajador_id: *id002
+        trabajador_nombre:
+          type: string
+        fecha_inicio: *id001
+        fecha_fin:
+          type:
+          - string
+          - 'null'
+          format: date
         activa:
           type: boolean
         acuerdo_turno:
-          $ref: '#/components/schemas/AcuerdoTurno'
+          oneOf:
+          - $ref: '#/components/schemas/AcuerdoTurno'
+          - type: 'null'
       required:
       - id
       - ruta_id
