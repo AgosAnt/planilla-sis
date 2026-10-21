@@ -10,7 +10,7 @@ Las migraciones deben ejecutarse en el siguiente orden estricto utilizando un us
 5. `M006_permisos_app_user.sql`
 6. `M007_estados_y_permisos.sql`
 7. `M008_rls_registros_eventos.sql`
-
+8. `M009_parametros_feriados.sql`
 Cada archivo se ejecuta en una sola transacción, deteniéndose ante el primer error:
 
 ```
