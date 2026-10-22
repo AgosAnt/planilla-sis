@@ -1,4 +1,4 @@
-import { useSesion } from "../sesion/contexto";
+import { useSesion } from '@/sesion/contexto'
 
 export function Panel() {
   const { usuario } = useSesion()

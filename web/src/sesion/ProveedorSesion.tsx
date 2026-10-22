@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import * as clienteApi from "../lib/api";
+import * as clienteApi from '@/lib/api'
 import type { Usuario } from '@/lib/api'
 import { ContextoSesion, type ValorSesion } from './contexto'
 

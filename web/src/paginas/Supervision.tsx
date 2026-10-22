@@ -20,7 +20,7 @@ export default function Supervision() {
       setIsLoading(true);
       setErrorMsg(null);
       try {
-        const res = await api<{ items: RegistroTiempo[] }>('/registros-tiempo?page_size=50', 'GET');
+        const res = await api<{ items: RegistroTiempo[] }>('GET', '/registros-tiempo?page_size=50');
         if (activo) setRegistros(res.items || []);
       } catch (err) {
         if (activo) setErrorMsg(err instanceof Error ? err.message : 'Error al cargar jornadas');
@@ -34,7 +34,7 @@ export default function Supervision() {
 
   const handleValidacion = async (id: string | number, estado: 'APROBADA' | 'RECHAZADA') => {
     try {
-      await api(`/registros-tiempo/${id}/validacion`, 'PATCH', { estado_validacion: estado });
+      await api('PATCH', `/registros-tiempo/${id}/validacion`, { estado_validacion: estado });
       setRegistros(prev => prev.map(r => r.id === id ? { ...r, estado_validacion: estado } : r));
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error al validar la jornada');
