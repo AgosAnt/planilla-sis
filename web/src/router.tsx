@@ -1,17 +1,15 @@
 import { createBrowserRouter, Navigate } from 'react-router'
-import { Layout } from '@/components/Layout'
-import { RutaProtegida } from '@/components/RutaProtegida'
-import { AccesoDenegado } from '@/paginas/AccesoDenegado'
-import { EnConstruccion } from '@/paginas/EnConstruccion'
-import { Login } from '@/paginas/Login'
-import { NoEncontrada } from '@/paginas/NoEncontrada'
-import { Panel } from '@/paginas/Panel'
+import { Layout } from './components/Layout'
+import { RutaProtegida } from './components/RutaProtegida'
+import { AccesoDenegado } from './paginas/AccesoDenegado'
+import { EnConstruccion } from './paginas/EnConstruccion'
+import { Login } from './paginas/Login'
+import { NoEncontrada } from './paginas/NoEncontrada'
+import { Panel } from './paginas/Panel'
 
-// Importación de tus pantallas
-// Importación de tus pantallas
-import Rutas from './pages/rutas/Rutas'
-import Supervision from './pages/supervision/Supervision'
-import Planillas from './pages/planillas/Planillas'
+import Rutas from './paginas/Rutas'
+import Supervision from './paginas/Supervision'
+import Planillas from './paginas/Planillas'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
