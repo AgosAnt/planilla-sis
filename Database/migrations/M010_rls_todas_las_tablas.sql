@@ -1,3 +1,15 @@
+-- M010: Row Level Security en todas las tablas restantes (M008 ya cubre registros_tiempo y eventos_diarios).
+-- Requiere M002 a M009. Ejecutar con un rol administrador, en una sola transacción:
+--   psql -v ON_ERROR_STOP=1 -1 -d <base> -f M010_rls_todas_las_tablas.sql
+-- Es idempotente: se puede ejecutar dos veces sin error.
+--
+-- IMPORTANTE: se mergea el MISMO DÍA que el PR del backend que adapta el login y GET /me al RLS
+-- (feature/auth-login-rls). Con el RLS activo, app_user sin claims ya no ve perfiles: el login usa las funciones
+-- de la sección 2 y el resto de consultas corre dentro de conClaims (app.jwt_claims).
+--
+-- Criterio: la API es la primera barrera (rol y pertenencia); el RLS es la segunda (defensa en profundidad).
+-- Las funciones auxiliares son SECURITY DEFINER con search_path vacío: leen las tablas sin pasar por el RLS
+-- (evita recursión entre políticas) y no se pueden secuestrar con objetos de otro esquema.
 
 CREATE SCHEMA IF NOT EXISTS app;
 
