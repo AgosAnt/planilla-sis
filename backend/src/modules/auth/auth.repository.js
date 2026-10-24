@@ -44,6 +44,32 @@ export const buscarAsignacionVigente = async (client, trabajadorId, zona) => {
   return rows[0];
 };
 
+// Puntos de la geocerca de la ruta (ruta_puntos, M003), en su orden. La app móvil los usa para decidir
+// si deja marcar; el servidor vuelve a calcularlo al recibir el ingreso (dentro_de_geocerca).
+export const buscarPuntosRuta = async (client, rutaId) => {
+  const query = `
+    SELECT nombre, latitud::float8 AS latitud, longitud::float8 AS longitud, radio_m
+    FROM ruta_puntos
+    WHERE ruta_id = $1
+    ORDER BY orden;
+  `;
+  const { rows } = await client.query(query, [rutaId]);
+  return rows;
+};
+
+// Jornada sin salida del trabajador (el índice registros_uno_abierto, M004, garantiza que haya como máximo una).
+// Con ella la app de un teléfono nuevo o reinstalado sabe que el turno sigue abierto.
+export const buscarJornadaAbierta = async (client, trabajadorId) => {
+  const query = `
+    SELECT id, ingreso_at
+    FROM registros_tiempo
+    WHERE trabajador_id = $1 AND salida_at IS NULL
+    LIMIT 1;
+  `;
+  const { rows } = await client.query(query, [trabajadorId]);
+  return rows[0] ?? null;
+};
+
 export const buscarActivoPorId = async (client, id) => {
   const query = `
     SELECT ${COLUMNAS}

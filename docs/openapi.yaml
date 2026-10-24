@@ -206,8 +206,9 @@ paths:
       - Autenticación
       operationId: obtenerPerfil
       summary: Perfil del usuario autenticado
-      description: 'Para un trabajador incluye su asignación activa y vigente hoy (con la ruta y el turno acordado del
-        día): la app móvil la usa para registrar el ingreso. Para otros roles, o sin asignación, asignacion_activa es null.'
+      description: 'Para un trabajador incluye su asignación activa y vigente hoy (con la ruta, los puntos de su geocerca
+        y el turno acordado del día) y su jornada abierta: la app móvil los usa para registrar el ingreso y la salida.
+        Para otros roles, asignacion_activa y jornada_abierta son null.'
       security:
       - cookieAuth: []
       - bearerAuth: []
@@ -1891,8 +1892,42 @@ components:
             oneOf:
             - $ref: '#/components/schemas/AsignacionActiva'
             - type: 'null'
+          jornada_abierta:
+            description: Jornada del trabajador sin salida en el servidor (null si no hay, o si el rol no es trabajador).
+              La app móvil la usa para mostrar el turno abierto aunque se haya marcado desde otro teléfono.
+            type:
+            - object
+            - 'null'
+            properties:
+              id:
+                type: string
+                format: uuid
+              ingreso_at:
+                type: string
+                format: date-time
+            required:
+            - id
+            - ingreso_at
         required:
         - asignacion_activa
+        - jornada_abierta
+    PuntoGeocerca:
+      type: object
+      description: Punto de la ruta (ruta_puntos) donde se permite marcar, con su radio en metros.
+      properties:
+        nombre:
+          type: string
+        latitud:
+          type: number
+        longitud:
+          type: number
+        radio_m:
+          type: integer
+      required:
+      - nombre
+      - latitud
+      - longitud
+      - radio_m
     AsignacionActiva:
       type: object
       properties:
@@ -1917,10 +1952,17 @@ components:
               type: string
             nombre:
               type: string
+            puntos:
+              description: Geocerca de la ruta. Vacía si la ruta no tiene puntos; en ese caso la app deja marcar
+                y el servidor no informa dentro_de_geocerca.
+              type: array
+              items:
+                $ref: '#/components/schemas/PuntoGeocerca'
           required:
           - id
           - codigo
           - nombre
+          - puntos
         turno_hoy:
           type:
           - object

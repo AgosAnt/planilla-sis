@@ -6,12 +6,14 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import com.google.gson.JsonObject;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-// Cola local (offline-first): cada marca se guarda primero aquí y se envía al servidor de la oficina
+// Cola local (offline-first): cada marca se guarda primero aquí y se envía al servidor
 // cuando hay conexión, de a una y en orden (Sincronizador). Versión 2: la tabla "registros" de la
 // versión 1 no se borra, pero ya no se usa (su endpoint /api/registros dejó de existir).
 public class DatabaseHelper extends SQLiteOpenHelper {
@@ -81,12 +83,25 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     // La jornada se abrió en el servidor sin una fila local (reinstalación u otro teléfono): se agrega
     // como INGRESO ya enviado para que la salida y los descansos sepan a qué registro van.
-    public long registrarJornadaDelServidor(String trabajadorId, String registroServidorId) {
+    // ingresoAt (puede ser null) solo se usa para mostrar desde qué hora está abierta.
+    public long registrarJornadaDelServidor(String trabajadorId, String registroServidorId, String ingresoAt) {
+        JsonObject cuerpo = new JsonObject();
+        if (ingresoAt != null) cuerpo.addProperty("ingreso_at", ingresoAt);
+        return insertarYaEnviado(trabajadorId, TIPO_INGRESO, "servidor-" + registroServidorId, cuerpo, registroServidorId);
+    }
+
+    // El servidor ya no tiene abierta esa jornada (se cerró desde otro teléfono o la corrigió el supervisor):
+    // se agrega una SALIDA ya enviada para que la app deje de mostrarla como abierta.
+    public long cerrarJornadaDelServidor(String trabajadorId, String registroServidorId) {
+        return insertarYaEnviado(trabajadorId, TIPO_SALIDA, "servidor-salida-" + registroServidorId, new JsonObject(), registroServidorId);
+    }
+
+    private long insertarYaEnviado(String trabajadorId, String tipo, String clientUuid, JsonObject cuerpo, String registroServidorId) {
         ContentValues valores = new ContentValues();
         valores.put("trabajador_id", trabajadorId);
-        valores.put("tipo", TIPO_INGRESO);
-        valores.put("client_uuid", "servidor-" + registroServidorId);
-        valores.put("cuerpo", "{}");
+        valores.put("tipo", tipo);
+        valores.put("client_uuid", clientUuid);
+        valores.put("cuerpo", cuerpo.toString());
         valores.put("registro_servidor_id", registroServidorId);
         valores.put("estado", ENVIADO);
         valores.put("creado_at", ahora());
