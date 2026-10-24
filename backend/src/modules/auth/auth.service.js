@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
-import pool, { conClaims } from '../../config/db.js';
+import { conClaims } from '../../config/db.js';
 import { jwtConfig } from '../../config/jwt.js';
 import {
     DURACION_ACCESS_SEG,
@@ -39,23 +39,13 @@ const registrarFalloCorreoDesconocido = (email) => {
     });
 };
 
-// Suma el intento en perfiles y, si la cuenta queda bloqueada, lo deja en la auditoría (sin contraseñas).
-const registrarFallo = async (perfilId, rol) => {
-    const resultado = await authRepo.registrarIntentoFallido(perfilId, INTENTOS_ANTES_DE_BLOQUEO, BLOQUEO_MAXIMO_MIN);
-    if (resultado && resultado.intentos_fallidos >= INTENTOS_ANTES_DE_BLOQUEO) {
-        await registrarAuditoria(pool, {
-            actor: { id: perfilId, rol },
-            entidad: 'perfiles',
-            entidadId: perfilId,
-            accion: 'LOGIN',
-            datosDespues: {
-                resultado: 'BLOQUEADO',
-                intentos_fallidos: resultado.intentos_fallidos,
-                bloqueado_hasta: resultado.bloqueado_hasta,
-            },
-        });
-    }
-};
+// Suma el intento y, si la cuenta queda bloqueada, la base lo deja en la auditoría (sin contraseñas).
+// Se hace en una función de M010 porque, sin sesión, el RLS no deja escribir en perfiles ni en auditoria.
+const registrarFallo = (perfilId) =>
+    authRepo.registrarResultadoLogin(perfilId, false, INTENTOS_ANTES_DE_BLOQUEO, BLOQUEO_MAXIMO_MIN);
+
+const reiniciarIntentos = (perfilId) =>
+    authRepo.registrarResultadoLogin(perfilId, true, INTENTOS_ANTES_DE_BLOQUEO, BLOQUEO_MAXIMO_MIN);
 
 const estaBloqueado = (hasta) => Boolean(hasta) && new Date(hasta) > new Date();
 
@@ -96,13 +86,13 @@ export const iniciarSesion = async (email, password) => {
     const esValida = await bcrypt.compare(password, fila?.password_hash ?? HASH_RELLENO);
     if (!fila || !esValida) {
         if (fila) {
-            await registrarFallo(fila.id, fila.rol);
+            await registrarFallo(fila.id);
         } else {
             registrarFalloCorreoDesconocido(correo);
         }
         throw crearError(401, 'CREDENCIALES_INVALIDAS', 'Credenciales inválidas');
     }
-    await authRepo.reiniciarIntentos(fila.id);
+    await reiniciarIntentos(fila.id);
 
     // 4. Generar el JWT: sub = perfiles.id (RLS de M008); jti identifica la sesión para el token CSRF.
     //    dcp marca una contraseña temporal: hasta cambiarla, autenticarToken solo permite /me y /auth/password.
@@ -128,7 +118,7 @@ const verificarPasswordPropia = async (usuario, password) => {
     if (typeof password !== 'string' || !password) {
         throw crearError(400, 'PASSWORD_REQUERIDA', 'Escribe tu contraseña actual');
     }
-    const credenciales = await authRepo.buscarCredencialesPorId(usuario.id);
+    const credenciales = await conClaims(usuario, (client) => authRepo.buscarCredencialesPorId(client, usuario.id));
     if (!credenciales) {
         throw crearError(401, 'PERFIL_INACTIVO', 'El usuario no existe o está desactivado');
     }
@@ -136,10 +126,10 @@ const verificarPasswordPropia = async (usuario, password) => {
         throw errorDeBloqueo(429, 'DEMASIADOS_INTENTOS', credenciales.bloqueado_hasta);
     }
     if (!(await bcrypt.compare(password, credenciales.password_hash))) {
-        await registrarFallo(usuario.id, usuario.rol);
+        await registrarFallo(usuario.id);
         throw crearError(403, 'PASSWORD_INCORRECTA', 'La contraseña no es correcta');
     }
-    await authRepo.reiniciarIntentos(usuario.id);
+    await reiniciarIntentos(usuario.id);
     return credenciales;
 };
 
@@ -199,13 +189,14 @@ const aAsignacion = (fila) => ({
 
 // GET /me: datos frescos de la BD; un perfil desactivado después del login deja de ser válido.
 // Para un trabajador incluye su asignación activa: la app móvil necesita su id para registrar el ingreso.
-export const obtenerPerfil = async (usuarioId) => {
-    const fila = await authRepo.buscarActivoPorId(usuarioId);
-    if (!fila) {
-        throw crearError(401, 'PERFIL_INACTIVO', 'El usuario no existe o está desactivado');
-    }
-    const asignacion = fila.rol === 'trabajador'
-        ? await authRepo.buscarAsignacionVigente(usuarioId, ZONA_OPERACION)
-        : null;
-    return { ...aUsuario(fila), asignacion_activa: asignacion ? aAsignacion(asignacion) : null };
-};
+export const obtenerPerfil = (usuario) =>
+    conClaims(usuario, async (client) => {
+        const fila = await authRepo.buscarActivoPorId(client, usuario.id);
+        if (!fila) {
+            throw crearError(401, 'PERFIL_INACTIVO', 'El usuario no existe o está desactivado');
+        }
+        const asignacion = fila.rol === 'trabajador'
+            ? await authRepo.buscarAsignacionVigente(client, usuario.id, ZONA_OPERACION)
+            : null;
+        return { ...aUsuario(fila), asignacion_activa: asignacion ? aAsignacion(asignacion) : null };
+    });
