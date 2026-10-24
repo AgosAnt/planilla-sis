@@ -10,8 +10,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.gson.JsonObject;
-
 import java.security.GeneralSecurityException;
 
 import retrofit2.Call;
@@ -84,7 +82,7 @@ public class LoginActivity extends AppCompatActivity {
             public void onFailure(@NonNull Call<SesionApi.Respuesta> call, @NonNull Throwable t) {
                 ocupado(false);
                 mostrarError("No se pudo conectar con " + Configuracion.servidor(LoginActivity.this)
-                        + ". Verifica que estés en la red de la oficina.");
+                        + ". Verifica tu conexión a internet y la dirección del servidor.");
             }
         });
     }
@@ -107,7 +105,8 @@ public class LoginActivity extends AppCompatActivity {
                     return;
                 }
                 sesion.guardarPerfil(perfil);
-                recuperarJornadaAbierta(api, perfil);
+                recuperarJornadaAbierta(perfil);
+                abrirPrincipal();
             }
 
             @Override
@@ -119,24 +118,14 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    // Si el servidor tiene una jornada abierta que el teléfono no conoce, se agrega a la cola local
-    private void recuperarJornadaAbierta(ApiService api, Perfil perfil) {
-        api.registros(5).enqueue(new Callback<JsonObject>() {
-            @Override
-            public void onResponse(@NonNull Call<JsonObject> call, @NonNull Response<JsonObject> response) {
-                DatabaseHelper cola = new DatabaseHelper(LoginActivity.this);
-                String registroId = response.isSuccessful() ? ClasificadorRespuesta.jornadaAbierta(response.body()) : null;
-                if (registroId != null && cola.jornadaAbierta(perfil.id) == null) {
-                    cola.registrarJornadaDelServidor(perfil.id, registroId);
-                }
-                abrirPrincipal();
-            }
-
-            @Override
-            public void onFailure(@NonNull Call<JsonObject> call, @NonNull Throwable t) {
-                abrirPrincipal(); // no es indispensable para empezar
-            }
-        });
+    // Si el servidor tiene una jornada abierta (GET /me) que el teléfono no conoce, se agrega a la cola local.
+    // Con marcas pendientes de este teléfono no se toca nada: la sincronización alinea todo al enviarlas.
+    private void recuperarJornadaAbierta(Perfil perfil) {
+        DatabaseHelper cola = new DatabaseHelper(this);
+        if (perfil.jornadaAbierta != null && cola.jornadaAbierta(perfil.id) == null
+                && cola.contar(perfil.id, DatabaseHelper.PENDIENTE) == 0) {
+            cola.registrarJornadaDelServidor(perfil.id, perfil.jornadaAbierta.id, perfil.jornadaAbierta.ingresoAt);
+        }
     }
 
     private void abrirPrincipal() {

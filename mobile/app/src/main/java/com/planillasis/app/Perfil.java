@@ -2,6 +2,8 @@ package com.planillasis.app;
 
 import com.google.gson.annotations.SerializedName;
 
+import java.util.List;
+
 // Respuesta de GET /api/v1/me (esquema Perfil del contrato)
 public class Perfil {
 
@@ -11,6 +13,8 @@ public class Perfil {
     public String apellidos;
     public String rol;
     @SerializedName("asignacion_activa") public AsignacionActiva asignacionActiva;
+    // Jornada sin salida en el servidor (puede haberse abierto desde otro teléfono)
+    @SerializedName("jornada_abierta") public JornadaAbierta jornadaAbierta;
 
     public static class AsignacionActiva {
         public String id;
@@ -22,6 +26,13 @@ public class Perfil {
         public String id;
         public String codigo;
         public String nombre;
+        // Geocerca de la ruta (ruta_puntos); vacía o null si la ruta no tiene puntos
+        public List<Geocerca.Punto> puntos;
+    }
+
+    public static class JornadaAbierta {
+        public String id;
+        @SerializedName("ingreso_at") public String ingresoAt;
     }
 
     public static class Turno {

@@ -15,8 +15,9 @@ import java.util.concurrent.Executors;
 
 import retrofit2.Response;
 
-// Envía la cola al servidor de la oficina de a una marca y en orden (C-04), en un hilo aparte.
-// Se detiene ante falta de conexión (la marca queda pendiente) o sesión vencida (se pide login).
+// Envía la cola al servidor de a una marca y en orden (C-04), en un hilo aparte, y luego trae GET /me para
+// alinear el estado local con el del servidor. Se detiene ante falta de conexión (la marca queda pendiente)
+// o sesión vencida (se pide login).
 public final class Sincronizador {
 
     public static class Resumen {
@@ -79,13 +80,45 @@ public final class Sincronizador {
                     return resumen;
                 }
             } catch (IOException e) {
-                // Fuera de la red de la oficina o servidor apagado: se reintenta en la próxima sincronización
+                // Sin conexión o servidor caído: se reintenta en la próxima sincronización
                 cola.sumarIntento(item.id);
                 resumen.sinConexion = true;
                 return resumen;
             }
         }
+        // Cola vacía: ya no hay marcas en camino, así que el estado del servidor es el definitivo
+        try {
+            actualizarPerfil(sesion, cola, api, perfil.id, resumen);
+        } catch (IOException e) {
+            resumen.sinConexion = true;
+        }
         return resumen;
+    }
+
+    // Trae GET /me (asignación del día, geocerca y jornada abierta) y alinea la cola local con el servidor:
+    // un teléfono nuevo ve el turno abierto en otro, y uno que quedó atrás deja de mostrar un turno ya cerrado.
+    private static void actualizarPerfil(SesionManager sesion, DatabaseHelper cola, ApiService api,
+                                         String trabajadorId, Resumen resumen) throws IOException {
+        Response<Perfil> respuesta = api.perfil().execute();
+        if (respuesta.code() == 401) {
+            sesion.invalidarToken();
+            resumen.requiereLogin = true;
+            return;
+        }
+        Perfil perfil = respuesta.body();
+        if (!respuesta.isSuccessful() || perfil == null) return;
+        sesion.guardarPerfil(perfil);
+
+        DatabaseHelper.ItemCola local = cola.jornadaAbierta(trabajadorId);
+        Perfil.JornadaAbierta servidor = perfil.jornadaAbierta;
+        String idLocal = local != null ? local.registroServidorId : null;
+        if (idLocal != null && (servidor == null || !idLocal.equals(servidor.id))) {
+            cola.cerrarJornadaDelServidor(trabajadorId, idLocal);
+            sesion.limpiarDescanso();
+        }
+        if (servidor != null && !servidor.id.equals(idLocal)) {
+            cola.registrarJornadaDelServidor(trabajadorId, servidor.id, servidor.ingresoAt);
+        }
     }
 
     private static ClasificadorRespuesta.Resultado enviar(DatabaseHelper cola, ApiService api,
@@ -160,7 +193,7 @@ public final class Sincronizador {
         Response<JsonObject> respuesta = api.registros(5).execute();
         if (!respuesta.isSuccessful()) return;
         String registroId = ClasificadorRespuesta.jornadaAbierta(respuesta.body());
-        if (registroId != null) cola.registrarJornadaDelServidor(trabajadorId, registroId);
+        if (registroId != null) cola.registrarJornadaDelServidor(trabajadorId, registroId, null);
     }
 
     private static ClasificadorRespuesta.Resultado registrarEvento(DatabaseHelper cola, DatabaseHelper.ItemCola item,

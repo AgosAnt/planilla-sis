@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -20,20 +21,23 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.location.LocationManagerCompat;
 
+import com.google.android.gms.location.CurrentLocationRequest;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.tasks.CancellationTokenSource;
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
-
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -49,9 +53,9 @@ public class MainActivity extends AppCompatActivity {
     private Perfil perfil;
     private FusedLocationProviderClient fusedLocationClient;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1000;
-    private static final double EMPRESA_LAT = 14.635202183200219;
-    private static final double EMPRESA_LON = -90.74817535490664;
-    private static final float RADIO_PERMITIDO_METROS = 100.0f;
+    // Lectura del GPS: se acepta una de hace menos de 30 s y se espera hasta 20 s por una nueva
+    private static final long UBICACION_EDAD_MAXIMA_MS = 30_000;
+    private static final long UBICACION_ESPERA_MAXIMA_MS = 20_000;
 
     // Catálogo tipos_descanso del seed de M004 (falta GET /catalogos/tipos-descanso en el backend)
     private static final String[] NOMBRES_DESCANSO = { "Almuerzo", "Pausa activa / café", "Imprevisto / sanitario" };
@@ -59,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean procesandoRegistro = false;
 
-    // Envío automático de pendientes: al volver el WiFi de la oficina y, mientras queden, cada 30 s
+    // Envío automático de pendientes: al recuperar la conexión y, mientras queden, cada 30 s
     private static final long REINTENTO_MS = 30_000;
     private ConnectivityManager.NetworkCallback escuchaRed;
     private final Runnable reintentoPeriodico = new Runnable() {
@@ -112,11 +116,11 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // La sincronización también trae GET /me: asignación del día, geocerca y jornada abierta en el servidor
     @Override
     protected void onResume() {
         super.onResume();
         if (perfil == null) return;
-        actualizarPerfil();
         sincronizar();
     }
 
@@ -124,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         if (perfil == null) return;
-        escucharWifi();
+        escucharRed();
         handler.postDelayed(reintentoPeriodico, REINTENTO_MS);
     }
 
@@ -139,17 +143,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // El servidor está en la LAN de la oficina: al conectarse a un WiFi se intenta enviar lo pendiente
-    private void escucharWifi() {
+    // Al recuperar internet (WiFi o datos móviles) se intenta enviar lo pendiente
+    private void escucharRed() {
         ConnectivityManager conectividad = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        NetworkRequest soloWifi = new NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
+        NetworkRequest conInternet = new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build();
         escuchaRed = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(@NonNull Network red) {
                 runOnUiThread(() -> sincronizar());
             }
         };
-        conectividad.registerNetworkCallback(soloWifi, escuchaRed);
+        conectividad.registerNetworkCallback(conInternet, escuchaRed);
     }
 
     private String obtenerHoraActual() {
@@ -188,34 +192,15 @@ public class MainActivity extends AppCompatActivity {
         tvRuta.setText(texto);
     }
 
-    // Refresca la asignación del día cuando hay conexión; sin red se usa la guardada
-    private void actualizarPerfil() {
-        RetrofitClient.getApiService(this).perfil().enqueue(new Callback<Perfil>() {
-            @Override
-            public void onResponse(@NonNull Call<Perfil> call, @NonNull Response<Perfil> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    perfil = response.body();
-                    sesion.guardarPerfil(perfil);
-                    mostrarPerfil();
-                    restaurarEstadoUI();
-                }
-            }
-
-            @Override
-            public void onFailure(@NonNull Call<Perfil> call, @NonNull Throwable t) {
-                // Fuera de la red de la oficina: se sigue con el perfil guardado
-            }
-        });
-    }
-
     private void restaurarEstadoUI() {
-        boolean enRuta = dbHelper.jornadaAbierta(perfil.id) != null;
+        DatabaseHelper.ItemCola jornada = dbHelper.jornadaAbierta(perfil.id);
+        boolean enRuta = jornada != null;
         String inicioDescanso = sesion.inicioDescanso();
 
         if (enRuta && inicioDescanso != null) {
-            tvEstado.setText("Estado: EN DESCANSO");
+            tvEstado.setText(conHora("Estado: EN DESCANSO", horaLocal(inicioDescanso)));
         } else if (enRuta) {
-            tvEstado.setText("Estado: EN RUTA");
+            tvEstado.setText(conHora("Estado: EN RUTA", horaLocal(ingresoDe(jornada))));
         } else {
             tvEstado.setText("Estado: LISTO PARA INICIAR");
         }
@@ -226,12 +211,38 @@ public class MainActivity extends AppCompatActivity {
         mostrarEstadoCola(null);
     }
 
+    private static String conHora(String estado, String hora) {
+        return hora != null ? estado + " desde las " + hora : estado;
+    }
+
+    // ingreso_at del cuerpo de la marca (o de la jornada recuperada del servidor); null si no se conoce
+    private static String ingresoDe(DatabaseHelper.ItemCola jornada) {
+        try {
+            JsonObject cuerpo = new Gson().fromJson(jornada.cuerpo, JsonObject.class);
+            return cuerpo != null && cuerpo.has("ingreso_at") ? cuerpo.get("ingreso_at").getAsString() : null;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    // "2026-10-24T13:37:39.777Z" -> "07:37" en la hora del teléfono; null si no se puede leer
+    private static String horaLocal(String instanteIso) {
+        if (instanteIso == null) return null;
+        SimpleDateFormat entrada = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+        entrada.setTimeZone(TimeZone.getTimeZone("UTC"));
+        try {
+            return new SimpleDateFormat("HH:mm", Locale.getDefault()).format(entrada.parse(instanteIso));
+        } catch (ParseException e) {
+            return null;
+        }
+    }
+
     private void mostrarEstadoCola(String mensaje) {
         int pendientes = dbHelper.contar(perfil.id, DatabaseHelper.PENDIENTE);
         int rechazados = dbHelper.contar(perfil.id, DatabaseHelper.RECHAZADO);
         StringBuilder texto = new StringBuilder();
         texto.append(pendientes == 0 ? "Todo enviado al servidor."
-                : "Pendientes de enviar: " + pendientes + ". Se envían solos al conectarte a la red de la oficina (toca aquí para reintentar).");
+                : "Pendientes de enviar: " + pendientes + ". Se envían solos al recuperar la conexión (toca aquí para reintentar).");
         if (rechazados > 0) {
             DatabaseHelper.ItemCola ultimo = dbHelper.ultimoRechazado(perfil.id);
             texto.append("\nRechazados por el servidor: ").append(rechazados);
@@ -279,9 +290,24 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        LocationManager ubicacionSistema = (LocationManager) getSystemService(LOCATION_SERVICE);
+        if (ubicacionSistema != null && !LocationManagerCompat.isLocationEnabled(ubicacionSistema)) {
+            mostrarMensaje("La ubicación del teléfono está desactivada. Actívala y vuelve a intentar.");
+            restaurarEstadoUI();
+            btnEmergencia.setEnabled(true);
+            return;
+        }
+
         procesandoRegistro = true;
 
-        fusedLocationClient.getLastLocation()
+        // Lectura actual (no la última conocida, que es null en un teléfono recién encendido o sin uso del GPS):
+        // si hay una de menos de 30 s se usa; si no, se enciende el GPS y se espera hasta 20 s
+        CurrentLocationRequest solicitud = new CurrentLocationRequest.Builder()
+                .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+                .setMaxUpdateAgeMillis(UBICACION_EDAD_MAXIMA_MS)
+                .setDurationMillis(UBICACION_ESPERA_MAXIMA_MS)
+                .build();
+        fusedLocationClient.getCurrentLocation(solicitud, new CancellationTokenSource().getToken())
                 .addOnSuccessListener(this, location -> {
                     try {
                         if (location != null) {
@@ -291,7 +317,7 @@ public class MainActivity extends AppCompatActivity {
                                 verificarGeocerca(location, tipoRegistro);
                             }
                         } else {
-                            mostrarMensaje("El GPS está inactivo. Abre Google Maps un momento y vuelve a intentar.");
+                            mostrarMensaje("No se pudo leer el GPS. Si estás bajo techo, acércate a una ventana y vuelve a intentar.");
                         }
                     } finally {
                         procesandoRegistro = false;
@@ -307,18 +333,25 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    // Misma geocerca de la empresa que antes: entrada y salida solo dentro del radio permitido
+    // Entrada y salida solo dentro de algún punto de la ruta (GET /me). Si la ruta no tiene puntos se deja
+    // marcar: el servidor guarda la ubicación y el supervisor la revisa al validar.
     private void verificarGeocerca(Location ubicacionActual, String tipoRegistro) {
-        Location ubicacionEmpresa = new Location("");
-        ubicacionEmpresa.setLatitude(EMPRESA_LAT);
-        ubicacionEmpresa.setLongitude(EMPRESA_LON);
-
-        float distanciaMetros = ubicacionActual.distanceTo(ubicacionEmpresa);
-        if (distanciaMetros <= RADIO_PERMITIDO_METROS) {
+        List<Geocerca.Punto> puntos = perfil.asignacionActiva != null && perfil.asignacionActiva.ruta != null
+                ? perfil.asignacionActiva.ruta.puntos : null;
+        Geocerca.Resultado resultado = Geocerca.evaluar(puntos, ubicacionActual.getLatitude(), ubicacionActual.getLongitude());
+        if (resultado.dentro) {
             guardarRegistroLocal(tipoRegistro, ubicacionActual);
-        } else {
-            mostrarMensaje("ESTÁS MUY LEJOS: A " + Math.round(distanciaMetros) + " metros de la empresa.");
+            return;
         }
+        StringBuilder texto = new StringBuilder("ESTÁS FUERA DE LA ZONA: a ")
+                .append(Math.round(resultado.distanciaM)).append(" m de ").append(resultado.masCercano.nombre)
+                .append(" (se permite hasta ").append(resultado.masCercano.radioM).append(" m).");
+        // Una lectura imprecisa (bajo techo) puede dejar fuera a alguien que está en el lugar
+        if (ubicacionActual.hasAccuracy() && ubicacionActual.getAccuracy() > resultado.masCercano.radioM) {
+            texto.append(" El GPS tiene poca precisión (±").append(Math.round(ubicacionActual.getAccuracy()))
+                    .append(" m): intenta al aire libre.");
+        }
+        mostrarMensaje(texto.toString());
     }
 
     // Guarda la marca en la cola local (funciona sin conexión) y luego intenta enviarla
@@ -428,8 +461,14 @@ public class MainActivity extends AppCompatActivity {
                 irAlLogin();
                 return;
             }
+            // La sincronización pudo traer un perfil nuevo (asignación del día, geocerca, jornada abierta)
+            Perfil actualizado = sesion.perfil();
+            if (actualizado != null) {
+                perfil = actualizado;
+                mostrarPerfil();
+            }
             restaurarEstadoUI();
-            mostrarEstadoCola(resumen.sinConexion ? "Sin conexión con el servidor de la oficina." : resumen.mensaje);
+            mostrarEstadoCola(resumen.sinConexion ? "Sin conexión con el servidor. Lo pendiente se enviará solo." : resumen.mensaje);
         });
     }
 
