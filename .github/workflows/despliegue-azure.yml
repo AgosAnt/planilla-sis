@@ -1,0 +1,51 @@
+# Despliegue de prueba en la nube: cada merge a develop compila la web y publica backend + web en Azure App Service.
+# La base de datos está en Supabase; sus credenciales viven solo en la configuración de Azure (DATABASE_URL).
+# Requiere en GitHub: el secreto AZURE_WEBAPP_PUBLISH_PROFILE y la variable AZURE_WEBAPP_NAME.
+name: Despliegue a Azure (prueba)
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Si entran dos merges seguidos, se publica solo el último
+concurrency:
+  group: despliegue-azure
+  cancel-in-progress: true
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # La misma versión que la pila de Azure (Node 22 LTS): bcrypt se compila para esa versión
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Compilar la web
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Dependencias del backend (sin las de desarrollo)
+        working-directory: backend
+        run: npm ci --omit=dev
+
+      # Azure arranca con "node backend/index.js"; app.js sirve la web desde ../web/dist
+      - name: Armar el paquete (backend + web compilada)
+        run: |
+          mkdir -p paquete/web
+          cp -r backend paquete/backend
+          cp -r web/dist paquete/web/dist
+
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: paquete
