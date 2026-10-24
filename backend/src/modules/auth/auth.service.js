@@ -177,26 +177,33 @@ export const cambiarPassword = async (usuario, datos) => {
     });
 };
 
-const aAsignacion = (fila) => ({
+const aAsignacion = (fila, puntos) => ({
     id: fila.id,
     fecha_inicio: fila.fecha_inicio,
     fecha_fin: fila.fecha_fin,
-    ruta: { id: fila.ruta_id, codigo: fila.ruta_codigo, nombre: fila.ruta_nombre },
+    ruta: { id: fila.ruta_id, codigo: fila.ruta_codigo, nombre: fila.ruta_nombre, puntos },
     turno_hoy: fila.turno_nombre
         ? { nombre: fila.turno_nombre, hora_inicio: fila.turno_hora_inicio, hora_fin: fila.turno_hora_fin }
         : null,
 });
 
 // GET /me: datos frescos de la BD; un perfil desactivado después del login deja de ser válido.
-// Para un trabajador incluye su asignación activa: la app móvil necesita su id para registrar el ingreso.
+// Para un trabajador incluye su asignación activa (la app móvil necesita su id para registrar el ingreso),
+// los puntos de la geocerca de su ruta y la jornada que tenga abierta en el servidor.
 export const obtenerPerfil = (usuario) =>
     conClaims(usuario, async (client) => {
         const fila = await authRepo.buscarActivoPorId(client, usuario.id);
         if (!fila) {
             throw crearError(401, 'PERFIL_INACTIVO', 'El usuario no existe o está desactivado');
         }
-        const asignacion = fila.rol === 'trabajador'
-            ? await authRepo.buscarAsignacionVigente(client, usuario.id, ZONA_OPERACION)
-            : null;
-        return { ...aUsuario(fila), asignacion_activa: asignacion ? aAsignacion(asignacion) : null };
+        if (fila.rol !== 'trabajador') {
+            return { ...aUsuario(fila), asignacion_activa: null, jornada_abierta: null };
+        }
+        const asignacion = await authRepo.buscarAsignacionVigente(client, usuario.id, ZONA_OPERACION);
+        const puntos = asignacion ? await authRepo.buscarPuntosRuta(client, asignacion.ruta_id) : [];
+        return {
+            ...aUsuario(fila),
+            asignacion_activa: asignacion ? aAsignacion(asignacion, puntos) : null,
+            jornada_abierta: await authRepo.buscarJornadaAbierta(client, usuario.id),
+        };
     });
