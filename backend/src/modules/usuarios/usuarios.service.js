@@ -12,6 +12,11 @@ const DUPLICADOS = {
   perfiles_documento_key: ['DOCUMENTO_DUPLICADO', 'Ya existe un usuario con ese documento'],
 };
 
+const traducirDuplicado = (error) => {
+  const duplicado = error.code === '23505' && DUPLICADOS[error.constraint];
+  return duplicado ? crearError(409, ...duplicado) : error;
+};
+
 // 16 caracteres aleatorios (96 bits). La genera el sistema, nunca el administrador (E-2b).
 const generarPasswordTemporal = () => randomBytes(12).toString('base64url');
 
@@ -36,11 +41,7 @@ export const crearUsuario = (admin, datos) =>
         documento: datos.documento,
       });
     } catch (error) {
-      const duplicado = error.code === '23505' && DUPLICADOS[error.constraint];
-      if (duplicado) {
-        throw crearError(409, ...duplicado);
-      }
-      throw error;
+      throw traducirDuplicado(error);
     }
 
     await registrarAuditoria(client, {
@@ -57,4 +58,66 @@ export const crearUsuario = (admin, datos) =>
       password_temporal: passwordTemporal,
       debe_cambiar_password: perfil.debe_cambiar_password,
     };
+  });
+
+// GET /admin/usuarios: paginado, con filtros por rol, activo y texto (nombre, correo o código de empleado).
+export const listarUsuarios = (admin, filtros, { page, pageSize }) =>
+  conClaims(admin, async (client) => {
+    const total = await usuariosRepo.contarUsuarios(client, filtros);
+    const items = await usuariosRepo.listarUsuarios(client, {
+      ...filtros,
+      limite: pageSize,
+      desplazamiento: (page - 1) * pageSize,
+    });
+    return { items, page, page_size: pageSize, total };
+  });
+
+export const obtenerUsuario = (admin, id) =>
+  conClaims(admin, async (client) => {
+    const usuario = await usuariosRepo.buscarUsuario(client, id);
+    if (!usuario) {
+      throw crearError(404, 'USUARIO_NO_ENCONTRADO', 'El usuario no existe');
+    }
+    return usuario;
+  });
+
+// PATCH /admin/usuarios/{id}: solo cambia lo enviado. La baja es lógica (activo = false).
+// El cambio de rol o la baja se aplican en el próximo inicio de sesión del usuario (el token vigente dura hasta 2 h).
+export const actualizarUsuario = (admin, id, cambios) =>
+  conClaims(admin, async (client) => {
+    const actual = await usuariosRepo.buscarUsuario(client, id, { bloquear: true });
+    if (!actual) {
+      throw crearError(404, 'USUARIO_NO_ENCONTRADO', 'El usuario no existe');
+    }
+    // Un administrador no puede quitarse el rol ni darse de baja: el sistema podría quedar sin administradores
+    const cambiaSuAcceso = (cambios.rol !== undefined && cambios.rol !== actual.rol) || cambios.activo === false;
+    if (actual.id === admin.id && cambiaSuAcceso) {
+      throw crearError(422, 'OPERACION_SOBRE_SI_MISMO', 'No puedes cambiar tu propio rol ni darte de baja');
+    }
+
+    const rol = cambios.rol ?? actual.rol;
+    const rolId = await usuariosRepo.buscarIdRol(client, rol);
+    try {
+      await usuariosRepo.actualizarUsuario(client, id, {
+        nombres: cambios.nombres ?? actual.nombres,
+        apellidos: cambios.apellidos ?? actual.apellidos,
+        rolId,
+        activo: cambios.activo ?? actual.activo,
+        codigoEmpleado: cambios.codigo_empleado ?? actual.codigo_empleado,
+        documento: cambios.documento ?? actual.documento,
+      });
+    } catch (error) {
+      throw traducirDuplicado(error);
+    }
+
+    const actualizado = await usuariosRepo.buscarUsuario(client, id);
+    await registrarAuditoria(client, {
+      actor: admin,
+      entidad: 'perfiles',
+      entidadId: id,
+      accion: 'UPDATE',
+      datosAntes: actual,
+      datosDespues: actualizado,
+    });
+    return actualizado;
   });
