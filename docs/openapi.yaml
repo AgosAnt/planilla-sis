@@ -254,6 +254,186 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
+    get:
+      tags:
+      - Administración
+      operationId: listarUsuarios
+      summary: Listar usuarios
+      description: Solo administrador. Ordenados por apellidos. buscar compara contra nombre completo, correo y código
+        de empleado (texto literal, sin comodines).
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: rol
+        in: query
+        schema:
+          $ref: '#/components/schemas/Rol'
+      - name: activo
+        in: query
+        schema:
+          type: boolean
+      - name: buscar
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioAdminPagina'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/usuarios/{id}:
+    get:
+      tags:
+      - Administración
+      operationId: obtenerUsuario
+      summary: Consultar un usuario
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioAdmin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Administración
+      operationId: actualizarUsuario
+      summary: Editar un usuario
+      description: Solo administrador; cambia solo lo enviado y la baja es lógica (activo = false). El correo no se
+        cambia. Un administrador no puede cambiar su propio rol ni darse de baja (422 OPERACION_SOBRE_SI_MISMO).
+        Código de empleado o documento repetido = 409. El cambio de rol o la baja se aplican en el próximo inicio de
+        sesión del usuario.
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarUsuarioRequest'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioAdmin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /auditoria:
+    get:
+      tags:
+      - Administración
+      operationId: consultarAuditoria
+      summary: Consultar la bitácora de auditoría
+      description: Solo administrador (permiso auditoria.consultar). Más recientes primero. desde y hasta son fechas de
+        calendario en hora de Guatemala.
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: entidad
+        in: query
+        schema:
+          type: string
+          example: perfiles
+      - name: entidad_id
+        in: query
+        schema:
+          type: string
+      - name: actor_id
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: accion
+        in: query
+        schema:
+          type: string
+          enum:
+          - INSERT
+          - UPDATE
+          - DELETE
+          - VERIFICAR
+          - APROBAR
+          - RECHAZAR
+          - PAGAR
+          - LOGIN
+          - EXPORT
+      - name: desde
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: hasta
+        in: query
+        schema:
+          type: string
+          format: date
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditoriaPagina'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /registros-tiempo:
     get:
       tags:
@@ -1840,6 +2020,118 @@ components:
       required:
       - password_actual
       - password_nueva
+    UsuarioAdmin:
+      type: object
+      description: Datos de un usuario para el administrador. Nunca incluye la contraseña ni su hash.
+      properties:
+        id: *id002
+        email:
+          type: string
+          format: email
+        nombres:
+          type: string
+        apellidos:
+          type: string
+        rol:
+          $ref: '#/components/schemas/Rol'
+        codigo_empleado:
+          type: string
+        documento:
+          type: string
+        activo:
+          type: boolean
+        debe_cambiar_password:
+          type: boolean
+        bloqueado:
+          type: boolean
+          description: Cuenta bloqueada en este momento por intentos fallidos de inicio de sesión.
+        creado_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - email
+      - nombres
+      - apellidos
+      - rol
+      - activo
+    UsuarioAdminPagina:
+      allOf:
+      - $ref: '#/components/schemas/Paginacion'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/UsuarioAdmin'
+        required:
+        - items
+    ActualizarUsuarioRequest:
+      type: object
+      description: Al menos un campo. El correo no se puede cambiar.
+      properties:
+        nombres:
+          type: string
+          maxLength: 100
+        apellidos:
+          type: string
+          maxLength: 100
+        rol:
+          $ref: '#/components/schemas/Rol'
+        activo:
+          type: boolean
+        codigo_empleado:
+          type: string
+          maxLength: 50
+        documento:
+          type: string
+          maxLength: 50
+    RegistroAuditoria:
+      type: object
+      properties:
+        id:
+          type: integer
+        ocurrido_en:
+          type: string
+          format: date-time
+        actor_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        actor_nombre:
+          type:
+          - string
+          - 'null'
+        actor_rol:
+          type:
+          - string
+          - 'null'
+        entidad:
+          type: string
+        entidad_id:
+          type: string
+        accion:
+          type: string
+        datos_antes:
+          type:
+          - object
+          - 'null'
+        datos_despues:
+          type:
+          - object
+          - 'null'
+    AuditoriaPagina:
+      allOf:
+      - $ref: '#/components/schemas/Paginacion'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/RegistroAuditoria'
+        required:
+        - items
     CrearUsuarioRequest:
       type: object
       properties:
