@@ -79,7 +79,7 @@ export const cambiarPassword = async (req, res, next) => {
 
 export const obtenerPerfil = async (req, res, next) => {
   try {
-    const usuario = await authService.obtenerPerfil(req.usuario.id);
+    const usuario = await authService.obtenerPerfil(req.usuario);
     return res.status(200).json(usuario);
   } catch (error) {
     next(error);
