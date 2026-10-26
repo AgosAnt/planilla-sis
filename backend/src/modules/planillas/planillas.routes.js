@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import * as controller from './planillas.controller.js';
-import { autenticarToken, requerirRol } from '../../middlewares/auth.js';
+import * as aprobacion from './aprobacion.controller.js';
+import { autenticarToken, requerirRol, requerirReautenticacion } from '../../middlewares/auth.js';
+import { requerirIdempotencyKey } from '../../middlewares/idempotencia.js';
 import { validarPaginacion } from '../../middlewares/validarPaginacion.js';
 import {
   validarIdsPlanilla, validarCrearPeriodo, validarCrearPlanilla, validarVerificar, validarListarPlanillas,
-  validarRutaOpcional, validarRangoCalculo,
+  validarRutaOpcional, validarRangoCalculo, validarAprobar, validarPagos,
 } from '../../middlewares/validarPlanilla.js';
 
 // Permisos de M007: calcular (administrador y supervisor), verificar (supervisor). Aprobar y pagar: administrador.
@@ -23,6 +25,14 @@ router.post('/', gestiona, validarCrearPlanilla, controller.crearPlanilla);
 router.get('/:id', gestiona, validarIdsPlanilla('id'), validarPaginacion, controller.obtenerPlanilla);
 router.post('/:id/calcular', gestiona, validarIdsPlanilla('id'), controller.recalcularPlanilla);
 router.post('/:id/verificar', requerirRol('supervisor'), validarIdsPlanilla('id'), validarVerificar, controller.verificarPlanilla);
+
+// Aprobar y pagar: administrador, con la contraseña confirmada (X-Reauth-Token de POST /auth/reauth).
+// La validación va antes de la reautenticación para no gastar el token en un cuerpo mal formado.
+router.post('/:id/aprobar', requerirRol('administrador'), validarIdsPlanilla('id'), validarAprobar,
+  requerirReautenticacion, aprobacion.aprobarPlanilla);
+router.post('/:id/pagos', requerirRol('administrador'), validarIdsPlanilla('id'), requerirIdempotencyKey, validarPagos,
+  requerirReautenticacion, aprobacion.registrarPagos);
+router.get('/:id/pagos', requerirRol('administrador'), validarIdsPlanilla('id'), aprobacion.obtenerPagos);
 
 export default router;
 

@@ -1133,8 +1133,10 @@ paths:
       security:
       - cookieAuth: []
         csrfToken: []
-      description: Exige permiso planilla.aprobar y reautenticación; el permiso no está asignado a ningún rol por
-        defecto. Bloqueo de integridad y montos inmutables tras aprobación.
+      description: 'Solo administrador (permiso planilla.aprobar de M007), con X-Reauth-Token. VERIFICADA -> APROBADA.
+        Quien aprueba no puede haber calculado ni verificado (409 SEGREGACION_FUNCIONES). total_esperado debe ser igual
+        a la suma de los netos (409 TOTAL_NO_COINCIDE). Guarda un hash SHA-256 del detalle; desde aquí los montos son
+        inmutables (RN-07, triggers de M005).'
       parameters:
       - name: id
         in: path
@@ -1175,8 +1177,10 @@ paths:
       security:
       - cookieAuth: []
         csrfToken: []
-      description: Reautenticación obligatoria. No persistir ni auditar el token. Rechazar pagos duplicados, modificaciones
-        indebidas y montos que difieran del neto aprobado.
+      description: 'Solo administrador (permiso pagos.registrar), con X-Reauth-Token e Idempotency-Key. La planilla debe
+        estar APROBADA. Un pago por trabajador, por el neto exacto (422 MONTO_DISTINTO_DEL_NETO); repetido = 409
+        PAGO_DUPLICADO; detalle de otra planilla = 422 DETALLE_AJENO. Se puede pagar por partes; cuando todos tienen
+        pago, la planilla pasa a PAGADA (y el período, si todas sus planillas lo están).'
       parameters:
       - name: id
         in: path
@@ -1209,6 +1213,33 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
+    get:
+      tags:
+      - Planillas
+      operationId: listarPagos
+      summary: Consultar los pagos de una planilla
+      description: Solo administrador.
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagosPlanilla'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /planillas/periodos:
     get:
       tags:
@@ -3354,6 +3385,37 @@ components:
       required:
       - monto_hora
       - vigente_desde
+    PagosPlanilla:
+      type: object
+      properties:
+        planilla_id: *id002
+        estado:
+          $ref: '#/components/schemas/EstadoPlanilla'
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id: *id002
+              detalle_id: *id002
+              trabajador_id: *id002
+              trabajador_nombre:
+                type: string
+              metodo:
+                type: string
+              estado:
+                type: string
+                enum:
+                - PROCESADO
+                - RECHAZADO
+                - ANULADO
+              referencia_transaccion:
+                type:
+                - string
+                - 'null'
+              monto_pagado: *id004
+              pagado_at: *id003
+              registrado_por: *id002
     TipoDescanso:
       type: object
       properties:
