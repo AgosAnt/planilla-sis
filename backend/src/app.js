@@ -8,7 +8,8 @@ import authRoutes, { perfilRouter } from './modules/auth/auth.routes.js';
 import auditoriaRoutes from './modules/auditoria/auditoria.routes.js';
 import registrosRoutes from './modules/registros/registros.routes.js';
 import rutasRoutes from './modules/rutas/rutas.routes.js';
-import planillasRoutes from './modules/planillas/planillas.routes.js';
+import planillasRoutes, { miCalculoRouter } from './modules/planillas/planillas.routes.js';
+import { parametrosRouter, feriadosRouter, tarifasRouter } from './modules/parametros/parametros.routes.js';
 import eventosDescansoRoutes from './modules/eventos_descanso/eventos_descanso.routes.js';
 import eventosRutaRoutes from './modules/eventos_ruta/eventos_ruta.routes.js';
 import usuariosRoutes from './modules/usuarios/usuarios.routes.js';
@@ -62,6 +63,10 @@ app.use('/api/v1/asignaciones', asignacionesRouter);
 app.use('/api/v1/acuerdos-turno', acuerdosTurnoRouter);
 app.use('/api/v1/catalogos', catalogosRouter);
 app.use('/api/v1/planillas', planillasRoutes);
+app.use('/api/v1/me/calculo', miCalculoRouter);
+app.use('/api/v1/admin/parametros-pago', parametrosRouter);
+app.use('/api/v1/admin/feriados', feriadosRouter);
+app.use('/api/v1/trabajadores/:trabajadorId/tarifas', tarifasRouter);
 app.use('/api/v1/eventos\\:batch', eventosRutaRoutes);
 
 // Ruta de API inexistente: 404 en problem+json, no la página HTML por defecto de Express

@@ -979,6 +979,8 @@ paths:
       - Planillas
       operationId: obtenerMiCalculo
       summary: Obtener horas propias
+      description: Solo el trabajador. Horas de sus jornadas aprobadas o corregidas en el rango (máximo 62 días), con las
+        reglas de docs/reglas-calculo.md. No incluye montos. jornadas_pendientes cuenta las que aún no valida el supervisor.
       security:
       - bearerAuth: []
       parameters:
@@ -1015,12 +1017,18 @@ paths:
       - Planillas
       operationId: obtenerCalculoPeriodo
       summary: Obtener cálculo del período
+      description: Administrador o supervisor. Planilla del período con su resumen y el detalle por trabajador (paginado).
+        Sin ruta_id devuelve la planilla general.
       security:
       - cookieAuth: []
+      - bearerAuth: []
       parameters:
       - name: periodoId
         in: path
         required: true
+        schema: *id002
+      - name: ruta_id
+        in: query
         schema: *id002
       - $ref: '#/components/parameters/Page'
       - $ref: '#/components/parameters/PageSize'
@@ -1197,6 +1205,363 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /planillas/periodos:
+    get:
+      tags:
+      - Planillas
+      operationId: listarPeriodos
+      summary: Listar períodos de planilla
+      description: Administrador o supervisor. Más recientes primero.
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeriodoPagina'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Planillas
+      operationId: crearPeriodo
+      summary: Crear período de planilla
+      description: Solo administrador. Máximo 62 días. Código o fechas repetidas = 409 PERIODO_DUPLICADO.
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearPeriodoRequest'
+      responses:
+        '201':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Periodo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /planillas:
+    get:
+      tags:
+      - Planillas
+      operationId: listarPlanillas
+      summary: Listar planillas de un período
+      description: Administrador o supervisor. Cada planilla con su número de trabajadores y totales.
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: periodo_id
+        in: query
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanillasDelPeriodo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+      - Planillas
+      operationId: crearPlanilla
+      summary: Crear y calcular la planilla de un período
+      description: 'Crea la planilla (general, o de una ruta con ruta_id) y la calcula en la misma transacción
+        (docs/reglas-calculo.md). El supervisor solo calcula planillas de rutas a su cargo; la general la calcula el
+        administrador (403 PLANILLA_GENERAL_SOLO_ADMIN). Errores: 409 JORNADAS_PENDIENTES (jornadas sin validar o sin
+        salida en el período), 409 PLANILLA_EXISTENTE, 409 PERIODO_CERRADO, 422 TARIFA_FALTANTE.'
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearPlanillaRequest'
+      responses:
+        '201':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Planilla'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+  /planillas/{id}:
+    get:
+      tags:
+      - Planillas
+      operationId: obtenerPlanilla
+      summary: Consultar una planilla
+      description: Administrador o supervisor. Misma forma que el cálculo del período.
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalculoPeriodoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/parametros-pago:
+    get:
+      tags:
+      - Administración
+      operationId: obtenerParametrosPago
+      summary: Consultar parámetros de pago
+      description: Administrador o supervisor.
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParametrosPago'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags:
+      - Administración
+      operationId: actualizarParametrosPago
+      summary: Cambiar parámetros de pago
+      description: Solo administrador (permiso parametros.configurar). Cambia solo lo enviado y queda en la auditoría.
+        factor_hora_extra mínimo 1.50 (art. 121); regla_redondeo por ahora solo EXACTO.
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarParametrosRequest'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParametrosPago'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/feriados:
+    get:
+      tags:
+      - Administración
+      operationId: listarFeriados
+      summary: Listar feriados
+      description: Administrador o supervisor. Filtro opcional por año.
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: anio
+        in: query
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Feriado'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Administración
+      operationId: crearFeriado
+      summary: Agregar feriado
+      description: Solo administrador. Fecha repetida = 409 FERIADO_EXISTENTE.
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Feriado'
+      responses:
+        '201':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feriado'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /admin/feriados/{fecha}:
+    delete:
+      tags:
+      - Administración
+      operationId: borrarFeriado
+      summary: Quitar feriado
+      description: Solo administrador.
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
+      parameters:
+      - name: fecha
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '204':
+          description: Operación exitosa
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /trabajadores/{trabajadorId}/tarifas:
+    get:
+      tags:
+      - Planillas
+      operationId: listarTarifas
+      summary: Consultar tarifas de un trabajador
+      description: Administrador o supervisor (el supervisor, de los trabajadores de sus rutas). Más recientes primero.
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: trabajadorId
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tarifa'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Planillas
+      operationId: crearTarifa
+      summary: Registrar tarifa de un trabajador
+      description: Solo administrador. Las tarifas no se editan, se reemplazan; la vigente se cierra el día anterior a
+        vigente_desde. Se cruza con otra = 409 TARIFA_SOLAPADA; no es un trabajador activo = 422 TRABAJADOR_INVALIDO.
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
+      parameters:
+      - name: trabajadorId
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearTarifaRequest'
+      responses:
+        '201':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarifa'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
@@ -2575,6 +2940,10 @@ components:
     MiCalculoResponse:
       type: object
       properties:
+        jornadas_contadas:
+          type: integer
+        jornadas_pendientes:
+          type: integer
         desde: *id001
         hasta: *id001
         horas_ordinarias:
@@ -2586,7 +2955,10 @@ components:
     DetalleCalculo:
       type: object
       properties:
+        id: *id002
         trabajador_id: *id002
+        trabajador_nombre:
+          type: string
         horas_ordinarias:
           type: string
         horas_extra_diurnas:
@@ -2741,6 +3113,242 @@ components:
       - estado
       - pagos_registrados
       - total_pagado
+    Periodo:
+      type: object
+      properties:
+        id: *id002
+        codigo:
+          type: string
+        fecha_inicio: *id001
+        fecha_fin: *id001
+        estado:
+          type: string
+          enum:
+          - BORRADOR
+          - EN_CALCULO
+          - CERRADO
+          - PAGADO
+        creado_at: *id003
+      required:
+      - id
+      - codigo
+      - fecha_inicio
+      - fecha_fin
+      - estado
+    PeriodoPagina:
+      allOf:
+      - $ref: '#/components/schemas/Paginacion'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Periodo'
+        required:
+        - items
+    CrearPeriodoRequest:
+      type: object
+      properties:
+        codigo:
+          type: string
+          maxLength: 50
+          example: 2026-11-Q2
+        fecha_inicio: *id001
+        fecha_fin: *id001
+      required:
+      - codigo
+      - fecha_inicio
+      - fecha_fin
+    CrearPlanillaRequest:
+      type: object
+      properties:
+        periodo_id: *id002
+        ruta_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Sin ruta (null) es la planilla general.
+      required:
+      - periodo_id
+    Planilla:
+      type: object
+      properties:
+        id: *id002
+        periodo_id: *id002
+        ruta_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        estado:
+          $ref: '#/components/schemas/EstadoPlanilla'
+        calculada_por: *id002
+        calculada_at: *id003
+        verificada_por:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        verificada_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        aprobada_por:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        aprobada_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        hash_integridad:
+          type:
+          - string
+          - 'null'
+      required:
+      - id
+      - periodo_id
+      - estado
+      - calculada_por
+      - calculada_at
+    PlanillasDelPeriodo:
+      type: object
+      properties:
+        periodo:
+          $ref: '#/components/schemas/Periodo'
+        items:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/Planilla'
+            - type: object
+              properties:
+                ruta_codigo:
+                  type:
+                  - string
+                  - 'null'
+                trabajadores:
+                  type: integer
+                total_bruto: *id004
+                total_neto: *id004
+    ParametrosPago:
+      type: object
+      description: Reglas de docs/reglas-calculo.md (M005 y M009).
+      properties:
+        factor_hora_extra: *id004
+        factor_hora_nocturna: *id004
+        minutos_tolerancia_llegada:
+          type: integer
+        regla_redondeo:
+          type: string
+          enum:
+          - EXACTO
+          - CADA_15_MIN
+          - CADA_30_MIN
+        periodicidad:
+          type: string
+          enum:
+          - SEMANAL
+          - QUINCENAL
+          - MENSUAL
+        porcentaje_igss_laboral: *id004
+        bonificacion_incentivo_mensual: *id004
+        minutos_almuerzo_pagado:
+          type: integer
+        horas_maximas_dia: *id004
+        actualizado_at: *id003
+    ActualizarParametrosRequest:
+      type: object
+      description: Al menos un campo. Los decimales se aceptan como número o texto con hasta 2 decimales.
+      properties:
+        factor_hora_extra:
+          type:
+          - string
+          - number
+        factor_hora_nocturna:
+          type:
+          - string
+          - number
+        minutos_tolerancia_llegada:
+          type: integer
+        regla_redondeo:
+          type: string
+          enum:
+          - EXACTO
+        periodicidad:
+          type: string
+          enum:
+          - SEMANAL
+          - QUINCENAL
+          - MENSUAL
+        porcentaje_igss_laboral:
+          type:
+          - string
+          - number
+        bonificacion_incentivo_mensual:
+          type:
+          - string
+          - number
+        minutos_almuerzo_pagado:
+          type: integer
+        horas_maximas_dia:
+          type:
+          - string
+          - number
+    Feriado:
+      type: object
+      properties:
+        fecha: *id001
+        nombre:
+          type: string
+          maxLength: 100
+        medio_dia:
+          type: boolean
+          description: Si es true, solo cuentan como feriado las horas desde las 12:00.
+      required:
+      - fecha
+      - nombre
+    Tarifa:
+      type: object
+      properties:
+        id: *id002
+        trabajador_id: *id002
+        monto_hora: *id004
+        monto_hora_extra:
+          type:
+          - string
+          - 'null'
+          pattern: ^\d+\.\d{2}$
+        moneda:
+          type: string
+        vigente_desde: *id001
+        vigente_hasta:
+          type:
+          - string
+          - 'null'
+          format: date
+        creado_at: *id003
+    CrearTarifaRequest:
+      type: object
+      properties:
+        monto_hora:
+          type:
+          - string
+          - number
+        monto_hora_extra:
+          type:
+          - string
+          - number
+          - 'null'
+          description: Opcional. Si se omite, la hora extra es monto_hora x factor_hora_extra. Mínimo 1.5 x monto_hora.
+        vigente_desde: *id001
+      required:
+      - monto_hora
+      - vigente_desde
     TipoDescanso:
       type: object
       properties:

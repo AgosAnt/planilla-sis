@@ -1,11 +1,32 @@
-import * as motorCalculoService from './motorCalculo.service.js';
+import * as planillasService from './planillas.service.js';
 
-// Los errores pasan a errorHandler: problem+json y sin detalles internos en los 500.
-
-export const generarPlanilla = async (req, res, next) => {
+export const crearPeriodo = async (req, res, next) => {
   try {
-    const resultado = await motorCalculoService.calcularYGenerarPlanilla(req.body);
-    res.status(201).json(resultado);
+    res.status(201).json(await planillasService.crearPeriodo(req.usuario, req.body));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const obtenerPeriodos = async (req, res, next) => {
+  try {
+    res.status(200).json(await planillasService.listarPeriodos(req.usuario, req.paginacion));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const crearPlanilla = async (req, res, next) => {
+  try {
+    res.status(201).json(await planillasService.crearPlanilla(req.usuario, req.body));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const recalcularPlanilla = async (req, res, next) => {
+  try {
+    res.status(200).json(await planillasService.recalcularPlanilla(req.usuario, req.params.id));
   } catch (error) {
     next(error);
   }
@@ -13,19 +34,39 @@ export const generarPlanilla = async (req, res, next) => {
 
 export const obtenerPlanillas = async (req, res, next) => {
   try {
-    const planillas = await motorCalculoService.listarPlanillas();
-    res.status(200).json(planillas);
+    res.status(200).json(await planillasService.listarPlanillas(req.usuario, req.query.periodo_id));
   } catch (error) {
     next(error);
   }
 };
 
-export const cambiarEstado = async (req, res, next) => {
+export const obtenerPlanilla = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { estado } = req.body;
-    const resultado = await motorCalculoService.cambiarEstadoPlanilla(id, estado);
-    res.status(200).json(resultado);
+    res.status(200).json(await planillasService.obtenerPlanilla(req.usuario, req.params.id, req.paginacion));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const obtenerCalculoPeriodo = async (req, res, next) => {
+  try {
+    res.status(200).json(await planillasService.obtenerCalculoPeriodo(req.usuario, req.params.periodoId, req.rutaId, req.paginacion));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verificarPlanilla = async (req, res, next) => {
+  try {
+    res.status(200).json(await planillasService.verificarPlanilla(req.usuario, req.params.id, req.body));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const obtenerMiCalculo = async (req, res, next) => {
+  try {
+    res.status(200).json(await planillasService.miCalculo(req.usuario, req.query.desde, req.query.hasta));
   } catch (error) {
     next(error);
   }
