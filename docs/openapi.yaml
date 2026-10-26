@@ -2668,6 +2668,11 @@ components:
       properties:
         id: *id002
         trabajador_id: *id002
+        trabajador_nombre:
+          type:
+          - string
+          - 'null'
+          description: Nombres y apellidos del trabajador.
         asignacion_id: *id002
         ingreso_at: *id003
         salida_at:

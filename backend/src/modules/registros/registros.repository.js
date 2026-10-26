@@ -1,7 +1,9 @@
 // Todas las funciones reciben el client de la transacción abierta por conClaims (RLS de M008).
 
-const COLUMNAS = `rt.id, rt.trabajador_id, rt.asignacion_id, rt.ingreso_at, rt.salida_at,
-  rt.estado_validacion, rt.validado_por, rt.validado_at`;
+// trabajador_nombre: para que Supervisión muestre el nombre y no el id (el supervisor puede leer a los trabajadores, M010)
+const COLUMNAS = `rt.id, rt.trabajador_id,
+  (SELECT p.nombres || ' ' || p.apellidos FROM perfiles p WHERE p.id = rt.trabajador_id) AS trabajador_nombre,
+  rt.asignacion_id, rt.ingreso_at, rt.salida_at, rt.estado_validacion, rt.validado_por, rt.validado_at`;
 
 // Visibilidad por rol (C.2 y D.4): administrador ve todos; trabajador, los propios; supervisor, los de
 // trabajadores con asignación activa en una ruta suya (igual que app.supervisa_trabajador). $1 = rol, $2 = perfiles.id
