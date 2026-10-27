@@ -17,6 +17,10 @@ public interface ApiService {
     @POST("api/v1/auth/session")
     Call<SesionApi.Respuesta> iniciarSesion(@Header("X-Client-Type") String tipoCliente, @Body SesionApi.Solicitud cuerpo);
 
+    // Revoca la sesión (refresh y access) en el servidor
+    @POST("api/v1/auth/logout")
+    Call<Void> cerrarSesion();
+
     @GET("api/v1/me")
     Call<Perfil> perfil();
 

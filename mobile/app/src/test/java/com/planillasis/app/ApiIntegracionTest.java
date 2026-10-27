@@ -57,7 +57,8 @@ public class ApiIntegracionTest {
             JsonObject registro = elemento.getAsJsonObject();
             if (registro.get("salida_at").isJsonNull()) {
                 JsonObject salida = new JsonObject();
-                salida.addProperty("salida_at", hace(150));
+                // Después del ingreso del seed (hace 2 h) y antes del ingreso de esta prueba (hace 60 min)
+                salida.addProperty("salida_at", hace(90));
                 assertEquals(200, api.salida(registro.get("id").getAsString(), uuid(), salida).execute().code());
             }
         }
