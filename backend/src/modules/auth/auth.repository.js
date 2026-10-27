@@ -92,6 +92,35 @@ export const buscarCredencialesPorId = async (client, id) => {
   return rows[0];
 };
 
+// Sesión nueva al iniciar sesión (sesiones_refresh, M002 y M011). La primera fila abre la familia: id = familia_id.
+// Corre dentro de conClaims del usuario que acaba de autenticarse (política sesiones_propias, M010).
+// Solo se guarda el hash del refresh token, nunca el token.
+export const crearSesionRefresh = async (client, { id, perfilId, tokenHash, expiraAt, ip, userAgent }) => {
+  const query = `
+    INSERT INTO sesiones_refresh (id, familia_id, perfil_id, token_hash, expira_at, ip, user_agent)
+    VALUES ($1, $1, $2, $3, $4, $5, $6);
+  `;
+  await client.query(query, [id, perfilId, tokenHash, expiraAt, ip, userAgent]);
+};
+
+// POST /auth/refresh: sin sesión, así que pasa por app.rotar_sesion_refresh (M011). Devuelve
+// { resultado, perfil_id, familia_id, email, nombres, apellidos, rol, debe_cambiar_password }.
+export const rotarSesionRefresh = async ({ tokenHash, nuevoHash, expiraAt, graciaSeg, ip, userAgent }) => {
+  const query = 'SELECT * FROM app.rotar_sesion_refresh($1, $2, $3, $4, $5, $6);';
+  const { rows } = await pool.query(query, [tokenHash, nuevoHash, expiraAt, graciaSeg, ip, userAgent]);
+  return rows[0];
+};
+
+// Logout: revoca la sesión (toda la familia) del usuario de la sesión
+export const revocarFamilia = async (client, familiaId) => {
+  await client.query('UPDATE sesiones_refresh SET revocado_at = NOW() WHERE familia_id = $1 AND revocado_at IS NULL;', [familiaId]);
+};
+
+// Cambio de contraseña: revoca todas las sesiones del usuario, en todos sus dispositivos
+export const revocarSesionesDe = async (client, perfilId) => {
+  await client.query('UPDATE sesiones_refresh SET revocado_at = NOW() WHERE perfil_id = $1 AND revocado_at IS NULL;', [perfilId]);
+};
+
 // Cambio de contraseña propia: también quita la marca de contraseña temporal y el bloqueo (app.cambiar_password, M010).
 export const actualizarPassword = async (client, id, passwordHash) => {
   const { rows } = await client.query('SELECT app.cambiar_password($1, $2) AS actualizado;', [id, passwordHash]);

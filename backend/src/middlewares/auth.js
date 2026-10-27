@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { jwtConfig } from '../config/jwt.js';
-import { COOKIE_ACCESS } from '../config/sesion.js';
+import { COOKIE_ACCESS, DURACION_ACCESS_SEG } from '../config/sesion.js';
 import { esCsrfValido } from './csrf.js';
 
 const METODOS_SEGUROS = ['GET', 'HEAD', 'OPTIONS'];
@@ -43,6 +43,23 @@ const extraerToken = (req) => {
 // Ruta completa sin la barra final: /api/v1/me/ y /api/v1/me cuentan igual
 const rutaDe = (req) => (req.baseUrl + req.path).replace(/\/+$/, '');
 
+// Sesiones cerradas (logout o cambio de contraseña): id de sesión -> hasta cuándo recordarla (segundos).
+// El access token no consulta la base en cada petición; esto lo invalida al instante en vez de esperar su exp.
+// Como reauthUsados, vive en memoria: si el backend se reinicia, un token de una sesión cerrada sirve hasta su exp.
+const sesionesCerradas = new Map();
+
+export const recordarSesionCerrada = (sesionId) => {
+  if (sesionId) sesionesCerradas.set(sesionId, Math.floor(Date.now() / 1000) + DURACION_ACCESS_SEG);
+};
+
+const sesionCerrada = (sesionId) => {
+  const ahora = Math.floor(Date.now() / 1000);
+  for (const [id, hasta] of sesionesCerradas) {
+    if (hasta <= ahora) sesionesCerradas.delete(id);
+  }
+  return sesionesCerradas.has(sesionId);
+};
+
 export const autenticarToken = (req, res, next) => {
   // 1. Obtener el token del encabezado o de la cookie de sesión
   const { token, viaCookie } = extraerToken(req);
@@ -61,6 +78,9 @@ export const autenticarToken = (req, res, next) => {
     });
   } catch (error) {
     return responderNoAutenticado(res, 'El token es inválido o ha expirado.', 'TOKEN_INVALIDO');
+  }
+  if (sesionCerrada(decodificado.jti)) {
+    return responderNoAutenticado(res, 'La sesión se cerró; vuelve a iniciar sesión.', 'SESION_CERRADA');
   }
 
   // 3. La cookie viaja sola en cada petición: las escrituras exigen el token CSRF (F.2)

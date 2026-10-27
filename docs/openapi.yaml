@@ -35,7 +35,8 @@ paths:
       description: Desde el 5.º intento fallido la cuenta se bloquea 1, 2, 4, 8 y hasta 15 minutos (423 CUENTA_BLOQUEADA
         con header Retry-After), también para correos que no existen. Si el usuario tiene contraseña temporal, el
         token solo permite GET /me, GET /auth/csrf, POST /auth/logout y POST /auth/password; el resto responde 403
-        DEBE_CAMBIAR_PASSWORD.
+        DEBE_CAMBIAR_PASSWORD. Abre una sesión con refresh token (ADR-001); la web lo recibe en la cookie psis_refresh
+        (HttpOnly, SameSite=Strict, Path=/api/v1/auth) y el móvil en refresh_token.
       security: []
       parameters:
       - name: X-Client-Type
@@ -72,11 +73,18 @@ paths:
       - Autenticación
       operationId: renovarSesion
       summary: Rotar refresh token
+      description: 'Entrega un access token nuevo de la misma sesión y rota el refresh token: el anterior deja de servir.
+        La web manda la cookie psis_refresh y recibe las dos cookies nuevas (el csrf_token no cambia); el móvil manda
+        X-Client-Type: mobile y refresh_token en el cuerpo, y recibe ambos tokens. 401 REFRESH_INVALIDO si el refresh
+        no existe, venció, la sesión se cerró o el usuario fue desactivado. 401 REFRESH_REUTILIZADO si se presenta un
+        refresh ya rotado: se revocan todas las sesiones del usuario y queda en la auditoría. 409 REFRESH_CONCURRENTE
+        si se rotó hace menos de 30 s (dos pestañas a la vez): la cookie nueva ya está en el navegador, así que basta
+        con repetir la petición original.'
       security:
       - refreshCookie: []
       - {}
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -90,12 +98,16 @@ paths:
                 $ref: '#/components/schemas/RefreshResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /auth/logout:
     post:
       tags:
       - Autenticación
       operationId: cerrarSesion
       summary: Cerrar sesión
+      description: Revoca el refresh token de la sesión y su access token deja de aceptarse (401 SESION_CERRADA). La
+        web recibe las cookies borradas. POST /auth/password también revoca todas las sesiones del usuario.
       security:
       - cookieAuth: []
         csrfToken: []
