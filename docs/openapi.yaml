@@ -1906,7 +1906,8 @@ paths:
       summary: Consultar catálogo RBAC
       security:
       - cookieAuth: []
-      description: '[PROPUESTA] Consulta de permisos; sin asignación automática.'
+      description: 'Solo administrador. Permisos de M007 con los roles que tiene cada uno. Es solo de consulta: lo que
+        cada rol puede hacer lo aplican la API (por rol en cada ruta) y el RLS, no esta tabla.'
       responses:
         '200':
           description: Operación exitosa
@@ -1936,6 +1937,7 @@ paths:
       summary: Consultar permisos de rol
       security:
       - cookieAuth: []
+      description: 'Solo administrador. Un rol fuera del enum responde 400.'
       parameters:
       - name: rol
         in: path
@@ -3675,15 +3677,22 @@ components:
           type: string
         descripcion:
           type: string
+        roles:
+          type: array
+          description: Roles que tienen el permiso (rol_permiso de M007)
+          items:
+            $ref: '#/components/schemas/Rol'
       required:
       - codigo
-      description: '[PROPUESTA] Exposición de permisos; la BD no asigna permisos automáticamente.'
+      description: 'Permiso del catálogo RBAC de M007 (solo lectura).'
     RolPermiso:
       type: object
       properties:
         rol:
           $ref: '#/components/schemas/Rol'
         permiso_codigo:
+          type: string
+        descripcion:
           type: string
       required:
       - rol
