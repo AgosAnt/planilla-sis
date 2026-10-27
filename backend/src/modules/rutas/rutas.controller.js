@@ -35,3 +35,19 @@ export const actualizarRuta = async (req, res, next) => {
     next(error);
   }
 };
+
+export const obtenerPuntos = async (req, res, next) => {
+  try {
+    res.status(200).json(await rutasService.obtenerPuntos(req.usuario, req.params.rutaId));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const reemplazarPuntos = async (req, res, next) => {
+  try {
+    res.status(200).json(await rutasService.reemplazarPuntos(req.usuario, req.params.rutaId, req.body.puntos));
+  } catch (error) {
+    next(error);
+  }
+};

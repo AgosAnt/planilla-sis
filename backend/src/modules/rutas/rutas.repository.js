@@ -73,3 +73,27 @@ export const actualizarRuta = async (client, rutaId, { codigo, nombre, descripci
   const { rows } = await client.query(query, [rutaId, codigo, nombre, descripcion, supervisorId, activa]);
   return rows[0];
 };
+
+// ------------------------------- Puntos de la geocerca (ruta_puntos, M003) -------------------------------
+export const listarPuntos = async (client, rutaId) => {
+  const query = `
+    SELECT orden, nombre, latitud::float8 AS latitud, longitud::float8 AS longitud, radio_m
+    FROM ruta_puntos
+    WHERE ruta_id = $1
+    ORDER BY orden;
+  `;
+  const { rows } = await client.query(query, [rutaId]);
+  return rows;
+};
+
+// Reemplaza todos los puntos de la ruta (dentro de la transacción de conClaims): el orden es la posición en la lista.
+export const reemplazarPuntos = async (client, rutaId, puntos) => {
+  await client.query('DELETE FROM ruta_puntos WHERE ruta_id = $1;', [rutaId]);
+  if (puntos.length === 0) return;
+  const query = `
+    INSERT INTO ruta_puntos (ruta_id, orden, nombre, latitud, longitud, radio_m)
+    SELECT $1, p.orden, p.nombre, p.latitud, p.longitud, p.radio_m
+    FROM jsonb_to_recordset($2::jsonb) AS p(orden smallint, nombre text, latitud numeric, longitud numeric, radio_m int);
+  `;
+  await client.query(query, [rutaId, JSON.stringify(puntos.map((p, i) => ({ ...p, orden: i + 1 })))]);
+};
