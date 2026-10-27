@@ -4,8 +4,12 @@ info:
   version: 0.3.0-borrador
   description: 'Contrato REST para LAN (HTTP). Fechas ISO 8601 UTC, importes como cadena decimal y errores application/problem+json.
 
-    Adaptado a DECISIONES.md (M002–M007). Las operaciones y campos sin DDL o paquete de contrato verificable se
-    marcan [PROPUESTA]; no se consideran implementados.
+    Basado en los casos de uso CU-01 a CU-15 y en las migraciones M002–M011.
+
+    Fuera de alcance de esta versión: contratos laborales y prestaciones (aguinaldo, bono 14, indemnización,
+    vacaciones pagadas). Ningún caso de uso los pide y las reglas de cálculo (docs/reglas-calculo.md) cubren horas,
+    extras, Bonificación Incentivo e IGSS; los datos del trabajador que usa la planilla están en perfiles, estados,
+    tarifas con vigencia y asignaciones.
 
     '
 servers:
@@ -22,7 +26,6 @@ tags:
 - name: Eventos
 - name: Rutas
 - name: Estados de trabajador
-- name: Contratos
 - name: Planillas
 - name: Catálogos
 paths:
@@ -2107,80 +2110,6 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/Unprocessable'
-  /contratos/{id}:
-    get:
-      tags:
-      - Contratos
-      operationId: obtenerContrato
-      summary: Consultar contrato
-      security:
-      - cookieAuth: []
-      - bearerAuth: []
-      description: '[PROPUESTA] Estados B, documento y fecha: verificar detalle aprobado.'
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema: *id002
-      responses:
-        '200':
-          description: Operación exitosa
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Contrato'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/Unprocessable'
-  /contratos/{id}/correcciones:
-    post:
-      tags:
-      - Contratos
-      operationId: corregirContrato
-      summary: Registrar corrección de contrato
-      security:
-      - cookieAuth: []
-        csrfToken: []
-      description: '[PROPUESTA] Registrar observaciones y auditoría; no inventar columnas en base de datos.'
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema: *id002
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CorreccionContratoRequest'
-      responses:
-        '201':
-          description: Operación exitosa
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Contrato'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/Unprocessable'
 components:
   securitySchemes:
     cookieAuth:
@@ -3778,45 +3707,3 @@ components:
           - RECHAZADO
       required:
       - estado
-    ContratoDocumento:
-      type: object
-      properties:
-        nombre_archivo:
-          type: string
-        referencia:
-          type: string
-        fecha_documento: *id001
-      required:
-      - nombre_archivo
-      - referencia
-      description: '[PROPUESTA] Metadatos, sin asumir almacenamiento de archivos en BD.'
-    CorreccionContratoRequest:
-      type: object
-      properties:
-        observaciones:
-          type: string
-          minLength: 1
-          maxLength: 1000
-        fecha_correccion: *id001
-        documento:
-          $ref: '#/components/schemas/ContratoDocumento'
-      required:
-      - observaciones
-      - fecha_correccion
-      description: '[PROPUESTA] Registrar corrección y auditoría sin sobrescribir historial.'
-    Contrato:
-      type: object
-      properties:
-        id: *id002
-        estado:
-          type: string
-        fecha: *id001
-        documento:
-          $ref: '#/components/schemas/ContratoDocumento'
-        observaciones:
-          type: string
-      required:
-      - id
-      - estado
-      description: '[PROPUESTA] Los estados B exactos no constan en DECISIONES.md; validar catálogo/DDL antes de
-        implementar.'

@@ -9,4 +9,11 @@
 
 Un ADR es un documento corto que registra una decisión técnica importante, con su contexto, alternativas y consecuencias.
 
+## Fuera de alcance de esta versión
+
+- **Contratos laborales y prestaciones** (aguinaldo, bono 14, indemnización, vacaciones pagadas): ningún caso de uso
+  (CU-01 a CU-15) los pide y las reglas de cálculo cubren horas, extras, Bonificación Incentivo e IGSS. Lo que la
+  planilla necesita del trabajador ya está en `perfiles`, sus estados, sus tarifas con vigencia y sus asignaciones.
+  Los endpoints `/contratos` que el borrador del contrato tenía como propuesta se retiraron.
+
 Las reglas de trabajo del equipo están en `CONTRIBUTING.md`, en la raíz del repositorio.
