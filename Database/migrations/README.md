@@ -13,6 +13,7 @@ Las migraciones deben ejecutarse en el siguiente orden estricto utilizando un us
 8. `M009_parametros_feriados.sql`
 9. `M010_rls_todas_las_tablas.sql`
 10. `M011_sesiones_refresh.sql`
+
 Cada archivo se ejecuta en una sola transacción, deteniéndose ante el primer error:
 
 ```
