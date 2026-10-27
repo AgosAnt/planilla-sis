@@ -26,6 +26,15 @@ public class ClasificadorRespuestaTest {
     }
 
     @Test
+    public void passwordTemporalNoEsUnRechazoDeLaMarca() {
+        assertEquals(true, ClasificadorRespuesta.requiereCambioPassword(403, "DEBE_CAMBIAR_PASSWORD"));
+        // Otros 403 sí son rechazos de verdad (rol o recurso ajeno)
+        assertEquals(false, ClasificadorRespuesta.requiereCambioPassword(403, "PROHIBIDO"));
+        assertEquals(false, ClasificadorRespuesta.requiereCambioPassword(403, null));
+        assertEquals(false, ClasificadorRespuesta.requiereCambioPassword(422, "DEBE_CAMBIAR_PASSWORD"));
+    }
+
+    @Test
     public void sesionVencidaPideLogin() {
         assertEquals(ClasificadorRespuesta.Resultado.REQUIERE_LOGIN, ClasificadorRespuesta.clasificar(401));
     }

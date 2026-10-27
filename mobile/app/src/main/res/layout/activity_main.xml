@@ -42,6 +42,20 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/tvTitulo" />
 
+    <!-- Mi cálculo, Mis turnos y Cambiar contraseña -->
+    <TextView
+        android:id="@+id/btnMas"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:padding="8dp"
+        android:text="Más"
+        android:textColor="@color/slate_700"
+        android:textSize="14sp"
+        android:fontFamily="sans-serif-medium"
+        app:layout_constraintEnd_toStartOf="@+id/btnSalir"
+        app:layout_constraintTop_toTopOf="@+id/tvTitulo" />
+
     <!-- Trabajador y ruta del día (GET /me) -->
     <TextView
         android:id="@+id/tvTrabajador"

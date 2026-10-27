@@ -12,6 +12,8 @@ public class Perfil {
     public String nombres;
     public String apellidos;
     public String rol;
+    // Contraseña temporal (E-2b): hasta cambiarla el servidor solo deja ver el perfil, cambiarla o salir
+    @SerializedName("debe_cambiar_password") public boolean debeCambiarPassword;
     @SerializedName("asignacion_activa") public AsignacionActiva asignacionActiva;
     // Jornada sin salida en el servidor (puede haberse abierto desde otro teléfono)
     @SerializedName("jornada_abierta") public JornadaAbierta jornadaAbierta;

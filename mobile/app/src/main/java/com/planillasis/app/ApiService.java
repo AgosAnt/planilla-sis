@@ -38,4 +38,20 @@ public interface ApiService {
 
     @POST("api/v1/eventos:batch")
     Call<JsonObject> eventos(@Header("Idempotency-Key") String clave, @Body JsonObject cuerpo);
+
+    // Horas propias de jornadas aprobadas en el rango (sin montos)
+    @GET("api/v1/me/calculo")
+    Call<JsonObject> miCalculo(@Query("desde") String desde, @Query("hasta") String hasta);
+
+    // Turnos que el supervisor propone (el RLS deja ver solo los propios)
+    @GET("api/v1/acuerdos-turno")
+    Call<JsonObject> acuerdos(@Query("desde") String desde, @Query("page_size") int tamanoPagina);
+
+    // { "estado": "ACEPTADO" | "RECHAZADO" }
+    @PATCH("api/v1/acuerdos-turno/{id}/respuesta")
+    Call<JsonObject> responderAcuerdo(@Path("id") String acuerdoId, @Body JsonObject cuerpo);
+
+    // { "password_actual", "password_nueva" }: 204 y todas las sesiones quedan cerradas
+    @POST("api/v1/auth/password")
+    Call<Void> cambiarPassword(@Body JsonObject cuerpo);
 }

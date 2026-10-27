@@ -26,6 +26,11 @@ public final class ClasificadorRespuesta {
         return Resultado.REINTENTAR; // 408, 429, 5xx
     }
 
+    // 403 por contraseña temporal: la marca no está mal, solo falta cambiar la contraseña. Queda pendiente.
+    public static boolean requiereCambioPassword(int status, String codigo) {
+        return status == 403 && "DEBE_CAMBIAR_PASSWORD".equals(codigo);
+    }
+
     // POST /eventos:batch responde 207 con un estado por evento
     public static Resultado clasificarEvento(String estado) {
         if ("CREADO".equals(estado) || "DUPLICADO".equals(estado)) return Resultado.ENVIADO;

@@ -25,6 +25,7 @@ public final class Sincronizador {
         public int rechazados;
         public boolean sinConexion;
         public boolean requiereLogin;
+        public boolean requiereCambioPassword; // contraseña temporal: la cola espera a que se cambie
         public String mensaje; // detalle del último rechazo o datos del ingreso (turno, geocerca)
         String ultimoCodigo;   // code del último rechazo (problem+json)
     }
@@ -63,6 +64,7 @@ public final class Sincronizador {
         while ((item = cola.siguientePendiente(perfil.id)) != null) {
             try {
                 ClasificadorRespuesta.Resultado resultado = enviar(cola, api, item, resumen);
+                if (resumen.requiereCambioPassword) return resumen; // la marca sigue pendiente
                 // El servidor ya tenía una jornada abierta (por ejemplo, marcada desde otro teléfono):
                 // se recupera para que la salida y los descansos vayan a esa jornada
                 if (resultado == ClasificadorRespuesta.Resultado.RECHAZADO
@@ -180,6 +182,10 @@ public final class Sincronizador {
             String[] problema = ClasificadorRespuesta.problema(respuesta.errorBody() != null ? respuesta.errorBody().string() : null);
             String codigo = problema != null ? problema[0] : "HTTP_" + respuesta.code();
             String detalle = problema != null && problema[1] != null ? problema[1] : "El servidor rechazó la marca (" + respuesta.code() + ")";
+            if (ClasificadorRespuesta.requiereCambioPassword(respuesta.code(), codigo)) {
+                resumen.requiereCambioPassword = true;
+                return ClasificadorRespuesta.Resultado.REINTENTAR;
+            }
             cola.marcarRechazado(item.id, codigo, detalle);
             resumen.rechazados++;
             resumen.mensaje = detalle;
