@@ -55,6 +55,35 @@ export const validarCrearRuta = (req, res, next) => {
   next();
 };
 
+const MAX_PUNTOS = 20;
+const RADIO_MIN = 10; // mismos límites que chk_ruta_puntos_radio (M012)
+const RADIO_MAX = 5000;
+
+// PUT /rutas/{rutaId}/puntos: { puntos: [{ nombre, latitud, longitud, radio_m }] } (0 a 20; el orden es el de la lista)
+export const validarPuntos = (req, res, next) => {
+  const { puntos } = req.body ?? {};
+  if (!Array.isArray(puntos) || puntos.length > MAX_PUNTOS) {
+    return responderValidacion(res, `El campo "puntos" debe ser una lista de 0 a ${MAX_PUNTOS} puntos.`);
+  }
+  const limpios = [];
+  for (const [i, punto] of puntos.entries()) {
+    const { nombre, latitud, longitud, radio_m } = punto ?? {};
+    if (!esTextoEntre(nombre, 100)) {
+      return responderValidacion(res, `Punto ${i + 1}: "nombre" debe ser texto de 1 a 100 caracteres.`);
+    }
+    if (typeof latitud !== 'number' || !Number.isFinite(latitud) || Math.abs(latitud) > 90
+        || typeof longitud !== 'number' || !Number.isFinite(longitud) || Math.abs(longitud) > 180) {
+      return responderValidacion(res, `Punto ${i + 1}: "latitud" (-90 a 90) y "longitud" (-180 a 180) deben ser números.`);
+    }
+    if (!Number.isInteger(radio_m) || radio_m < RADIO_MIN || radio_m > RADIO_MAX) {
+      return responderValidacion(res, `Punto ${i + 1}: "radio_m" debe ser un entero de ${RADIO_MIN} a ${RADIO_MAX} metros.`);
+    }
+    limpios.push({ nombre: nombre.trim(), latitud, longitud, radio_m });
+  }
+  req.body = { puntos: limpios };
+  next();
+};
+
 // PATCH: solo lo que cambia, al menos un campo.
 export const validarActualizarRuta = (req, res, next) => {
   const { error, datos } = normalizarCampos(req.body ?? {});

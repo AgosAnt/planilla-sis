@@ -1,5 +1,6 @@
 import { conClaims } from '../../config/db.js';
 import { crearError } from '../../middlewares/errorHandler.js';
+import { registrarAuditoria } from '../auditoria/auditoria.repository.js';
 import * as rutasRepo from './rutas.repository.js';
 
 const CODIGO_DUPLICADO = '23505'; // unique_violation (rutas.codigo es UNIQUE)
@@ -84,4 +85,32 @@ export const actualizarRuta = (usuario, rutaId, cambios) =>
       supervisorId: cambios.supervisor_id !== undefined ? cambios.supervisor_id : actual.supervisor_id,
       activa: cambios.activa ?? actual.activa,
     }));
+  });
+
+// GET /rutas/{rutaId}/puntos: la geocerca que usa la app móvil para dejar marcar (y el servidor para dentro_de_geocerca).
+export const obtenerPuntos = (usuario, rutaId) =>
+  conClaims(usuario, async (client) => {
+    const ruta = await rutasRepo.buscarRuta(client, { ...visibilidad(usuario), rutaId });
+    if (!ruta) {
+      throw crearError(404, 'RUTA_NO_ENCONTRADA', 'La ruta no existe');
+    }
+    return { ruta_id: rutaId, puntos: await rutasRepo.listarPuntos(client, rutaId) };
+  });
+
+// PUT /rutas/{rutaId}/puntos: reemplaza la geocerca completa. Una lista vacía la quita (la app deja marcar en
+// cualquier lugar). Administrador, o el supervisor de la ruta (también lo exige el RLS de M010).
+export const reemplazarPuntos = (usuario, rutaId, puntos) =>
+  conClaims(usuario, async (client) => {
+    const ruta = await rutasRepo.buscarRuta(client, { ...visibilidad(usuario), rutaId, bloquear: true });
+    if (!ruta) {
+      throw crearError(404, 'RUTA_NO_ENCONTRADA', 'La ruta no existe');
+    }
+    const antes = await rutasRepo.listarPuntos(client, rutaId);
+    await rutasRepo.reemplazarPuntos(client, rutaId, puntos);
+    const despues = await rutasRepo.listarPuntos(client, rutaId);
+    await registrarAuditoria(client, {
+      actor: usuario, entidad: 'ruta_puntos', entidadId: rutaId, accion: 'UPDATE',
+      datosAntes: { puntos: antes }, datosDespues: { puntos: despues },
+    });
+    return { ruta_id: rutaId, puntos: despues };
   });
