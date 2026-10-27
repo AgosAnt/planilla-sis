@@ -696,6 +696,101 @@ paths:
           $ref: '#/components/responses/PayloadTooLarge'
         '422':
           $ref: '#/components/responses/Unprocessable'
+  /eventos:
+    get:
+      tags:
+      - Eventos
+      operationId: listarEventos
+      summary: Consultar eventos (emergencias y otros)
+      description: El trabajador ve los suyos; el supervisor, los de sus trabajadores; el administrador, todos (RLS de
+        M008). Primero los que esperan atención, y dentro de cada grupo los más recientes.
+      security:
+      - cookieAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: estado_atencion
+        in: query
+        schema:
+          type: string
+          enum:
+          - PENDIENTE_REVISION
+          - EN_ATENCION
+          - ATENDIDO
+          - DESCARTADO
+      - name: tipo_evento
+        in: query
+        schema:
+          type: string
+          enum:
+          - EMERGENCIA
+          - VISITA_FALLIDA
+          - PROBLEMA_VEHICULO
+          - CAMBIO_ESTADO
+          - NOTA
+          - OTRO
+      - name: trabajador_id
+        in: query
+        schema: *id002
+      - name: desde
+        in: query
+        schema: *id001
+      - name: hasta
+        in: query
+        schema: *id001
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoDiarioPagina'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /eventos/{id}/atencion:
+    patch:
+      tags:
+      - Eventos
+      operationId: atenderEvento
+      summary: Registrar la atención de un evento
+      description: 'Supervisor del trabajador o administrador (otro = 404). PENDIENTE_REVISION -> EN_ATENCION -> ATENDIDO
+        o DESCARTADO (también directo desde PENDIENTE_REVISION); ATENDIDO y DESCARTADO son finales (409
+        TRANSICION_INVALIDA). Guarda quién y cuándo, y queda en la auditoría.'
+      security:
+      - cookieAuth: []
+        csrfToken: []
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AtencionEventoRequest'
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoDiario'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /rutas/{rutaId}/asignaciones:
     post:
       tags:
@@ -2809,6 +2904,75 @@ components:
       - tipo_evento
       - esquema_version
       - ocurrido_en
+    EventoDiario:
+      type: object
+      properties:
+        id: *id002
+        trabajador_id: *id002
+        trabajador_nombre:
+          type:
+          - string
+          - 'null'
+        registro_tiempo_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        tipo_evento:
+          type: string
+        origen:
+          type: string
+        latitud:
+          type:
+          - number
+          - 'null'
+        longitud:
+          type:
+          - number
+          - 'null'
+        estado_atencion:
+          type: string
+          enum:
+          - PENDIENTE_REVISION
+          - EN_ATENCION
+          - ATENDIDO
+          - DESCARTADO
+        atendido_por:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        atendido_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        payload:
+          type: object
+        ocurrido_en: *id003
+        recibido_en: *id003
+    EventoDiarioPagina:
+      allOf:
+      - $ref: '#/components/schemas/Paginacion'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/EventoDiario'
+        required:
+        - items
+    AtencionEventoRequest:
+      type: object
+      properties:
+        estado_atencion:
+          type: string
+          enum:
+          - EN_ATENCION
+          - ATENDIDO
+          - DESCARTADO
+      required:
+      - estado_atencion
     EventosBatchRequest:
       type: object
       properties:

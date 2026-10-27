@@ -14,6 +14,7 @@ import { parametrosRouter, feriadosRouter, tarifasRouter } from './modules/param
 import eventosDescansoRoutes from './modules/eventos_descanso/eventos_descanso.routes.js';
 import eventosRutaRoutes from './modules/eventos_ruta/eventos_ruta.routes.js';
 import usuariosRoutes from './modules/usuarios/usuarios.routes.js';
+import eventosRoutes from './modules/eventos/eventos.routes.js';
 import {
   asignacionesDeRutaRouter, asignacionesRouter, acuerdosTurnoRouter, catalogosRouter,
 } from './modules/asignaciones/asignaciones.routes.js';
@@ -63,6 +64,7 @@ app.use('/api/v1/registros-tiempo', registrosRoutes);
 app.use('/api/v1/rutas/:rutaId/asignaciones', asignacionesDeRutaRouter);
 app.use('/api/v1/rutas', rutasRoutes);
 app.use('/api/v1/asignaciones', asignacionesRouter);
+app.use('/api/v1/eventos', eventosRoutes);
 app.use('/api/v1/acuerdos-turno', acuerdosTurnoRouter);
 app.use('/api/v1/catalogos', catalogosRouter);
 app.use('/api/v1/planillas', planillasRoutes);
