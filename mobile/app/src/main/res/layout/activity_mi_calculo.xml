@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_app"
+    android:fillViewport="true"
+    tools:context=".MiCalculoActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView android:id="@+id/btnVolverCalculo" style="@style/Volver" />
+
+        <TextView style="@style/TituloPantalla" android:text="Mi cálculo" />
+
+        <TextView
+            android:id="@+id/tvPeriodo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/slate_500"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnQuincenaActual"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:text="Esta quincena"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/btnQuincenaAnterior"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="La anterior"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            app:cardBackgroundColor="@android:color/white"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView style="@style/EtiquetaDato" android:text="Horas ordinarias" />
+                <TextView android:id="@+id/tvOrdinarias" style="@style/ValorDato" />
+
+                <TextView style="@style/EtiquetaDato" android:text="Horas extra diurnas" />
+                <TextView android:id="@+id/tvExtraDiurnas" style="@style/ValorDato" />
+
+                <TextView style="@style/EtiquetaDato" android:text="Horas extra nocturnas" />
+                <TextView android:id="@+id/tvExtraNocturnas" style="@style/ValorDato" />
+
+                <TextView style="@style/EtiquetaDato" android:text="Jornadas contadas" />
+                <TextView android:id="@+id/tvJornadas" style="@style/ValorDato" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <TextView
+            android:id="@+id/tvPendientes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="@color/slate_700"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvErrorCalculo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="@color/red_alert"
+            android:visibility="gone" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Solo se cuentan las jornadas que tu supervisor ya aprobó. Los montos (pago, bonificación e IGSS) aparecen en la planilla."
+            android:textColor="@color/slate_500"
+            android:textSize="13sp" />
+    </LinearLayout>
+</ScrollView>

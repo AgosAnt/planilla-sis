@@ -87,7 +87,13 @@ public class MainActivity extends AppCompatActivity {
             irAlLogin();
             return;
         }
-        perfil = sesion.perfil();
+        Perfil guardado = sesion.perfil();
+        // Contraseña temporal: el servidor no acepta marcas hasta cambiarla (perfil queda null: onStart y onResume no hacen nada)
+        if (guardado != null && guardado.debeCambiarPassword) {
+            abrirCambioPassword(true);
+            return;
+        }
+        perfil = guardado;
 
         setContentView(R.layout.activity_main);
         dbHelper = new DatabaseHelper(this);
@@ -114,6 +120,7 @@ public class MainActivity extends AppCompatActivity {
         btnEmergencia.setOnClickListener(v -> procesarRegistro(DatabaseHelper.TIPO_EVENTO, true));
         btnDescanso.setOnClickListener(v -> alternarDescanso());
         findViewById(R.id.btnSalir).setOnClickListener(v -> confirmarSalida());
+        findViewById(R.id.btnMas).setOnClickListener(v -> mostrarMas());
         tvSincronizacion.setOnClickListener(v -> {
             mostrarMensaje("Reintentando el envío...");
             sincronizar();
@@ -467,6 +474,10 @@ public class MainActivity extends AppCompatActivity {
             }
             // La sincronización pudo traer un perfil nuevo (asignación del día, geocerca, jornada abierta)
             Perfil actualizado = sesion.perfil();
+            if (resumen.requiereCambioPassword || (actualizado != null && actualizado.debeCambiarPassword)) {
+                abrirCambioPassword(true);
+                return;
+            }
             if (actualizado != null) {
                 perfil = actualizado;
                 mostrarPerfil();
@@ -474,6 +485,22 @@ public class MainActivity extends AppCompatActivity {
             restaurarEstadoUI();
             mostrarEstadoCola(resumen.sinConexion ? "Sin conexión con el servidor. Lo pendiente se enviará solo." : resumen.mensaje);
         });
+    }
+
+    private void mostrarMas() {
+        new AlertDialog.Builder(this)
+                .setItems(new String[] { "Mi cálculo", "Mis turnos", "Cambiar contraseña" }, (dialogo, opcion) -> {
+                    if (opcion == 0) startActivity(new Intent(this, MiCalculoActivity.class));
+                    else if (opcion == 1) startActivity(new Intent(this, TurnosActivity.class));
+                    else abrirCambioPassword(false);
+                })
+                .show();
+    }
+
+    // Obligatoria (contraseña temporal): esta pantalla se cierra y no se vuelve hasta cambiarla
+    private void abrirCambioPassword(boolean obligatoria) {
+        startActivity(new Intent(this, CambiarPasswordActivity.class).putExtra(CambiarPasswordActivity.EXTRA_OBLIGATORIA, obligatoria));
+        if (obligatoria) finish();
     }
 
     private void confirmarSalida() {

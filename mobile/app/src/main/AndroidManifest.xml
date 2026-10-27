@@ -33,6 +33,19 @@
             android:name=".LoginActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".MiCalculoActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".TurnosActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".CambiarPasswordActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>
