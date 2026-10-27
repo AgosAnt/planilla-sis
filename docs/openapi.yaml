@@ -1646,7 +1646,8 @@ paths:
       security:
       - cookieAuth: []
       - bearerAuth: []
-      description: '[PROPUESTA] Catálogo de seis estados de CU-03; códigos exactos pendientes de contraste con M007.'
+      description: 'Cualquier sesión. Los 7 estados de M007: ACTIVO, EN_RUTA, DESCANSO, INCAPACIDAD, VACACIONES,
+        SUSPENDIDO e INACTIVO.'
       responses:
         '200':
           description: Operación exitosa
@@ -1674,6 +1675,8 @@ paths:
       - Estados de trabajador
       operationId: obtenerEstadoTrabajador
       summary: Consultar estado actual del trabajador
+      description: El propio trabajador, su supervisor o el administrador; otro = 404. Sin estados registrados = 404
+        SIN_ESTADO_REGISTRADO.
       security:
       - cookieAuth: []
       - bearerAuth: []
@@ -1709,7 +1712,10 @@ paths:
       security:
       - cookieAuth: []
         csrfToken: []
-      description: '[PROPUESTA] Validar transición, autorización y solapamiento de intervalos dentro de una transacción.'
+      description: 'Administrador, o supervisor del trabajador (permiso estados.gestionar de M007); otro = 404. Cierra el
+        estado vigente en inicio_at y abre el nuevo, en una transacción, y queda en la auditoría. Mismo estado = 409
+        ESTADO_SIN_CAMBIO; inicio_at anterior al estado vigente = 422 INICIO_ANTERIOR_AL_ESTADO_ACTUAL; en el futuro =
+        422 FECHA_FUTURA; código inexistente = 422 ESTADO_INVALIDO.'
       parameters:
       - name: trabajadorId
         in: path
@@ -1746,6 +1752,7 @@ paths:
       - Estados de trabajador
       operationId: listarHistorialEstadoTrabajador
       summary: Consultar historial de estados
+      description: El propio trabajador, su supervisor o el administrador. Más recientes primero.
       security:
       - cookieAuth: []
       - bearerAuth: []
@@ -3483,7 +3490,8 @@ components:
       required:
       - estado_codigo
       - inicio_at
-      description: '[PROPUESTA] El servicio cierra el intervalo abierto y crea el nuevo en una transacción.'
+      description: 'estado_codigo del catálogo GET /catalogos/estados-trabajador. El servicio cierra el intervalo abierto y
+        crea el nuevo en una transacción.'
     Permiso:
       type: object
       properties:
