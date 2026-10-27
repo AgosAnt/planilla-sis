@@ -10,6 +10,7 @@ import { Panel } from './paginas/Panel'
 import Rutas from './paginas/Rutas'
 import Supervision from './paginas/Supervision'
 import Planillas from './paginas/Planillas'
+import Pagos from './paginas/Pagos'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -32,7 +33,7 @@ export const router = createBrowserRouter([
               {
                 element: <RutaProtegida roles={['administrador']} />,
                 children: [
-                  { path: '/pagos', element: <EnConstruccion titulo="Pagos" /> },
+                  { path: '/pagos', element: <Pagos /> },
                   { path: '/admin/usuarios', element: <EnConstruccion titulo="Usuarios" /> },
                   { path: '/admin/parametros', element: <EnConstruccion titulo="Parámetros" /> },
                   { path: '/auditoria', element: <EnConstruccion titulo="Auditoría" /> },

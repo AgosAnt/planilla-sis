@@ -52,8 +52,14 @@ export const limpiarSesionApi = () => {
   }
 }
 
-export async function api<T>(metodo: string, ruta: string, cuerpo?: unknown): Promise<T> {
-  const cabeceras: Record<string, string> = { Accept: 'application/json' }
+// cabecerasExtra: las que piden algunas operaciones, como X-Reauth-Token e Idempotency-Key al aprobar y pagar
+export async function api<T>(
+  metodo: string,
+  ruta: string,
+  cuerpo?: unknown,
+  cabecerasExtra: Record<string, string> = {},
+): Promise<T> {
+  const cabeceras: Record<string, string> = { ...cabecerasExtra, Accept: 'application/json' }
   if (cuerpo !== undefined) cabeceras['Content-Type'] = 'application/json'
   if (!METODOS_SEGUROS.includes(metodo) && csrf) cabeceras['X-CSRF-Token'] = csrf
 
