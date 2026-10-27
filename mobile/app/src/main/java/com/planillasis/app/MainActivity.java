@@ -39,6 +39,10 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class MainActivity extends AppCompatActivity {
 
     private TextView tvFechaHoraActual, tvEstado, tvTrabajador, tvRuta, tvSincronizacion;
@@ -479,12 +483,31 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Cerrar sesión")
                 .setMessage(mensaje)
-                .setPositiveButton("Cerrar sesión", (d, w) -> {
-                    sesion.cerrar();
-                    irAlLogin();
-                })
+                .setPositiveButton("Cerrar sesión", (d, w) -> cerrarSesion())
                 .setNegativeButton("Cancelar", null)
                 .show();
+    }
+
+    // Primero revoca la sesión en el servidor (si el access venció, el Renovador lo renueva para poder salir);
+    // sin conexión se cierra igual en el teléfono. Los tokens se borran al final para que la petición los use.
+    private void cerrarSesion() {
+        mostrarMensaje("Cerrando sesión...");
+        RetrofitClient.getApiService(this).cerrarSesion().enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
+                terminar();
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
+                terminar();
+            }
+
+            private void terminar() {
+                sesion.cerrar();
+                irAlLogin();
+            }
+        });
     }
 
     private void irAlLogin() {

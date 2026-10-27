@@ -69,7 +69,7 @@ public class LoginActivity extends AppCompatActivity {
                     return;
                 }
                 try {
-                    sesion.guardarToken(response.body().accessToken);
+                    sesion.guardarSesion(response.body().accessToken, response.body().refreshToken);
                 } catch (GeneralSecurityException e) {
                     ocupado(false);
                     mostrarError("No se pudo guardar la sesión de forma segura en este teléfono.");
