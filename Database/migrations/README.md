@@ -1,3 +1,4 @@
+
 # Migraciones de Base de Datos - Planilla SIS
 
 ## Orden de Ejecución
@@ -12,7 +13,8 @@ Las migraciones deben ejecutarse en el siguiente orden estricto utilizando un us
 7. `M008_rls_registros_eventos.sql`
 8. `M009_parametros_feriados.sql`
 9. `M010_rls_todas_las_tablas.sql`
-10. `M011_sesiones_refresh.sql`
+10.  `M011_sesiones_refresh.sql`
+11. `M012_ruta_puntos_validaciones.sql`
 
 Cada archivo se ejecuta en una sola transacción, deteniéndose ante el primer error:
 
