@@ -6,7 +6,7 @@
 | Fecha | 2026-10-05 |
 | Decisor | Líder del proyecto (Jonatan) |
 | Decisiones relacionadas | D-3 (autenticación propia), D-4 (HTTP en LAN, sin HTTPS) |
-| Referencias | Entregable Fase 1, secciones A.1, D.4 y F.1 |
+| Referencias | `arquitectura-tecnica.md`, secciones A.1, D.4 y F.1 |
 
 ## Contexto
 
@@ -50,3 +50,13 @@ El backend implementa su propia autenticación (Opción B), sin proveedor extern
 **Seguimiento**
 - Todo PR que toque autenticación, sesiones o secretos requiere revisión de Jonatan o Daniel.
 - La rotación de `JWT_SECRET` invalida todas las sesiones activas.
+
+## Actualización (28 de octubre de 2026)
+
+La decisión se mantiene. Cambió el entorno de despliegue y, con él, tres consecuencias:
+
+- **Despliegue.** Además de la red local, el sistema corre en Azure App Service (backend y web) con la base en Supabase como PostgreSQL gestionado. Supabase se usa solo como alojamiento de PostgreSQL: no se usan Supabase Auth, su API REST ni la llave `service_role`.
+- **HTTPS y `Secure`.** Azure termina HTTPS; el backend confía en su proxy (`trust proxy`) y, cuando la petición llega por HTTPS, las cookies salen con `Secure` y se envía `Strict-Transport-Security` (#57). Por HTTP en la LAN siguen sin `Secure`, como decía D-4.
+- **RLS.** Dejó de ser opcional: está activo en las 27 tablas (M008 y M010) y el backend se conecta con `app_user`, un rol sin superusuario sujeto a las políticas.
+
+Estado de lo que este ADR dejaba pendiente: bloqueo progresivo y reautenticación para aprobar y pagar, hechos (#32); refresh con rotación y detección de reúso, hecho (#47); access token en 2 h hasta terminar la renovación automática de la web, luego baja a 15 min; MFA (TOTP), diferido.

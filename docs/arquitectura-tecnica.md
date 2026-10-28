@@ -101,6 +101,30 @@ Lo que ocurrió en la construcción, a partir de los *pull requests* integrados 
 | 15 | Dev Móvil dedicado | El líder técnico | El equipo quedó en 6 integrantes |
 | 19–22 | No estaban en el plan | Se agregaron durante el desarrollo | Surgieron de los casos de uso CU-02, CU-03, CU-04, CU-08 y CU-14 al construirlos |
 
+### A.4 Desglose de entregables por integrante
+
+| Integrante | Módulos a su cargo (A o R principal) | Carpetas del repositorio | Sección de este documento |
+| --- | --- | --- | --- |
+| Jonatan | Arquitectura y contrato API; app móvil y sincronización offline; despliegue en Azure; documentación | `docs/`, `mobile/`, `.github/workflows/` | A, B.1, B.5, manual de despliegue |
+| Marco | Backend REST: rutas, asignaciones, turnos, registros, motor de cálculo, aprobación y pagos, geocerca | `backend/src/modules/` (rutas, asignaciones, registros, planillas, parametros) | C.3, E |
+| Sofía | Modelado de la base de datos (3FN, JSONB), migraciones y RLS | `Database/` | D |
+| Daniel | Autenticación propia, sesiones, seguridad OWASP, administración de usuarios, estados y emergencias | `backend/src/modules/` (auth, usuarios, auditoria, eventos, estados), `backend/src/middlewares/` | F |
+| Samuel | Shell de la SPA, History API, guardas por rol, pantallas de planillas y pagos | `web/src/` (router, layout, sesión, planillas, pagos) | B.2, B.3 |
+| Stefany | Módulos de UI: rutas, supervisión, geocerca, estados y emergencias, turnos y panel | `web/src/paginas/` | B.4, C (excepto C.3) |
+
+### A.5 Reporte de cumplimiento por integrante
+
+Corte al 28 de octubre de 2026, con los *pull requests* integrados a `develop` desde el #9. Se actualiza antes de la entrega final.
+
+| Integrante | PRs integrados | Entregables cumplidos | En curso |
+| --- | --- | --- | --- |
+| Jonatan | 21 (#11–#19, #21, #22, #24, #27, #29, #30, #38, #39, #48, #49, #56, #58) | Contrato OpenAPI, app móvil completa (sesión, cola offline, geocerca, cálculo, turnos, emergencia), despliegue en Azure, sesión web inicial, documentación | — |
+| Marco | 7 (#10, #33, #40, #42, #43, #51, #55) | Arquitectura modular del backend, asignaciones y turnos, motor de cálculo, aprobación con reautenticación y pagos, geocerca | — |
+| Sofía | 4 (#9, #35, #44, #52) | Migraciones M002–M007 y M009–M012, RLS en todas las tablas | — |
+| Daniel | 9 (#32, #36, #37, #45–#47, #50, #53, #57) | Reautenticación y bloqueo, login con RLS, refresh con rotación, usuarios y auditoría, estados, emergencias, permisos por rol, cookies `Secure` y HSTS | Renovación de sesión en la web (segunda fase) |
+| Samuel | 2 (#23, #54) | SPA con sesión, router y layout; pantallas de planillas y pagos | Pantallas de usuarios y auditoría, y de parámetros |
+| Stefany | 2 (#26, #31) | Módulos de rutas y supervisión | Editor de geocerca, renovación de sesión en la web, estados y emergencias, turnos, panel |
+
 ---
 
 ## B. Justificación de Arquitectura y Patrones
@@ -1298,6 +1322,15 @@ Un **supervisor** solo recibe trabajadores de sus rutas; los montos salariales r
 
 > Decisión D-3 (ADR-001, `adr/ADR-001-autenticacion-propia.md`): autenticación construida en el backend, sin proveedor externo.
 
+**Integración con Supabase: por qué no Supabase Auth.** La base vive en Supabase, pero la autenticación **no** usa Supabase Auth. Se evaluó y se descartó por cuatro razones:
+
+1. **Un solo contrato para web y móvil.** La web necesita cookies `HttpOnly` emitidas por nuestro propio dominio, con token CSRF; el móvil necesita `Bearer`. Con Supabase Auth la sesión la maneja su SDK en el navegador (por defecto guarda el JWT en `localStorage`, y su variante para servidor usa cookies que JavaScript sí puede leer), lo que contradice la regla de §B.4 de no dejar tokens al alcance de JavaScript.
+2. **Altas controladas.** No hay registro público: el Administrador crea cada cuenta con contraseña temporal, y la sesión lleva el rol del sistema (administrador, supervisor, trabajador) que usan la API y RLS.
+3. **Reglas propias de sesión:** bloqueo progresivo, reautenticación con token de un solo uso para aprobar planillas y registrar pagos, revocación de todas las sesiones al cambiar la contraseña, y auditoría de cada evento en nuestra tabla `auditoria`.
+4. **Portabilidad.** El sistema también debe funcionar en un servidor de la red local de la oficina (D-4), donde no hay Supabase; con autenticación propia, el mismo código corre en ambos entornos.
+
+El equivalente de `auth.uid()` de Supabase es `app.usuario_actual()`: el backend verifica su JWT y fija los *claims* en la transacción (`set_config('app.jwt_claims', …)`), y las políticas RLS los leen (§D.4).
+
 **Flujo Web**
 
 ```mermaid
@@ -1350,7 +1383,7 @@ sequenceDiagram
 | **XSS reflejado / basado en DOM** | Parámetros de la URL (filtros, `?ruta=`) leídos por la SPA; History API | Parsear y **validar** *query params* contra una lista/esquema antes de usarlos; nunca insertar en el DOM como HTML; validar `next`/`redirect` (solo rutas internas, mismo origen) | Pruebas unitarias del *parser* de rutas; prueba de *open redirect* |
 | **Impacto de XSS (contención)** | Un XSS residual no debe robar sesión | Cookies `HttpOnly` (no exfiltrables); **CSP estricta** (abajo); sin tokens en `localStorage`; refresh tokens revocables desde `sesiones_refresh` | Escaneo de cabeceras (securityheaders); auditoría de almacenamiento |
 | **CSRF** | Cookies de sesión se envían automáticamente a la API | 1) `SameSite=Lax/Strict`. 2) **Token CSRF** (sincronizador o *double-submit* firmado) en `X-CSRF-Token` para `POST/PUT/PATCH/DELETE`. 3) Validar `Origin`/`Referer` contra lista blanca. 4) CORS con **lista blanca** de orígenes y `credentials` solo para el dominio de la web. 5) Las mutaciones nunca usan `GET`. 6) Exigir `Content-Type: application/json`. | Pruebas: petición cruzada sin token → `403`; CORS con origen no permitido rechazado |
-| **Exposición de secretos** | Credenciales de BD (en el prototipo estaban escritas en el código), `JWT_SECRET`/llave de firma, contraseña del rol `app_user` | 1) `DATABASE_URL` (con el rol `app_user`, sin superusuario) y `JWT_SECRET` **solo en el backend**, en variables de entorno del servidor o gestor de secretos; **jamás** en el bundle web ni en el móvil ni en el repositorio. 2) La web y el móvil **nunca** tienen credenciales de base de datos: solo hablan con la API. 3) Prohibido prefijar secretos con `VITE_`/`NEXT_PUBLIC_`/`REACT_APP_` (se incrustan en el cliente). 4) `.env` en `.gitignore`; `.env.example` sin valores; si la contraseña actual estuvo versionada (C-01), **cambiarla** y limpiar el historial de Git. 5) **Escaneo de secretos** en CI (gitleaks/GitHub secret scanning) y *pre-commit hook*. 6) Bases de datos separadas para dev/staging/prod; **rotación** de `JWT_SECRET` y contraseñas ante cualquier sospecha (invalida todas las sesiones activas). | Búsqueda de la llave en el bundle compilado; escaneo del historial de Git del repositorio |
+| **Exposición de secretos** | Credenciales de BD (en el prototipo estaban escritas en el código), `JWT_SECRET`/llave de firma, contraseña del rol `app_user` | 1) `DATABASE_URL` (con el rol `app_user`, sin superusuario) y `JWT_SECRET` **solo en el backend**, en variables de entorno del servidor o gestor de secretos; **jamás** en el bundle web ni en el móvil ni en el repositorio. 2) La web y el móvil **nunca** tienen credenciales de base de datos: solo hablan con la API. Las llaves de Supabase (`anon` y sobre todo `service_role`, que salta RLS) no se usan en la aplicación: no están en Azure, en el repositorio, en la web ni en la app, y solo el DBA usa el panel de Supabase para las migraciones (§D.4). 3) Prohibido prefijar secretos con `VITE_`/`NEXT_PUBLIC_`/`REACT_APP_` (se incrustan en el cliente). 4) `.env` en `.gitignore`; `.env.example` sin valores; si la contraseña actual estuvo versionada (C-01), **cambiarla** y limpiar el historial de Git. 5) **Escaneo de secretos** en CI (gitleaks/GitHub secret scanning) y *pre-commit hook*. 6) Bases de datos separadas para dev/staging/prod; **rotación** de `JWT_SECRET` y contraseñas ante cualquier sospecha (invalida todas las sesiones activas). | Búsqueda de la llave en el bundle compilado; escaneo del historial de Git del repositorio |
 | **Control de acceso roto / IDOR** | Manipular IDs (`/planillas/{id}`, `/registros-tiempo/{id}`) | Autorización por objeto en la API (pertenencia a ruta/trabajador), reforzada con **RLS activo** en la base; IDs `uuid`; respuesta `404` en lugar de `403` cuando el recurso no es visible | Suite de pruebas con JWT de roles cruzados (§D.4) |
 | **Inyección (SQL/NoSQL/JSONB)** | Filtros y payloads | Consultas **siempre parametrizadas** con `pg` (`pool.query(texto, [valores])`); **nunca** concatenar SQL (corrige el patrón usado hoy en la ruta `/api/registros`, que ya parametriza, y lo mantiene como estándar); validación de esquema; `jsonb_path` con parámetros, no con cadenas del usuario | SAST (Semgrep/CodeQL) en CI |
 | **Fallas de autenticación** | Fuerza bruta, credenciales filtradas | Límite de tasa en `/auth/session`, bloqueo progresivo, MFA, mensajes de error genéricos | Pruebas de límite de tasa |
