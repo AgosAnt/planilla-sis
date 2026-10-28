@@ -2,67 +2,63 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/bg_app"
+    style="@style/Pantalla"
     android:fillViewport="true"
     tools:context=".MiCalculoActivity">
 
     <LinearLayout
+        android:id="@+id/contenidoCalculo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="24dp">
 
-        <TextView android:id="@+id/btnVolverCalculo" style="@style/Volver" />
+        <Button android:id="@+id/btnVolverCalculo" style="@style/Volver" />
 
         <TextView style="@style/TituloPantalla" android:text="Mi cálculo" />
 
-        <TextView
-            android:id="@+id/tvPeriodo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/slate_500"
-            android:textSize="14sp" />
+        <TextView android:id="@+id/tvPeriodo" style="@style/Subtitulo" />
 
-        <LinearLayout
+        <!-- Quincena: botones segmentados de M3, uno siempre elegido -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/grupoQuincena"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:orientation="horizontal">
+            app:selectionRequired="true"
+            app:singleSelection="true">
 
             <Button
                 android:id="@+id/btnQuincenaActual"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
                 android:layout_weight="1"
                 android:text="Esta quincena"
                 android:textAllCaps="false" />
 
             <Button
                 android:id="@+id/btnQuincenaAnterior"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:text="La anterior"
                 android:textAllCaps="false" />
-        </LinearLayout>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            app:cardBackgroundColor="@android:color/white"
-            app:cardCornerRadius="14dp"
-            app:cardElevation="0dp">
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardCalculo"
+            style="@style/Tarjeta"
+            android:layout_marginTop="20dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="16dp">
 
                 <TextView style="@style/EtiquetaDato" android:text="Horas ordinarias" />
                 <TextView android:id="@+id/tvOrdinarias" style="@style/ValorDato" />
@@ -76,31 +72,30 @@
                 <TextView style="@style/EtiquetaDato" android:text="Jornadas contadas" />
                 <TextView android:id="@+id/tvJornadas" style="@style/ValorDato" />
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
+        <!-- Jornadas sin aprobar: aviso en el contenedor terciario (ocre) -->
         <TextView
             android:id="@+id/tvPendientes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:textColor="@color/slate_700"
-            android:textSize="14sp"
+            android:background="@drawable/fondo_etiqueta"
+            android:backgroundTint="?attr/colorTertiaryContainer"
+            android:padding="12dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnTertiaryContainer"
             android:visibility="gone" />
 
         <TextView
             android:id="@+id/tvErrorCalculo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            style="@style/TextoError"
             android:layout_marginTop="16dp"
-            android:textColor="@color/red_alert"
             android:visibility="gone" />
 
         <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            style="@style/Nota"
             android:layout_marginTop="16dp"
-            android:text="Solo se cuentan las jornadas que tu supervisor ya aprobó. Los montos (pago, bonificación e IGSS) aparecen en la planilla."
-            android:textColor="@color/slate_500"
-            android:textSize="13sp" />
+            android:text="Solo se cuentan las jornadas que tu supervisor ya aprobó. Los montos (pago, bonificación e IGSS) aparecen en la planilla." />
     </LinearLayout>
 </ScrollView>

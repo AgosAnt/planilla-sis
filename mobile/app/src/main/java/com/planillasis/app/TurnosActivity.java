@@ -1,5 +1,6 @@
 package com.planillasis.app;
 
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -7,10 +8,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
 
+import com.google.android.material.color.MaterialColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -71,6 +73,7 @@ public class TurnosActivity extends AppCompatActivity {
         for (JsonElement elemento : pagina.getAsJsonArray("items")) {
             lista.addView(tarjeta(elemento.getAsJsonObject()));
         }
+        Animaciones.entrada(lista);
     }
 
     private View tarjeta(JsonObject acuerdo) {
@@ -83,8 +86,7 @@ public class TurnosActivity extends AppCompatActivity {
                 + turno.get("hora_inicio").getAsString() + " a " + turno.get("hora_fin").getAsString());
         TextView tvEstado = vista.findViewById(R.id.tvEstadoTurno);
         tvEstado.setText(textoEstado(estado));
-        tvEstado.setTextColor(ContextCompat.getColor(this,
-                "RECHAZADO".equals(estado) ? R.color.red_alert : "PROPUESTO".equals(estado) ? R.color.slate_700 : R.color.green_active));
+        colorearEstado(tvEstado, estado);
 
         View botones = vista.findViewById(R.id.botonesTurno);
         botones.setVisibility("PROPUESTO".equals(estado) ? View.VISIBLE : View.GONE);
@@ -92,7 +94,7 @@ public class TurnosActivity extends AppCompatActivity {
         Button aceptar = vista.findViewById(R.id.btnAceptarTurno);
         Button rechazar = vista.findViewById(R.id.btnRechazarTurno);
         aceptar.setOnClickListener(v -> responder(id, "ACEPTADO", aceptar, rechazar));
-        rechazar.setOnClickListener(v -> new AlertDialog.Builder(this)
+        rechazar.setOnClickListener(v -> new MaterialAlertDialogBuilder(this)
                 .setTitle("Rechazar turno")
                 .setMessage("¿Rechazar el turno del " + fecha(acuerdo.get("fecha").getAsString()) + "? Tu supervisor verá que no puedes.")
                 .setPositiveButton("Rechazar", (d, w) -> responder(id, "RECHAZADO", aceptar, rechazar))
@@ -113,7 +115,7 @@ public class TurnosActivity extends AppCompatActivity {
                 if (!response.isSuccessful()) {
                     aceptar.setEnabled(true);
                     rechazar.setEnabled(true);
-                    new AlertDialog.Builder(TurnosActivity.this)
+                    new MaterialAlertDialogBuilder(TurnosActivity.this)
                             .setMessage(RespuestaApi.mensaje(response, RespuestaApi.problema(response)))
                             .setPositiveButton("Aceptar", null)
                             .show();
@@ -127,9 +129,34 @@ public class TurnosActivity extends AppCompatActivity {
                 if (isFinishing()) return;
                 aceptar.setEnabled(true);
                 rechazar.setEnabled(true);
-                new AlertDialog.Builder(TurnosActivity.this).setMessage(RespuestaApi.SIN_CONEXION).setPositiveButton("Aceptar", null).show();
+                new MaterialAlertDialogBuilder(TurnosActivity.this).setMessage(RespuestaApi.SIN_CONEXION).setPositiveButton("Aceptar", null).show();
             }
         });
+    }
+
+    // Etiqueta con los contenedores de M3: por responder (secundario), esperando al supervisor (terciario, ocre),
+    // confirmado (primario, verde) y rechazado (error)
+    private static void colorearEstado(TextView etiqueta, String estado) {
+        int fondo, texto;
+        switch (estado) {
+            case "ACEPTADO":
+                fondo = com.google.android.material.R.attr.colorTertiaryContainer;
+                texto = com.google.android.material.R.attr.colorOnTertiaryContainer;
+                break;
+            case "CONFIRMADO":
+                fondo = com.google.android.material.R.attr.colorPrimaryContainer;
+                texto = com.google.android.material.R.attr.colorOnPrimaryContainer;
+                break;
+            case "RECHAZADO":
+                fondo = com.google.android.material.R.attr.colorErrorContainer;
+                texto = com.google.android.material.R.attr.colorOnErrorContainer;
+                break;
+            default:
+                fondo = com.google.android.material.R.attr.colorSecondaryContainer;
+                texto = com.google.android.material.R.attr.colorOnSecondaryContainer;
+        }
+        ViewCompat.setBackgroundTintList(etiqueta, ColorStateList.valueOf(MaterialColors.getColor(etiqueta, fondo)));
+        etiqueta.setTextColor(MaterialColors.getColor(etiqueta, texto));
     }
 
     private static String textoEstado(String estado) {
@@ -155,7 +182,8 @@ public class TurnosActivity extends AppCompatActivity {
     private void mostrarMensaje(String mensaje, boolean error) {
         lista.removeAllViews();
         tvMensaje.setText(mensaje);
-        tvMensaje.setTextColor(ContextCompat.getColor(this, error ? R.color.red_alert : R.color.slate_500));
+        tvMensaje.setTextColor(MaterialColors.getColor(tvMensaje, error
+                ? com.google.android.material.R.attr.colorError : com.google.android.material.R.attr.colorOnSurfaceVariant));
         tvMensaje.setVisibility(View.VISIBLE);
     }
 }
