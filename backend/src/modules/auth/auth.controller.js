@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import * as authService from './auth.service.js';
 import {
   COOKIE_ACCESS, COOKIE_REFRESH, opcionesCookieAccess, opcionesCookieRefresh,
@@ -7,8 +8,15 @@ import { crearError } from '../../middlewares/errorHandler.js';
 
 const esMovil = (req) => req.get('X-Client-Type') === 'mobile';
 
+// El frontal de Azure manda X-Forwarded-For como "ip:puerto" ("[ipv6]:puerto"); la columna es inet y solo acepta
+// la IP. Si no es una IP válida queda vacía: nunca debe impedir el inicio de sesión.
+const ipDe = (req) => {
+  const ip = (req.ip ?? '').replace(/^\[(.+)\]:\d+$/, '$1').replace(/^(\d+\.\d+\.\d+\.\d+):\d+$/, '$1');
+  return isIP(ip) ? ip : null;
+};
+
 // Dispositivo de la sesión (queda en sesiones_refresh para saber desde dónde se abrió)
-const contextoDe = (req) => ({ ip: req.ip ?? null, userAgent: req.get('User-Agent') ?? null });
+const contextoDe = (req) => ({ ip: ipDe(req), userAgent: req.get('User-Agent') ?? null });
 
 // Secure cuando la petición llegó por HTTPS (Azure); en la LAN o en local por HTTP la cookie sigue funcionando
 const ponerCookies = (req, res, sesion) => {
