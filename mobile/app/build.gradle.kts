@@ -1,6 +1,16 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
+
+// Servidor que trae la app de fábrica: servidor.api en local.properties (no se sube al repo), por ejemplo
+// servidor.api=https://planilla.azurewebsites.net/ . Sin él queda el servidor de la oficina (LAN) para desarrollo.
+val propiedadesLocales = Properties().apply {
+    val archivo = rootProject.file("local.properties")
+    if (archivo.exists()) archivo.inputStream().use { load(it) }
+}
+val servidorApi: String = propiedadesLocales.getProperty("servidor.api") ?: "http://192.168.1.76:3000/"
 
 android {
     namespace = "com.planillasis.app"
@@ -18,6 +28,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        resValue("string", "servidor_por_defecto", servidorApi)
     }
 
     buildTypes {
@@ -28,6 +39,9 @@ android {
                 "proguard-rules.pro"
             )
         }
+    }
+    buildFeatures {
+        resValues = true // servidor_por_defecto (ver servidorApi arriba)
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

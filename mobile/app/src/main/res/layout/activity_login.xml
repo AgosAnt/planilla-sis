@@ -55,12 +55,16 @@
                 android:inputType="textPassword" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Oculto: la app trae el servidor de fábrica. Se muestra con "Cambiar" o si no se pudo conectar -->
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/campoServidor"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:hint="Servidor de la oficina"
-            app:placeholderText="http://192.168.1.76:3000/">
+            android:hint="Servidor"
+            android:visibility="gone"
+            app:helperText="Déjalo vacío para usar el de fábrica"
+            app:placeholderText="https://servidor.empresa.com/">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etServidor"
@@ -81,6 +85,27 @@
             style="@style/BotonPrincipal"
             android:layout_marginTop="8dp"
             android:text="Iniciar sesión" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvServidor"
+                style="@style/Nota"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:ellipsize="middle"
+                android:singleLine="true" />
+
+            <Button
+                android:id="@+id/btnCambiarServidor"
+                style="@style/BotonTexto"
+                android:text="Cambiar servidor" />
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

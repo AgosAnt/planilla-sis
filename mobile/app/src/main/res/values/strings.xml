@@ -1,5 +1,4 @@
 <resources>
     <string name="app_name">Planilla movil</string>
-    <!-- Servidor de la oficina (LAN). Se puede cambiar desde la pantalla de inicio de sesión. -->
-    <string name="servidor_por_defecto">http://192.168.1.76:3000/</string>
+    <!-- servidor_por_defecto lo genera app/build.gradle.kts desde servidor.api de local.properties -->
 </resources>

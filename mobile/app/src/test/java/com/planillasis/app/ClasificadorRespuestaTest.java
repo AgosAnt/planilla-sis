@@ -81,4 +81,10 @@ public class ClasificadorRespuestaTest {
         assertEquals("http://192.168.1.76:3000/", Configuracion.normalizarServidor(" http://192.168.1.76:3000 "));
         assertEquals("http://servidor.local:3000/", Configuracion.normalizarServidor("http://servidor.local:3000/"));
     }
+
+    @Test
+    public void muestraElServidorSinProtocoloNiBarra() {
+        assertEquals("planilla.azurewebsites.net", Configuracion.nombreCorto("https://planilla.azurewebsites.net/"));
+        assertEquals("192.168.1.76:3000", Configuracion.nombreCorto("http://192.168.1.76:3000/"));
+    }
 }

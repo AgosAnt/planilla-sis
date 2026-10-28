@@ -21,7 +21,8 @@ import retrofit2.Response;
 public class LoginActivity extends AppCompatActivity {
 
     private EditText etEmail, etPassword, etServidor;
-    private TextView tvError;
+    private TextView tvError, tvServidor;
+    private View campoServidor, btnCambiarServidor;
     private Button btnIniciarSesion;
     private SesionManager sesion;
 
@@ -36,13 +37,25 @@ public class LoginActivity extends AppCompatActivity {
         etServidor = findViewById(R.id.etServidor);
         tvError = findViewById(R.id.tvErrorLogin);
         btnIniciarSesion = findViewById(R.id.btnIniciarSesion);
+        campoServidor = findViewById(R.id.campoServidor);
+        tvServidor = findViewById(R.id.tvServidor);
+        btnCambiarServidor = findViewById(R.id.btnCambiarServidor);
         Animaciones.entrada(findViewById(R.id.contenidoLogin));
 
         etServidor.setText(Configuracion.servidor(this));
+        tvServidor.setText("Servidor: " + Configuracion.nombreCorto(Configuracion.servidor(this)));
         Perfil anterior = sesion.perfil();
         if (anterior != null) etEmail.setText(anterior.email); // sesión vencida: mismo trabajador
 
         btnIniciarSesion.setOnClickListener(v -> iniciarSesion());
+        btnCambiarServidor.setOnClickListener(v -> mostrarCampoServidor());
+    }
+
+    // El servidor viene de fábrica; el campo solo aparece si alguien lo pide o si no se pudo conectar
+    private void mostrarCampoServidor() {
+        campoServidor.setVisibility(View.VISIBLE);
+        btnCambiarServidor.setVisibility(View.GONE);
+        tvServidor.setVisibility(View.GONE);
     }
 
     private void iniciarSesion() {
@@ -82,8 +95,9 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onFailure(@NonNull Call<SesionApi.Respuesta> call, @NonNull Throwable t) {
                 ocupado(false);
-                mostrarError("No se pudo conectar con " + Configuracion.servidor(LoginActivity.this)
-                        + ". Verifica tu conexión a internet y la dirección del servidor.");
+                mostrarError("No se pudo conectar con " + Configuracion.nombreCorto(Configuracion.servidor(LoginActivity.this))
+                        + ". Verifica tu conexión a internet; si persiste, revisa el servidor con tu supervisor.");
+                mostrarCampoServidor();
             }
         });
     }
