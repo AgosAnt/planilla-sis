@@ -36,6 +36,7 @@ public class LoginActivity extends AppCompatActivity {
         etServidor = findViewById(R.id.etServidor);
         tvError = findViewById(R.id.tvErrorLogin);
         btnIniciarSesion = findViewById(R.id.btnIniciarSesion);
+        Animaciones.entrada(findViewById(R.id.contenidoLogin));
 
         etServidor.setText(Configuracion.servidor(this));
         Perfil anterior = sesion.perfil();

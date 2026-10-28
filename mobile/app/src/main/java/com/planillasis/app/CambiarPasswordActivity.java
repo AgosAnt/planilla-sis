@@ -41,6 +41,7 @@ public class CambiarPasswordActivity extends AppCompatActivity {
         tvError = findViewById(R.id.tvErrorPassword);
         btnCambiar = findViewById(R.id.btnCambiarPassword);
         btnCambiar.setOnClickListener(v -> cambiar());
+        Animaciones.entrada(findViewById(R.id.contenidoPassword));
 
         boolean obligatoria = getIntent().getBooleanExtra(EXTRA_OBLIGATORIA, false);
         TextView volver = findViewById(R.id.btnVolverPassword);

@@ -2,6 +2,7 @@ package com.planillasis.app;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
@@ -13,21 +14,24 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.location.LocationManagerCompat;
+import androidx.core.view.ViewCompat;
 
 import com.google.android.gms.location.CurrentLocationRequest;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.CancellationTokenSource;
+import com.google.android.material.color.MaterialColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -46,11 +50,14 @@ import retrofit2.Response;
 public class MainActivity extends AppCompatActivity {
 
     private TextView tvFechaHoraActual, tvEstado, tvTrabajador, tvRuta, tvSincronizacion;
-    private Button btnEntrada, btnSalida, btnEmergencia, btnDescanso;
+    private Button btnEntrada, btnSalida, btnDescanso;
+    private BotonEmergencia btnEmergencia;
+    private View dotEstado;
+    private String estadoMostrado;
 
     private Handler handler;
     private Runnable runnable;
-    private Toast toastActual;
+    private Snackbar avisoActual;
 
     private DatabaseHelper dbHelper;
     private SesionManager sesion;
@@ -107,6 +114,7 @@ public class MainActivity extends AppCompatActivity {
         btnSalida = findViewById(R.id.btnSalida);
         btnDescanso = findViewById(R.id.btnDescanso);
         btnEmergencia = findViewById(R.id.btnEmergencia);
+        dotEstado = findViewById(R.id.dotEstado);
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
@@ -114,10 +122,13 @@ public class MainActivity extends AppCompatActivity {
         pedirPermisosGPS();
         mostrarPerfil();
         restaurarEstadoUI();
+        Animaciones.entrada(findViewById(R.id.contenidoPrincipal));
 
         btnEntrada.setOnClickListener(v -> procesarRegistro(DatabaseHelper.TIPO_INGRESO, false));
         btnSalida.setOnClickListener(v -> procesarRegistro(DatabaseHelper.TIPO_SALIDA, false));
-        btnEmergencia.setOnClickListener(v -> procesarRegistro(DatabaseHelper.TIPO_EVENTO, true));
+        // Emergencia: se envía al mantener presionado; con TalkBack o teclado (un toque) se pide confirmación
+        btnEmergencia.setAlCompletar(() -> procesarRegistro(DatabaseHelper.TIPO_EVENTO, true));
+        btnEmergencia.setOnClickListener(v -> confirmarEmergencia());
         btnDescanso.setOnClickListener(v -> alternarDescanso());
         findViewById(R.id.btnSalir).setOnClickListener(v -> confirmarSalida());
         findViewById(R.id.btnMas).setOnClickListener(v -> mostrarMas());
@@ -208,13 +219,26 @@ public class MainActivity extends AppCompatActivity {
         boolean enRuta = jornada != null;
         String inicioDescanso = sesion.inicioDescanso();
 
+        String estado;
+        int colorEstado;
         if (enRuta && inicioDescanso != null) {
-            tvEstado.setText(conHora("Estado: EN DESCANSO", horaLocal(inicioDescanso)));
+            estado = conHora("En descanso", horaLocal(inicioDescanso));
+            colorEstado = com.google.android.material.R.attr.colorTertiary;
         } else if (enRuta) {
-            tvEstado.setText(conHora("Estado: EN RUTA", horaLocal(ingresoDe(jornada))));
+            estado = conHora("En ruta", horaLocal(ingresoDe(jornada)));
+            colorEstado = com.google.android.material.R.attr.colorPrimary;
         } else {
-            tvEstado.setText("Estado: LISTO PARA INICIAR");
+            estado = "Listo para iniciar";
+            colorEstado = com.google.android.material.R.attr.colorOutline;
         }
+        tvEstado.setText(estado);
+        ViewCompat.setBackgroundTintList(dotEstado, ColorStateList.valueOf(MaterialColors.getColor(dotEstado, colorEstado)));
+        // Solo se anima cuando el estado cambia, no en cada sincronización
+        if (estadoMostrado != null && !estadoMostrado.equals(estado)) {
+            Animaciones.cambio(tvEstado);
+            Animaciones.latido(dotEstado);
+        }
+        estadoMostrado = estado;
         btnEntrada.setEnabled(!enRuta && perfil.asignacionActiva != null);
         btnSalida.setEnabled(enRuta && inicioDescanso == null);
         btnDescanso.setEnabled(enRuta);
@@ -263,10 +287,14 @@ public class MainActivity extends AppCompatActivity {
         tvSincronizacion.setText(texto);
     }
 
+    // Aviso de Material 3 encima del botón de emergencia; los mensajes del GPS pueden ocupar varias líneas
     private void mostrarMensaje(String mensaje) {
-        if (toastActual != null) toastActual.cancel();
-        toastActual = Toast.makeText(this, mensaje, Toast.LENGTH_LONG);
-        toastActual.show();
+        if (avisoActual != null) avisoActual.dismiss();
+        avisoActual = Snackbar.make(findViewById(R.id.contenidoPrincipal), mensaje, Snackbar.LENGTH_LONG)
+                .setAnchorView(btnEmergencia);
+        TextView texto = avisoActual.getView().findViewById(com.google.android.material.R.id.snackbar_text);
+        if (texto != null) texto.setMaxLines(5);
+        avisoActual.show();
     }
 
     // === Marcas ===
@@ -290,7 +318,7 @@ public class MainActivity extends AppCompatActivity {
         btnEntrada.setEnabled(false);
         btnSalida.setEnabled(false);
         btnEmergencia.setEnabled(false);
-        mostrarMensaje("📍 Obteniendo ubicación...");
+        mostrarMensaje("Obteniendo ubicación...");
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -408,7 +436,7 @@ public class MainActivity extends AppCompatActivity {
                 cuerpo.add("payload", payload);
                 dbHelper.encolar(perfil.id, tipo, clientUuid, cuerpo.toString(),
                         jornada != null ? jornada.id : null, jornada != null ? jornada.registroServidorId : null);
-                mostrarMensaje("🚨 EMERGENCIA GUARDADA. Enviando al servidor...");
+                mostrarMensaje("Emergencia guardada. Enviando al servidor...");
                 break;
         }
         sincronizar();
@@ -424,7 +452,7 @@ public class MainActivity extends AppCompatActivity {
             restaurarEstadoUI();
             return;
         }
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("¿Qué tipo de descanso fue?")
                 .setItems(NOMBRES_DESCANSO, (dialogo, posicion) -> {
                     String clientUuid = UUID.randomUUID().toString();
@@ -487,8 +515,18 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // Camino accesible: con TalkBack o teclado no se puede mantener presionado, así que un toque pide confirmación
+    private void confirmarEmergencia() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Enviar emergencia")
+                .setMessage("Se avisará a tu supervisor con tu ubicación actual.")
+                .setPositiveButton("Enviar", (d, w) -> procesarRegistro(DatabaseHelper.TIPO_EVENTO, true))
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
     private void mostrarMas() {
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setItems(new String[] { "Mi cálculo", "Mis turnos", "Cambiar contraseña" }, (dialogo, opcion) -> {
                     if (opcion == 0) startActivity(new Intent(this, MiCalculoActivity.class));
                     else if (opcion == 1) startActivity(new Intent(this, TurnosActivity.class));
@@ -507,7 +545,7 @@ public class MainActivity extends AppCompatActivity {
         int pendientes = dbHelper.contar(perfil.id, DatabaseHelper.PENDIENTE);
         String mensaje = pendientes == 0 ? "¿Cerrar sesión en este teléfono?"
                 : "Tienes " + pendientes + " marcas sin enviar. Se guardan en el teléfono y se enviarán cuando vuelvas a iniciar sesión con tu usuario.";
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("Cerrar sesión")
                 .setMessage(mensaje)
                 .setPositiveButton("Cerrar sesión", (d, w) -> cerrarSesion())

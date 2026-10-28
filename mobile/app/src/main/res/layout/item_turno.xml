@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    app:cardBackgroundColor="@android:color/white"
-    app:cardCornerRadius="14dp"
-    app:cardElevation="0dp">
+    style="@style/Tarjeta"
+    android:layout_marginBottom="12dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -18,52 +14,48 @@
             android:id="@+id/tvFechaTurno"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-medium"
-            android:textColor="@color/slate_900"
-            android:textSize="17sp" />
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textColor="?attr/colorOnSurface" />
 
         <TextView
             android:id="@+id/tvDetalleTurno"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/slate_700"
-            android:textSize="15sp" />
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
+        <!-- Estado: el fondo y el color del texto los pone TurnosActivity -->
         <TextView
             android:id="@+id/tvEstadoTurno"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:textSize="13sp" />
+            style="@style/Etiqueta"
+            android:layout_marginTop="10dp" />
 
         <LinearLayout
             android:id="@+id/botonesTurno"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="12dp"
             android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnRechazarTurno"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:text="Rechazar"
+                android:textAllCaps="false"
+                android:textColor="?attr/colorError"
+                app:strokeColor="?attr/colorError" />
 
             <Button
                 android:id="@+id/btnAceptarTurno"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
-                android:layout_weight="1"
-                android:backgroundTint="@color/green_active"
-                android:text="Aceptar"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white" />
-
-            <Button
-                android:id="@+id/btnRechazarTurno"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
                 android:layout_weight="1"
-                android:backgroundTint="@color/red_alert"
-                android:text="Rechazar"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white" />
+                android:text="Aceptar" />
         </LinearLayout>
     </LinearLayout>
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

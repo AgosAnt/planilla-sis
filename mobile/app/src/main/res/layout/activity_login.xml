@@ -1,98 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/bg_app"
+    style="@style/Pantalla"
     android:fillViewport="true"
     tools:context=".LoginActivity">
 
     <LinearLayout
+        android:id="@+id/contenidoLogin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="24dp">
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            style="@style/TituloPantalla"
+            android:layout_marginTop="32dp"
             android:text="Planilla"
-            android:textColor="@color/slate_900"
-            android:textSize="30sp"
-            android:textStyle="bold" />
+            android:textAppearance="?attr/textAppearanceDisplaySmall"
+            android:textColor="?attr/colorPrimary" />
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            style="@style/Subtitulo"
             android:layout_marginBottom="32dp"
-            android:text="Inicia sesión con tu usuario"
-            android:textColor="@color/slate_500"
-            android:textSize="14sp" />
+            android:text="Inicia sesión con tu usuario" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Correo"
-            android:textColor="@color/slate_700" />
-
-        <EditText
-            android:id="@+id/etEmail"
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:autofillHints="emailAddress"
-            android:hint="correo@empresa.com"
-            android:inputType="textEmailAddress" />
+            android:layout_marginBottom="12dp"
+            android:hint="Correo"
+            app:placeholderText="correo@empresa.com">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Contraseña"
-            android:textColor="@color/slate_700" />
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:autofillHints="emailAddress"
+                android:inputType="textEmailAddress" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-        <EditText
-            android:id="@+id/etPassword"
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:autofillHints="password"
+            android:layout_marginBottom="12dp"
             android:hint="Contraseña"
-            android:inputType="textPassword" />
+            app:endIconMode="password_toggle">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Servidor de la oficina"
-            android:textColor="@color/slate_700" />
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPassword"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:autofillHints="password"
+                android:inputType="textPassword" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-        <EditText
-            android:id="@+id/etServidor"
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:hint="http://192.168.1.76:3000/"
-            android:importantForAutofill="no"
-            android:inputType="textUri" />
+            android:hint="Servidor de la oficina"
+            app:placeholderText="http://192.168.1.76:3000/">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etServidor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:importantForAutofill="no"
+                android:inputType="textUri" />
+        </com.google.android.material.textfield.TextInputLayout>
 
         <TextView
             android:id="@+id/tvErrorLogin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            style="@style/TextoError"
             android:layout_marginBottom="8dp"
-            android:textColor="@color/red_alert"
             android:visibility="gone" />
 
         <Button
             android:id="@+id/btnIniciarSesion"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
+            style="@style/BotonPrincipal"
             android:layout_marginTop="8dp"
-            android:backgroundTint="@color/green_active"
-            android:text="Iniciar sesión"
-            android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:textSize="17sp" />
+            android:text="Iniciar sesión" />
 
     </LinearLayout>
 </ScrollView>

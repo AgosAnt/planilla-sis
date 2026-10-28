@@ -8,6 +8,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.gson.JsonObject;
 
 import java.util.Calendar;
@@ -22,6 +23,8 @@ public class MiCalculoActivity extends AppCompatActivity {
 
     private TextView tvPeriodo, tvOrdinarias, tvExtraDiurnas, tvExtraNocturnas, tvJornadas, tvPendientes, tvError;
     private Button btnActual, btnAnterior;
+    private MaterialButtonToggleGroup grupoQuincena;
+    private View cardCalculo;
     private Quincena actual, anterior;
 
     @Override
@@ -38,6 +41,8 @@ public class MiCalculoActivity extends AppCompatActivity {
         tvError = findViewById(R.id.tvErrorCalculo);
         btnActual = findViewById(R.id.btnQuincenaActual);
         btnAnterior = findViewById(R.id.btnQuincenaAnterior);
+        grupoQuincena = findViewById(R.id.grupoQuincena);
+        cardCalculo = findViewById(R.id.cardCalculo);
 
         actual = Quincena.de(Calendar.getInstance());
         anterior = actual.anterior();
@@ -46,11 +51,11 @@ public class MiCalculoActivity extends AppCompatActivity {
         findViewById(R.id.btnVolverCalculo).setOnClickListener(v -> finish());
 
         cargar(actual);
+        Animaciones.entrada(findViewById(R.id.contenidoCalculo));
     }
 
     private void cargar(Quincena quincena) {
-        btnActual.setEnabled(quincena != actual);
-        btnAnterior.setEnabled(quincena != anterior);
+        grupoQuincena.check(quincena == actual ? R.id.btnQuincenaActual : R.id.btnQuincenaAnterior);
         tvPeriodo.setText(quincena.nombre);
         tvError.setVisibility(View.GONE);
         for (TextView valor : new TextView[] { tvOrdinarias, tvExtraDiurnas, tvExtraNocturnas, tvJornadas }) valor.setText("…");
@@ -69,6 +74,7 @@ public class MiCalculoActivity extends AppCompatActivity {
                 tvExtraDiurnas.setText(horas(cuerpo, "horas_extra_diurnas"));
                 tvExtraNocturnas.setText(horas(cuerpo, "horas_extra_nocturnas"));
                 tvJornadas.setText(String.valueOf(cuerpo.get("jornadas_contadas").getAsInt()));
+                Animaciones.cambio(cardCalculo);
                 int pendientes = cuerpo.get("jornadas_pendientes").getAsInt();
                 if (pendientes > 0) {
                     tvPendientes.setText(pendientes + (pendientes == 1 ? " jornada todavía no está aprobada" : " jornadas todavía no están aprobadas")
