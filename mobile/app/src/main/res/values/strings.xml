@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Planilla movil</string>
+    <string name="app_name">Mi jornada</string>
     <!-- servidor_por_defecto lo genera app/build.gradle.kts desde servidor.api de local.properties -->
 </resources>
