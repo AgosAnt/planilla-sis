@@ -31,6 +31,11 @@ const WEB_DIR = existsSync(join(WEB_DIST, 'index.html')) ? WEB_DIST : WEB_PROTOT
 
 const app = express();
 
+// Azure App Service atiende el HTTPS en su frontal y reenvía por HTTP con X-Forwarded-Proto y X-Forwarded-For.
+// Confiar en ese único salto hace que req.secure sea true en producción (cookies Secure y HSTS) y que req.ip
+// sea la del cliente. En local o en la LAN no hay proxy: req.secure queda en false.
+app.set('trust proxy', 1);
+
 // Seguridad (F.2): sin cabecera X-Powered-By y con cabeceras de seguridad en toda respuesta
 app.disable('x-powered-by');
 app.use(cabecerasSeguridad);

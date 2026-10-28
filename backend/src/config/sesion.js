@@ -1,4 +1,5 @@
-// Cookies de sesión web (ADR-001 y E-1). Sin atributo Secure: el despliegue es HTTP dentro de la LAN (D-4).
+// Cookies de sesión web (ADR-001 y E-1). El atributo Secure lo pone auth.controller según la petición:
+// por HTTPS (Azure) va Secure; por HTTP dentro de la LAN (D-4) o en local, no.
 export const COOKIE_ACCESS = 'psis_access';
 export const COOKIE_REFRESH = 'psis_refresh';
 
@@ -23,7 +24,6 @@ export const BLOQUEO_MAXIMO_MIN = 15;
 export const opcionesCookieAccess = {
   httpOnly: true,
   sameSite: 'lax',
-  secure: false,
   path: '/',
 };
 
@@ -31,6 +31,5 @@ export const opcionesCookieAccess = {
 export const opcionesCookieRefresh = {
   httpOnly: true,
   sameSite: 'strict',
-  secure: false,
   path: '/api/v1/auth',
 };
