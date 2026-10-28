@@ -243,7 +243,7 @@ window.addEventListener("popstate", () =>
 );
 ```
 
-> **Nota de seguridad:** la guarda de rutas en el cliente es solo **experiencia de usuario**. La autorización real ocurre en la API (rol + pertenencia) y, si está activa, en RLS; ocultar una ruta no protege un dato.
+> **Nota de seguridad:** la guarda de rutas en el cliente es solo **experiencia de usuario**. La autorización real ocurre en la API (rol + pertenencia) y en RLS; ocultar una ruta no protege un dato.
 
 ### B.4 Distribución del almacenamiento web
 
@@ -824,7 +824,7 @@ create index sesiones_refresh_perfil on public.sesiones_refresh (perfil_id) wher
 
 ### D.3 Componente NoSQL: JSONB
 
-**Justificación.** La app móvil produce eventos de estructura variable (incidentes, geocercas, cambios de conectividad, notas) que evolucionan más rápido que el esquema relacional. JSONB permite **almacenar sin migrar** mientras se conserva consulta indexada y transaccionalidad de PostgreSQL (más RLS si el equipo la activa, §D.4). Los datos que participan en el **cálculo de pago** permanecen en columnas relacionales tipadas. De igual forma, en `eventos_diarios` se conservan como columnas tipadas los campos que el supervisor filtra a diario (tipo, coordenadas, estado de atención) y solo la parte variable va en `payload`.
+**Justificación.** La app móvil produce eventos de estructura variable (incidentes, geocercas, cambios de conectividad, notas) que evolucionan más rápido que el esquema relacional. JSONB permite **almacenar sin migrar** mientras se conserva consulta indexada y transaccionalidad de PostgreSQL (más RLS, §D.4). Los datos que participan en el **cálculo de pago** permanecen en columnas relacionales tipadas. De igual forma, en `eventos_diarios` se conservan como columnas tipadas los campos que el supervisor filtra a diario (tipo, coordenadas, estado de atención) y solo la parte variable va en `payload`.
 
 **Tabla 1: `eventos_diarios`** (generada por el móvil y por la web)
 
@@ -926,7 +926,7 @@ revoke update, delete, truncate on public.auditoria from anon, authenticated;
 - **El rol de aplicación (`app_user`) tiene los privilegios mínimos** que sus operaciones requieren; nunca se conecta con `postgres` ni con un rol de superusuario (cierra H-21).
 - Las funciones auxiliares usan `security definer` con `search_path` fijo para evitar recursión y suplantación.
 
-**Funciones auxiliares**
+**Funciones auxiliares** (definidas en `Database/migrations/M008_rls_registros_eventos.sql`; el backend fija los *claims* en `conClaims`, `backend/src/config/db.js`)
 
 ```sql
 create schema if not exists app;
@@ -1027,7 +1027,7 @@ create policy rt_admin_all on public.registros_tiempo
   with check (app.rol_actual() = 'administrador');
 ```
 
-**Pruebas de RLS (criterio de aceptación, si el equipo la activa):** suite automatizada que, para cada tabla, fija `app.jwt_claims` con cada rol y verifica (a) lo permitido, (b) lo denegado y (c) que un supervisor **no** accede a datos de rutas ajenas. Se incluye en CI.
+**Pruebas de RLS:** `Database/tests/M008_pruebas_rls.sql` fija `app.jwt_claims` con cada rol y verifica (a) lo permitido, (b) lo denegado y (c) que un supervisor **no** accede a datos de rutas ajenas. Se corre con `psql` sobre una base de prueba; además, cada PR que tocó tablas con RLS se probó con usuarios de los tres roles.
 
 **Restricción de segregación de funciones en BD:**
 
@@ -1415,7 +1415,7 @@ Strict-Transport-Security: max-age=15552000  (solo cuando la petición llega por
 | Área | Control |
 | --- | --- |
 | Transporte | HTTPS obligatorio con HSTS; TLS moderno en la API y en la conexión a PostgreSQL (`sslmode=require` si la base se aloja de forma remota) |
-| Datos personales | Minimización; acceso a salarios restringido por rol en la API (y RLS si está activa); enmascarar identificadores en listados |
+| Datos personales | Minimización; acceso a salarios restringido por rol en la API y en RLS; enmascarar identificadores en listados |
 | Copias y recuperación | *Backups* de BD y prueba de restauración periódica |
 | Móvil | Certificado *pinning* (opcional), detección de root/jailbreak (opcional), cifrado de la cola offline |
 | Ciclo de desarrollo seguro | Modelado de amenazas por módulo (planilla y pagos primero), revisión de PR con lista de verificación de seguridad, pruebas de seguridad antes de cada entrega |
