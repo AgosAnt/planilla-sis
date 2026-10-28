@@ -1,15 +1,15 @@
-# Entregable Fase 1: Arquitectura Técnica de la Solución
+# Entregable: Arquitectura Técnica de la Solución
 
 **Sistema de Control de Planillas y Rutas (`planilla-sis`)**
 
 | Campo | Detalle |
 | --- | --- |
-| Versión | 2.0 – Borrador para revisión (Decisión D-3 tomada: PostgreSQL autoadministrado + autenticación propia) |
-| Fecha | 21 de septiembre de 2026 |
-| Elaborado por | Arquitectura de Software y Análisis de Sistemas |
-| Equipo | 7 integrantes: 6 en Web/Backend, 1 en App Móvil |
-| Repositorio base | [https://github.com/AgosAnt/planilla-sis](https://github.com/AgosAnt/planilla-sis) |
-| Estado | Sujeto a validación de los puntos marcados **\[VALIDAR\]** |
+| Versión | 3.0 – Versión final (actualizada con lo construido y desplegado) |
+| Fecha | 28 de octubre de 2026 (versión 2.0: 21 de septiembre de 2026) |
+| Elaborado por | Equipo `planilla-sis` (§A.1) |
+| Equipo | 6 integrantes: 5 en Web/Backend y 1 que cubre Backend y App Móvil |
+| Repositorio | [https://github.com/AgosAnt/planilla-sis](https://github.com/AgosAnt/planilla-sis) |
+| Despliegue | Backend y web en Azure App Service; base de datos PostgreSQL en Supabase (ver [`manual-despliegue.md`](manual-despliegue.md)) |
 
 ---
 
@@ -17,28 +17,30 @@
 
 ### A.1 Roles del equipo
 
-| Rol | Perfil | Foco principal |
-| --- | --- | --- |
-| **Dev Web 1** | Líder Frontend | Arquitectura SPA, routing, guardas, CSP |
-| **Dev Web 2** | Frontend | Módulos de UI (rutas, supervisión, planillas) |
-| **Dev Backend 1** | Líder Técnico / Arquitecto | ADRs, contrato API, revisión de calidad |
-| **Dev Backend 2** | Backend – Dominio | API REST, motor de cálculo de planillas |
-| **Dev Backend 3** | Datos / DBA | Esquema 3FN, JSONB, migraciones, RLS |
-| **Dev Backend 4** | Seguridad / Autenticación / DevOps / QA | Módulo de autenticación propio (hash, JWT, refresh), OWASP, CI/CD, secretos, pruebas |
-| **Dev Móvil 1** | Móvil | App móvil, sincronización offline |
+| Integrante | Carné | Rol | Perfil | Foco principal |
+| --- | --- | --- | --- | --- |
+| Jonatan | _________ | **Dev Backend 1** y **Dev Móvil 1** | Líder Técnico / Arquitecto | Contrato API, arquitectura, ADRs, revisión de calidad; app móvil y sincronización offline |
+| Marco | _________ | **Dev Backend 2** | Backend – Dominio | Par inicial de la autenticación propia (consultado); rutas, turnos, registros de tiempo, motor de cálculo, aprobación y pagos |
+| Sofía | _________ | **Dev Backend 3** | Datos / DBA | Esquema 3FN, JSONB, migraciones, RLS; datos del motor de cálculo (parámetros y feriados) |
+| Daniel | _________ | **Dev Backend 4** | Seguridad / Autenticación / DevOps / QA | Autenticación propia (par inicial: hash, JWT, refresh), OWASP, CI/CD, secretos, pruebas |
+| Samuel | _________ | **Dev Web 1** | Líder Frontend | Shell de la SPA, routing, guardas, CSP |
+| Stefany | _________ | **Dev Web 2** | Frontend | Módulos de UI (rutas, supervisión, planillas) |
 
+> El plan original preveía 7 integrantes con un desarrollador móvil dedicado. El equipo quedó en 6: el líder técnico cubre también el rol **Dev Móvil 1**, por eso en las matrices ese rol aparece con su nombre.
 
 **Leyenda.** **R** = Responsable (ejecuta). **A** = Aprobador/Accountable (rinde cuentas; **uno solo por fila**). **C** = Consultado (bidireccional). **I** = Informado. **A/R** = quien aprueba también ejecuta.
 
-### A.2 Matriz RACI
+### A.2 Matriz RACI planificada
 
-| # | Entregable técnico | Dev Web 1 | Dev Web 2 | Dev BE 1 | Dev BE 2 | Dev BE 3 | Dev BE 4 | Dev Móvil |
+Asignación acordada al inicio del proyecto, por rol.
+
+| # | Entregable técnico | Dev Web 1 (Samuel) | Dev Web 2 (Stefany) | Dev BE 1 (Jonatan) | Dev BE 2 (Marco) | Dev BE 3 (Sofía) | Dev BE 4 (Daniel) | Dev Móvil (Jonatan) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Arquitectura, patrones y ADRs | C | I | **A/R** | C | C | C | C |
 | 2 | Integración con repo `planilla-sis` (estructura, ramas, convenciones) | C | I | **A** | R | C | R | I |
 | 3 | Auditoría del esquema BD existente | I | I | C | C | **A/R** | C | C |
 | 4 | Modelo ER 3FN, JSONB y migraciones | I | I | C | C | **A/R** | I | C |
-| 5 | Autorización a nivel de fila (RLS opcional, defensa en profundidad, §D.4) | I | I | C | C | **A/R** | C | I |
+| 5 | Autorización a nivel de fila (RLS, defensa en profundidad, §D.4) | I | I | C | C | **A/R** | C | I |
 | 6 | Contrato API REST (OpenAPI 3.x) | C | I | **A** | R | C | C | C |
 | 7 | Backend: módulos Rutas, Turnos, Registros de tiempo | I | I | C | **A/R** | C | C | C |
 | 8 | Backend: motor de cálculo, verificación y aprobación de planilla | I | I | C | **A/R** | C | C | I |
@@ -55,44 +57,96 @@
 
 **Verificación de consistencia:** cada fila tiene exactamente una **A**; ningún integrante concentra más de 7 filas como A, y ninguna persona es único R en un entregable crítico sin un C de respaldo (mitiga el riesgo de "factor camión").
 
+### A.3 Matriz RACI ejecutada
+
+Lo que ocurrió en la construcción, a partir de los *pull requests* integrados a `develop` desde el **#9 (13 de octubre de 2026)** hasta el **#58 (27 de octubre de 2026)**. Las filas 1 a 18 son las de la matriz planificada; las filas 19 a 22 son entregables que surgieron durante el desarrollo.
+
+- **R** refleja la autoría real en GitHub (columna *Evidencia*). Cuando el líder técnico construyó la primera versión de un módulo de otra área para desbloquear al equipo, figura como **R** de apoyo y el dueño del área conserva la **A**.
+- **A** sigue al dueño del rol (§A.1), no a quien presionó *merge*: la aprobación de cada entregable corresponde a quien rinde cuentas por él.
+
+| # | Entregable técnico | Samuel | Stefany | Jonatan | Marco | Sofía | Daniel | Evidencia (PRs) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Arquitectura, patrones y ADRs | C | I | **A/R** | R | C | C | #10 arquitectura modular controller-service-repository (Marco); #30 reglas de cálculo aprobadas (Jonatan) |
+| 2 | Integración con repo (estructura, ramas, convenciones) | R | I | **A** | R | C | C | #10 estructura del backend (Marco); #23 base de la web (Samuel) |
+| 3 | Auditoría del esquema BD existente | I | I | C | C | **A/R** | I | #9 M001 trabajo previo (Sofía) |
+| 4 | Modelo ER 3FN, JSONB y migraciones | I | I | R | C | **A/R** | C | #9 M002–M007, #35 M009, #44 M011, #52 M012 (Sofía); #11 permisos de M007 y #14 seed de desarrollo (Jonatan, apoyo) |
+| 5 | Autorización a nivel de fila (RLS) | I | I | R | C | **A/R** | R | #35 M010 RLS en todas las tablas (Sofía); #13 M008 RLS en registros y eventos (Jonatan); #36 login y `/me` con RLS (Daniel) |
+| 6 | Contrato API REST (OpenAPI 3.x) | C | C | **A/R** | R | C | R | #12 OpenAPI 0.3 (Jonatan); #42 y #51 (Marco); #37, #45–#47 y #50 (Daniel): cada PR documenta sus endpoints |
+| 7 | Backend: Rutas, Turnos, Registros de tiempo | I | C | R | **A/R** | C | C | #33 asignaciones y acuerdos de turno, #40 nombre del trabajador (Marco); #16 CRUD de rutas, #22 registros de tiempo, #24 asignación activa en `/me` (Jonatan, apoyo) |
+| 8 | Backend: motor de cálculo, verificación y aprobación | C | I | C | **A/R** | R | C | #42 motor de cálculo, #43 aprobación con reautenticación y pagos (Marco); M009 parámetros y feriados en #35 (Sofía) |
+| 9 | Frontend: shell SPA, History API, guardas por rol | **A/R** | R | R | I | I | C | #23 SPA con sesión, router y layout (Samuel); #26 módulos en el router (Stefany); #19 y #21 prototipo navegable (Jonatan, apoyo) |
+| 10 | Frontend: rutas, turnos y supervisión | **A** | R | C | C | I | I | #26 y #31 módulos de Rutas y Supervisión (Stefany); #29 corrección de llamadas a la API (Jonatan) |
+| 11 | Frontend: planillas y pagos | **A/R** | C | C | C | I | I | #54 pantallas de planillas y pagos con la API real (Samuel) |
+| 12 | Autenticación propia y endpoints de sesión | C | I | R | C | R | **A/R** | #32 reautenticación, cambio de contraseña y bloqueo, #36 y #47 refresh con rotación y detección de reúso (Daniel); #44 M011 (Sofía); #15 sesión web con cookies y CSRF, #18 alta de usuarios, #48 renovación en el móvil y #58 IP del cliente en Azure (Jonatan) |
+| 13 | Seguridad OWASP (XSS, CSRF, CSP, secretos) | C | I | R | C | C | **A/R** | #53 dependencia vulnerable, #57 cookies `Secure` y HSTS (Daniel); #15 cabeceras de seguridad y CSRF, #17 autenticación en registros y planillas (Jonatan) |
+| 14 | API móvil y sincronización offline | I | I | **A/R** | R | C | C | #10 módulo de eventos (Marco); #24 y #27 `/api/v1` con cola offline e idempotencia (Jonatan) |
+| 15 | App móvil | I | I | **A/R** | C | I | C | #27, #39 geocerca y GPS, #48, #49 mi cálculo, turnos y contraseña, #56 Material 3 y emergencia al mantener presionado (Jonatan) |
+| 16 | Pruebas | C | C | R | R | C | **A/R** | Pruebas del motor en #42 (Marco); pruebas unitarias y de integración del móvil en #27, #39, #48 y #49 (Jonatan); pruebas de RLS en #13; cada PR incluye "Cómo se probó" y Daniel revisa la parte de seguridad |
+| 17 | CI/CD, entornos y gestión de secretos | I | I | R | I | C | **A/R** | #53 auditoría de dependencias (Daniel); #38 despliegue a Azure con secretos en GitHub y Azure (Jonatan, apoyo) |
+| 18 | Documentación técnica y entregables | C | C | **A/R** | R | R | R | Este documento, `manual-despliegue.md` y #30 (Jonatan); #51 alcance (Marco); README de migraciones (Sofía); documentación de endpoints (Daniel) |
+| 19 | Estados del trabajador y catálogos (CU-03) | I | I | C | **A** | C | R | #46 estados con historial y catálogos (Daniel) |
+| 20 | Emergencias: envío desde la app, consulta y atención (CU-08) | I | I | R | **A** | I | R | #45 consulta y atención (Daniel); #56 botón de emergencia en la app (Jonatan) |
+| 21 | Administración: usuarios, auditoría y permisos por rol (CU-02, CU-14) | C | I | R | I | C | **A/R** | #37 usuarios y auditoría, #50 permisos por rol (Daniel); #18 alta de usuarios (Jonatan) |
+| 22 | Geocerca de las rutas (CU-04) | I | I | R | **A/R** | R | I | #55 consultar y reemplazar puntos (Marco); #52 M012 validaciones (Sofía); #39 geocerca en la app (Jonatan) |
+
+**En curso al cierre de esta versión** (paquetes listos, sin integrar a `develop`): pantallas de usuarios y auditoría, y de parámetros (Samuel); editor de geocerca, renovación de sesión en la web, estados y emergencias, turnos y panel (Stefany); segunda fase de la renovación de sesión en la web (Daniel).
+
+**Diferencias entre lo planificado y lo ejecutado**
+
+| Fila | Plan | Ejecución | Motivo |
+| --- | --- | --- | --- |
+| 8 | Motor de cálculo a cargo de Dev BE 2 (Marco) | Marco lo construyó; Sofía aportó la parte de datos (M009) | Las reglas de cálculo necesitaban tablas nuevas de parámetros y feriados |
+| 11 | Pantallas de planillas: R Dev Web 2 (Stefany) | Las construyó Samuel | Stefany quedó con rutas, supervisión, estados, turnos y panel; se repartió la carga |
+| 12 | Par inicial de autenticación: Daniel y Marco | Daniel y Jonatan | Marco quedó con el dominio (rutas, turnos, cálculo); la sesión web se necesitaba antes para la SPA |
+| 15 | Dev Móvil dedicado | El líder técnico | El equipo quedó en 6 integrantes |
+| 19–22 | No estaban en el plan | Se agregaron durante el desarrollo | Surgieron de los casos de uso CU-02, CU-03, CU-04, CU-08 y CU-14 al construirlos |
+
 ---
 
 ## B. Justificación de Arquitectura y Patrones
 
 ### B.1 Diagrama de arquitectura (vista de contenedores, nivel C4-2)
 
-> Este es el diagrama **objetivo**. El estado actual (MVP) se muestra en §0.4.1 y la decisión de usar autenticación propia sobre PostgreSQL en §0.4.4 (ADR-001).
+> Diagrama del sistema **tal como está desplegado**. La decisión de usar autenticación propia sobre PostgreSQL está en el ADR-001 (`adr/ADR-001-autenticacion-propia.md`).
 
 ```mermaid
 flowchart LR
   subgraph Clientes["Clientes"]
-    W["Cliente Web (SPA)<br/>Administradores y Supervisores"]
-    M["App Móvil<br/>Trabajadores en ruta"]
+    W["Cliente Web (SPA React)<br/>Administradores y Supervisores"]
+    M["App Móvil Android<br/>Trabajadores en ruta"]
   end
-  subgraph BE["Backend Node.js + Express - API REST /api/v1"]
-    GW["Capa HTTP<br/>CORS, rate limit, validación"]
-    AUTH["Módulo de autenticación propio<br/>hash, emisión/verificación de JWT, refresh"]
-    SVC["Servicios de dominio<br/>Rutas, Turnos, Registros, Planillas, Pagos"]
-    CALC["Motor de cálculo de planilla"]
-    GW --> AUTH
-    GW --> SVC --> CALC
+  subgraph AZ["Azure App Service (Node 22)"]
+    subgraph BE["Backend Node.js + Express - API REST /api/v1"]
+      GW["Capa HTTP<br/>CORS, cabeceras de seguridad, CSRF, validación"]
+      AUTH["Módulo de autenticación propio<br/>bcrypt, JWT, refresh con rotación"]
+      SVC["Servicios de dominio<br/>Rutas, Turnos, Registros, Eventos, Planillas, Pagos"]
+      CALC["Motor de cálculo de planilla"]
+      GW --> AUTH
+      GW --> SVC --> CALC
+    end
+    STATIC["Web compilada (web/dist)<br/>servida por el mismo backend"]
   end
-  PG[("PostgreSQL autoadministrado<br/>3FN + JSONB + RLS opcional")]
+  subgraph SB["Supabase"]
+    PG[("PostgreSQL gestionado<br/>3FN + JSONB + RLS activo en las 27 tablas")]
+  end
+  GH["GitHub Actions<br/>merge a develop: compila y publica"]
   W -- "HTTPS, cookies HttpOnly + CSRF" --> GW
-  M -- "HTTPS, Bearer JWT + Idempotency-Key" --> GW
+  W -. "carga la SPA (mismo origen)" .-> STATIC
+  M -- "HTTPS, Bearer JWT + client_uuid" --> GW
   AUTH -- "verifica credenciales,<br/>lee/escribe perfiles y sesiones_refresh" --> PG
-  SVC -- "consultas con pool pg<br/>(rol de aplicación, no superusuario)" --> PG
+  SVC -- "pool pg con app_user<br/>(sin superusuario, sujeto a RLS)" --> PG
+  GH -- "publica backend + web" --> AZ
 ```
 
 **Descripción textual (C4)**
 
-- **Nivel 1 – Contexto.** Tres personas interactúan con el sistema: el *Administrador* (configura, aprueba y paga), el *Supervisor* (asigna, supervisa, verifica) y el *Trabajador en ruta* (registra su jornada). El sistema no depende de proveedores externos de identidad ni de datos: la autenticación y la persistencia son propias (PostgreSQL autoadministrado).
+- **Nivel 1 – Contexto.** Tres personas interactúan con el sistema: el *Administrador* (configura, aprueba y paga), el *Supervisor* (asigna, supervisa, verifica) y el *Trabajador en ruta* (registra su jornada). No hay proveedores externos de identidad: la autenticación es propia del backend. La infraestructura es de terceros (Azure para ejecutar el backend y Supabase para alojar PostgreSQL), pero solo como alojamiento: no se usan Supabase Auth ni sus API.
 - **Nivel 2 – Contenedores.**
-  1. **Cliente Web (SPA):** aplicación estática en el navegador. Se comunica **solo** con la API REST mediante cookies `HttpOnly`.
-  2. **App Móvil:** aplicación nativa/multiplataforma. Se comunica con la misma API mediante `Authorization: Bearer`. Guarda tokens en el almacén seguro del SO (Keychain/Keystore).
-  3. **API REST (Backend):** contenedor de lógica de negocio, validación, autorización y motor de cálculo. Es la **frontera de confianza**.
+  1. **Cliente Web (SPA):** React + TypeScript compilado con Vite y servido por el mismo backend (mismo origen, sin CORS en producción). Se comunica **solo** con la API REST mediante cookies `HttpOnly`.
+  2. **App Móvil:** aplicación nativa Android (Java). Se comunica con la misma API mediante `Authorization: Bearer` y guarda los tokens cifrados con una llave del Android Keystore (`AlmacenSeguro`).
+  3. **API REST (Backend):** contenedor de lógica de negocio, validación, autorización y motor de cálculo. Es la **frontera de confianza**. Se ejecuta en Azure App Service, que termina HTTPS y reenvía la petición (`trust proxy`).
   4. **Módulo de autenticación (dentro del backend):** valida credenciales, emite y renueva JWT propios, gestiona la rotación de *refresh tokens*.
-  5. **PostgreSQL autoadministrado:** persistencia con 3FN, JSONB y RLS opcional como defensa en profundidad.
+  5. **PostgreSQL en Supabase:** persistencia con 3FN, JSONB y RLS **activo** como segunda barrera. El backend se conecta con el rol `app_user` (sin superusuario y sin ser dueño de las tablas), así que RLS se aplica a todas sus consultas. La llave `service_role` y el rol `postgres` de Supabase **no** se usan en la aplicación: solo los usa el DBA desde el editor SQL para aplicar migraciones.
 - **Nivel 3 – Componentes (API).** Capa HTTP → Servicios de dominio → Repositorios de datos. El *Motor de cálculo* es un componente puro (sin E/S), fácilmente testeable con casos de prueba deterministas.
 
 **Patrones aplicados**
@@ -113,7 +167,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | Interacción intensiva (tablas de horas, filtros, edición en línea de registros) | Actualización parcial sin recargar; mantiene estado de filtros y selecciones | Recarga por cada acción; pierde contexto | **SPA** |
 | Supervisión "casi en vivo" de horarios | Polling/SSE actualiza solo los componentes afectados | Requiere recargas o JS adicional por página | **SPA** |
-| Flujo de planilla de varios pasos (calcular → revisar → verificar → aprobar) | Estado del asistente persistente en memoria y `sessionStorage` | Estado a reconstruir en cada página | **SPA** |
+| Flujo de planilla de varios pasos (calcular → revisar → verificar → aprobar) | Estado del flujo en memoria; el estado de la planilla vive en la API | Estado a reconstruir en cada página | **SPA** |
 | Reutilización del contrato API con el móvil | Mismo API JSON, cero duplicación | Requiere capa de vistas en servidor además de la API | **SPA** |
 | SEO / indexación | Débil | Fuerte | **Irrelevante** (panel administrativo privado tras login) |
 | Tiempo de carga inicial | Mayor (bundle JS) | Menor | MPA, **mitigable** con *code splitting* y carga diferida por ruta |
@@ -122,7 +176,7 @@ flowchart LR
 
 **Decisión:** **SPA**. Los casos de uso (supervisión, cálculo de planilla y control de rutas) son intensivos en interacción y estado, el panel no requiere SEO, y la API REST ya es obligatoria para el móvil. Las debilidades de la SPA (carga inicial, superficie XSS) son mitigables con técnicas estándar (§B.3 y §F).
 
-**Propuesta tecnológica \[VALIDAR con el equipo\]:** React + TypeScript + Vite; React Router (implementa la History API) o equivalente; TanStack Query para caché y sincronización de datos de servidor; validación de esquemas con Zod. Si el equipo prefiere otro framework, los principios de este documento se mantienen.
+**Tecnología adoptada:** React 19 + TypeScript + Vite; React Router (implementa la History API); Tailwind CSS con componentes de shadcn/ui. La propuesta inicial incluía TanStack Query y Zod; no se adoptaron porque las pantallas cargan datos con un cliente propio (`web/src/lib/api.ts`) que ya maneja la sesión, el token CSRF y los errores de la API, y la validación de entrada que importa para la seguridad se hace en el backend. Agregarlos no cambiaría los principios de este documento.
 
 ### B.3 Estrategia de enrutamiento con History API
 
@@ -171,32 +225,44 @@ window.addEventListener("popstate", () =>
 
 | Mecanismo | Se almacena | **No** se almacena | Justificación |
 | --- | --- | --- | --- |
-| **Cookies `HttpOnly; Secure; SameSite`** | Access token (JWT), refresh token | Datos de negocio | Inaccesibles a JavaScript: un XSS no puede exfiltrar los tokens. Se envían automáticamente al mismo origen. |
-| **Memoria (variable de módulo / estado de la app)** | Token CSRF, perfil del usuario y rol cargados desde `/api/v1/me` | — | Se pierde al recargar; se rehidrata desde la API. Mínima persistencia = mínima exposición. |
-| **`sessionStorage`** | Borradores de formularios de planilla, filtros de la pestaña, paso actual del asistente | Tokens, datos personales completos | Aislado por pestaña y se destruye al cerrarla. Adecuado para estado efímero. |
-| **`localStorage`** | Preferencias no sensibles: tema, densidad de tabla, columnas visibles, colapso del menú, idioma | **Tokens, JWT, datos de nómina, PII** | Persistente y legible por cualquier script del origen: solo para preferencias inocuas. |
-| **`IndexedDB`** (opcional) | Caché de catálogos (turnos, rutas) para arranque rápido | Datos de pago | Solo si el rendimiento lo exige; se limpia al cerrar sesión. |
-| **Caché HTTP / Service Worker** | Activos estáticos versionados | Respuestas de la API con datos personales | Evita fugas en equipos compartidos. |
+| **Cookies `HttpOnly; SameSite`** (`psis_access`, `psis_refresh`; `Secure` cuando la petición llega por HTTPS) | Access token (JWT), refresh token | Datos de negocio | Inaccesibles a JavaScript: un XSS no puede exfiltrar los tokens. Se envían automáticamente al mismo origen. |
+| **Memoria (variable de módulo / estado de React)** | Token CSRF, perfil del usuario y rol cargados desde `/api/v1/me`, filtros y datos de cada pantalla | — | Se pierde al recargar; se rehidrata desde la API. Mínima persistencia = mínima exposición. |
+| **`localStorage`** | Solo preferencias no sensibles: el tema claro/oscuro (`psis:v1:tema`, `web/src/lib/preferencias.ts`) | **Tokens, JWT, datos de nómina, PII** | Persistente y legible por cualquier script del origen: solo para preferencias inocuas. |
+| **`sessionStorage`** | Nada (evaluado y descartado, ver abajo) | Todo | — |
+| **`IndexedDB`** | Nada (no se necesitó) | Datos de pago | Los catálogos son pequeños y la API responde rápido; una caché persistente solo agregaría datos que limpiar. |
+| **Caché HTTP** | Activos estáticos con nombre versionado por Vite | Respuestas de la API con datos personales (`Cache-Control: no-store`) | Evita fugas en equipos compartidos. |
+
+**Por qué no se usó `sessionStorage`.** La versión 2.0 de este documento lo reservaba para borradores de formularios de planilla, filtros de la pestaña y el paso actual del asistente de planilla. Al construir la web ninguno de esos casos lo necesitó:
+
+1. **El flujo de planilla no es un asistente con estado en el cliente.** Cada paso (calcular, verificar, aprobar, pagar) es una transición de estado que se guarda en la API (§C.3). Si el usuario recarga la página, la web vuelve a leer el estado real de la planilla; un borrador local podría incluso mostrar un paso que ya no corresponde.
+2. **Los formularios son cortos** (una ruta, un pago, un usuario) y se envían en una sola acción, así que no hay borradores que valga la pena conservar.
+3. **Menos datos en el navegador = menos exposición.** `sessionStorage` también es legible por cualquier script del origen; si no hace falta, no guardar nada ahí reduce lo que un XSS podría leer.
+
+Aun así, al cerrar sesión la web ejecuta `sessionStorage.clear()` (`limpiarSesionApi` en `web/src/lib/api.ts`) como medida preventiva, por si una pantalla futura llegara a usarlo.
 
 **Reglas transversales**
 
-- **Cerrar sesión** limpia `sessionStorage`, `localStorage` (claves de la app), IndexedDB, caché de consultas en memoria y ejecuta `POST /auth/logout` para invalidar cookies.
+- **Cerrar sesión** ejecuta `POST /auth/logout` (revoca la sesión en el servidor y borra las cookies), olvida el token CSRF y el perfil en memoria y limpia `sessionStorage`. La preferencia de tema se conserva porque no es dato del usuario.
 - Toda clave de almacenamiento usa el prefijo `psis:` y un **versionado** (`psis:v1:`) para migrar formatos sin errores.
 - Se lee siempre con `try/catch` y se asume que el almacenamiento puede estar vacío o bloqueado (modo privado).
 
-### B.5 Integración con el repositorio y estructura propuesta
+### B.5 Integración con el repositorio y estructura
 
 ```text
 planilla-sis/
-├── Database/        (existente)  → migraciones versionadas y seeds
-├── backend/         (existente)  → API REST
-├── mobile/          (existente)  → App móvil
-├── web/             (NUEVO)      → SPA (React + TS + Vite)
-├── docs/            (NUEVO)      → este entregable, ADRs, OpenAPI
-└── .github/workflows/ (NUEVO)    → CI: lint, test, escaneo de secretos y dependencias
+├── Database/
+│   ├── 01_schema_inicial.sql → script del prototipo (6 tablas, analizado en §D.1; solo referencia histórica)
+│   ├── migrations/    → M002 a M012, en orden (README con el procedimiento)
+│   ├── seeds/         → S001 datos de desarrollo
+│   └── tests/         → pruebas de RLS
+├── backend/           → API REST (src/modules/<módulo>/ controller, service, repository, routes)
+├── web/               → SPA (React + TS + Vite); se compila a web/dist y la sirve el backend
+├── mobile/            → App Android (Java)
+├── docs/              → este entregable, manual de despliegue, ADRs, OpenAPI, reglas de cálculo
+└── .github/workflows/ → despliegue-azure.yml: cada merge a develop compila la web y publica en Azure
 ```
 
-Convenciones: ramas `main` (protegida) / `develop` / `feature/*`, *pull requests* con al menos 1 revisión, *Conventional Commits*, y contrato OpenAPI en `docs/openapi.yaml` como fuente única de verdad entre Web, Backend y Móvil.
+Convenciones (detalle en `CONTRIBUTING.md`): ramas `main` / `develop` / `feature/*` y `fix/*`; todo cambio entra por *pull request* hacia `develop` con al menos 1 revisión y *squash and merge*; *Conventional Commits*; contrato OpenAPI en `docs/openapi.yaml` como fuente única de verdad entre Web, Backend y Móvil.
 
 ---
 
@@ -232,6 +298,12 @@ Convenciones: ramas `main` (protegida) / `develop` / `feature/*`, *pull requests
 | CU-13 | Consultar mis turnos, horas y horas extra | Trabajador | Consulta | Media | Móvil |
 | CU-14 | Consultar bitácora de auditoría | Administrador | Auditoría | Media | Web |
 | CU-15 | Configurar parámetros de pago (multiplicadores, jornada) | Administrador | Configuración | Alta | Web |
+
+**Diagrama de casos de uso (UML)**
+
+![Diagrama UML de casos de uso de planilla-sis](diagramas/casos-de-uso.svg)
+
+*Usuario* es un actor abstracto: Administrador, Supervisor y Trabajador en ruta lo especializan y heredan CU-01. CU-11 incluye CU-10 porque no se calcula una planilla con registros pendientes de validar (FA-1 de §C.3). Las especificaciones detalladas están en §C.3 (CU-11), §C.4 (CU-01), §C.5 (CU-07) y §C.6 (CU-08).
 
 **Matriz de acceso por rol (resumen de permisos)**
 
@@ -339,13 +411,161 @@ stateDiagram-v2
 | Trazabilidad | Auditoría completa (quién, cuándo, antes/después, IP) |
 | Usabilidad | Advertencias antes de acciones irreversibles; confirmación explícita |
 
+### C.4 Especificación detallada – CU-01: Iniciar sesión y verificar rol
+
+| Campo | Descripción |
+| --- | --- |
+| **Identificador** | CU-01 |
+| **Nombre** | Iniciar sesión y verificar rol |
+| **Actores primarios** | Administrador, Supervisor (web); Trabajador en ruta (app móvil) |
+| **Actores secundarios** | Módulo de autenticación, PostgreSQL (`perfiles`, `sesiones_refresh`, `auditoria`) |
+| **Descripción** | El usuario se identifica con correo y contraseña; el sistema verifica las credenciales, abre una sesión con tokens propios y lo dirige a la plataforma que corresponde a su rol. |
+| **Disparador** | El usuario abre la web o la app sin una sesión válida, o su sesión venció. |
+| **Precondiciones** | 1. El Administrador creó la cuenta (no hay registro público). 2. La cuenta está activa (`perfiles.activo`). |
+| **Postcondiciones (éxito)** | Existe una sesión en `sesiones_refresh` (hash del refresh token, IP y dispositivo); la web recibe las cookies `psis_access` y `psis_refresh` y un token CSRF; la app recibe los tokens en el cuerpo y los guarda cifrados con el Android Keystore. |
+| **Postcondiciones (fallo)** | No se crea sesión; el intento fallido suma al contador de la cuenta y, si la bloquea, queda en `auditoria`. |
+
+**Flujo principal**
+
+1. El usuario escribe correo y contraseña. La app móvil envía además `X-Client-Type: mobile`.
+2. El sistema ejecuta `POST /api/v1/auth/session`.
+3. El backend busca el perfil por correo y compara la contraseña con `bcrypt`. Si el correo no existe, compara contra un hash de relleno para que el tiempo de respuesta no revele qué correos están registrados.
+4. El backend reinicia el contador de intentos fallidos, firma el access token (JWT con `sub`, `rol`, `iss` y `aud`) y guarda el hash del refresh token en `sesiones_refresh`.
+5. La web recibe las cookies `HttpOnly` y el token CSRF; consulta `GET /api/v1/me` y muestra el panel según el rol (Administrador o Supervisor).
+6. La app recibe `access_token` y `refresh_token`, consulta `GET /api/v1/me` (perfil, asignación del día, geocerca y jornada abierta) y muestra la pantalla principal.
+
+**Flujos alternos**
+
+| ID | Condición | Comportamiento |
+| --- | --- | --- |
+| FA-1 | La cuenta tiene contraseña temporal (`debe_cambiar_password`) | El login responde, pero las demás operaciones devuelven `403 DEBE_CAMBIAR_PASSWORD` hasta cambiarla con `POST /auth/password`; la app lleva al trabajador a la pantalla de cambio de contraseña y conserva sus marcas pendientes. |
+| FA-2 | El access token venció durante el uso | La web y la app llaman a `POST /auth/refresh`, reciben un par nuevo (rotación) y repiten la operación una vez. |
+| FA-3 | Un Trabajador entra en la web, o un Administrador o Supervisor en la app | La web muestra "Acceso denegado" (`/403`); la app indica "Esta aplicación es para trabajadores en ruta. Usa la web para tu rol." y no abre sesión. |
+
+**Flujos de excepción**
+
+| ID | Excepción | Respuesta |
+| --- | --- | --- |
+| FE-1 | Correo o contraseña incorrectos | `401 CREDENCIALES_INVALIDAS`, con el mismo mensaje en ambos casos. |
+| FE-2 | 5 o más intentos fallidos seguidos | `423` con `Retry-After`; bloqueo progresivo de 1, 2, 4, 8 y hasta 15 minutos. También aplica a correos inexistentes. |
+| FE-3 | Se usa un refresh token que ya fue rotado | Se asume robo: se revocan todas las sesiones del usuario y se registra en `auditoria`; el usuario debe volver a iniciar sesión. |
+| FE-4 | Servidor no disponible | La app muestra el servidor configurado y permite cambiarlo; la web muestra un error de conexión. |
+
+**Reglas de negocio**
+
+- **RN-01.** Solo el Administrador crea cuentas; cada una nace con contraseña temporal.
+- **RN-02.** La contraseña nunca se guarda ni se registra en claro: solo su hash `bcrypt`.
+- **RN-03.** El rol que vale es el del token firmado por el backend; la guarda de rutas de la web es solo experiencia de usuario.
+
+### C.5 Especificación detallada – CU-07: Registrar ingreso, salida y descansos
+
+| Campo | Descripción |
+| --- | --- |
+| **Identificador** | CU-07 |
+| **Nombre** | Registrar ingreso, salida y descansos |
+| **Actores primarios** | Trabajador en ruta (app móvil) |
+| **Actores secundarios** | GPS del teléfono, PostgreSQL (`registros_tiempo`, `descansos`) |
+| **Descripción** | El trabajador marca el inicio y el fin de su jornada y sus descansos desde el lugar de trabajo. La app valida la ubicación contra la geocerca de su ruta y guarda cada marca aunque no haya señal, para enviarla cuando vuelva la conexión. |
+| **Disparador** | El trabajador presiona *Marcar entrada*, *Marcar salida* o *Descanso*. |
+| **Precondiciones** | 1. Sesión iniciada (CU-01) con rol Trabajador. 2. Asignación de ruta vigente para la fecha (CU-05). 3. Permiso de ubicación concedido y GPS encendido. |
+| **Postcondiciones (éxito)** | El registro queda en `registros_tiempo` con estado `PENDIENTE` de validación, la hora del dispositivo, la hora de recepción y la ubicación; el supervisor lo ve en CU-09 y lo valida en CU-10. |
+| **Postcondiciones (fallo)** | La marca no se guarda (fuera de zona o sin GPS) o queda en la cola local como rechazada, con el motivo visible para el trabajador. |
+
+**Flujo principal (ingreso)**
+
+1. El trabajador presiona *Marcar entrada*.
+2. La app pide una lectura actual del GPS (alta precisión; espera hasta 20 s).
+3. La app compara la ubicación con los puntos de la geocerca de su ruta (recibidos en `GET /me`): está dentro si la distancia a algún punto es menor o igual a su radio.
+4. La app guarda la marca en la cola local (SQLite) con un `client_uuid` nuevo y muestra "ENTRADA guardada".
+5. La app envía `POST /api/v1/registros-tiempo/ingreso` con `Idempotency-Key`, la asignación, la hora, la ubicación y los datos del dispositivo.
+6. El backend verifica la asignación vigente, que no haya otra jornada abierta y que no se solape con la anterior; guarda el registro, calcula `dentro_de_geocerca` por su cuenta y responde `201`.
+7. La app marca la entrada como enviada y muestra la jornada en curso.
+
+**Flujos alternos**
+
+| ID | Condición | Comportamiento |
+| --- | --- | --- |
+| FA-1 | Sin conexión | La marca queda en la cola local y se envía en orden cuando vuelve la red (también al reconectarse al WiFi). |
+| FA-2 | Salida | Igual que el ingreso; se envía `PATCH /registros-tiempo/{id}/salida` sobre la jornada abierta. |
+| FA-3 | Descanso | El primer toque guarda el inicio; el segundo pide el tipo de descanso y envía `POST /registros-tiempo/{id}/descansos` con inicio y fin. |
+| FA-4 | La ruta no tiene puntos de geocerca | La app permite marcar; el servidor guarda la ubicación y el supervisor la revisa al validar. |
+| FA-5 | Reintento de una marca ya recibida | El servidor reconoce el mismo `client_uuid` y no la duplica. |
+
+**Flujos de excepción**
+
+| ID | Excepción | Respuesta |
+| --- | --- | --- |
+| FE-1 | Fuera de la geocerca | La app no guarda la marca y muestra la distancia al punto más cercano y el radio permitido; si el GPS tiene poca precisión, sugiere intentar al aire libre. |
+| FE-2 | Sin asignación vigente | La app avisa "No tienes ruta asignada hoy"; el servidor responde `422 ASIGNACION_NO_ACTIVA`. |
+| FE-3 | Ya hay una jornada abierta (p. ej. marcada desde otro teléfono) | `409 REGISTRO_ABIERTO`; la app recupera esa jornada del servidor para que la salida y los descansos vayan a ella. |
+| FE-4 | El ingreso es anterior a la última salida | `422 SOLAPA_JORNADA_ANTERIOR`. |
+| FE-5 | Servidor caído o `5xx`/`408`/`429` | La marca sigue en la cola y se reintenta; los rechazos `4xx` no se reintentan y se muestran con su motivo. |
+| FE-6 | Sesión vencida | Se renueva con el refresh token (FA-2 de CU-01) y se reintenta. |
+
+**Reglas de negocio**
+
+- **RN-01.** Una sola jornada abierta por trabajador (índice único `registros_uno_abierto`).
+- **RN-02.** El servidor guarda la hora del dispositivo y la de recepción; la diferencia queda como `desfase_segundos` para el supervisor.
+- **RN-03.** La geocerca la valida la app para dar respuesta inmediata y el servidor la vuelve a calcular; la decisión del servidor es la que ve el supervisor.
+- **RN-04.** Todas las horas viajan en UTC (ISO 8601) y se muestran en la zona de operación (`America/Guatemala`).
+
+### C.6 Especificación detallada – CU-08: Enviar una emergencia
+
+Variante crítica de CU-08 (registrar eventos diarios).
+
+| Campo | Descripción |
+| --- | --- |
+| **Identificador** | CU-08 (emergencia) |
+| **Nombre** | Enviar una emergencia y atenderla |
+| **Actores primarios** | Trabajador en ruta (envía, app móvil); Supervisor o Administrador (atiende, web) |
+| **Actores secundarios** | GPS del teléfono, PostgreSQL (`eventos_diarios`) |
+| **Descripción** | El trabajador pide ayuda desde el lugar donde está; el sistema guarda la emergencia con su ubicación y la deja en la cola de revisión del supervisor, que registra su atención. |
+| **Disparador** | El trabajador mantiene presionado el botón *Emergencia*. |
+| **Precondiciones** | 1. Sesión iniciada con rol Trabajador. 2. Permiso de ubicación concedido. |
+| **Postcondiciones (éxito)** | Hay un registro en `eventos_diarios` con `tipo_evento = EMERGENCIA`, ubicación, precisión del GPS y estado `PENDIENTE_REVISION`; si había jornada abierta, queda vinculado a ella. |
+| **Postcondiciones (fallo)** | La emergencia queda en la cola local y se reenvía hasta que el servidor la reciba. |
+
+**Flujo principal**
+
+1. El trabajador mantiene presionado el botón *Emergencia*. La barra se llena durante 1,5 s y el teléfono vibra al empezar.
+2. Al completarse, el teléfono vibra de nuevo y la app lee la ubicación actual. **No** se valida la geocerca: una emergencia puede ocurrir en cualquier lugar.
+3. La app guarda el evento en la cola local con un `client_uuid`, el tipo `EMERGENCIA`, la hora, la ubicación y la precisión en `payload`.
+4. La app lo envía en `POST /api/v1/eventos:batch` con `Idempotency-Key`.
+5. El backend responde `207` con el resultado por evento (`CREADO`, `DUPLICADO` o `RECHAZADO`); la app marca como enviados los dos primeros.
+6. El Supervisor consulta las emergencias de sus rutas (`GET /api/v1/eventos?tipo_evento=EMERGENCIA`) y registra la atención con `PATCH /api/v1/eventos/{id}/atencion`; cada cambio queda en `auditoria`. La pantalla web de emergencias está en integración (§A.3, "En curso").
+
+**Flujos alternos**
+
+| ID | Condición | Comportamiento |
+| --- | --- | --- |
+| FA-1 | El trabajador suelta el botón antes de 1,5 s o desliza el dedo fuera | Se cancela sin enviar nada (evita envíos accidentales). |
+| FA-2 | El trabajador usa TalkBack o teclado | Un toque abre un diálogo de confirmación en lugar de mantener presionado. |
+| FA-3 | Sin conexión | El evento espera en la cola local y se envía al volver la red; `ocurrido_en` conserva la hora real y `recibido_en` la de llegada. |
+| FA-4 | Atención | `PENDIENTE_REVISION` → `EN_ATENCION` → `ATENDIDO` o `DESCARTADO` (también directo desde `PENDIENTE_REVISION`); se guarda quién y cuándo. |
+
+**Flujos de excepción**
+
+| ID | Excepción | Respuesta |
+| --- | --- | --- |
+| FE-1 | Sin permiso de ubicación o GPS apagado | La app pide activarlo y no envía; el trabajador puede reintentar al instante. |
+| FE-2 | Evento repetido (reintento) | El servidor lo reconoce por `(trabajador_id, client_uuid)` y responde `DUPLICADO`, sin crear otro. |
+| FE-3 | Transición de atención inválida (p. ej. reabrir un `ATENDIDO`) | `409`; el estado no cambia. |
+| FE-4 | Un Trabajador intenta cambiar la atención | `403`; solo Supervisor y Administrador atienden. |
+
+**Reglas de negocio**
+
+- **RN-01.** Los eventos son *append-only* para el trabajador: puede crearlos, no editarlos ni borrarlos (RLS de M008).
+- **RN-02.** El `payload` JSONB se muestra siempre como texto en la web, nunca como HTML (mitigación XSS, §F.2).
+
 ---
 
-## D. Diseño de Base de Datos Híbrida (PostgreSQL autoadministrado)
+## D. Diseño de Base de Datos Híbrida (PostgreSQL en Supabase)
+
+> **Alojamiento.** La base se diseñó para PostgreSQL estándar y se aloja en Supabase como PostgreSQL gestionado. No depende de funciones propias de Supabase: las mismas migraciones corren en un PostgreSQL local (así se prueban en desarrollo) y la aplicación no usa Supabase Auth, la API REST de Supabase ni la llave `service_role`.
 
 ### D.1 Análisis del esquema existente (`Database/` en `planilla-sis`)
 
-> **Fuente del análisis.** Script SQL preliminar entregado por el equipo (6 tablas: `Usuarios`, `Rutas`, `Jornadas`, `Eventos_Ruta`, `Eventos_Descanso`, `Planillas`). El script se analizó tal como fue entregado; se contrastó con el código del backend y de la app móvil recibidos (§0.4). Se desconoce si la base local tiene índices, funciones o vistas que no figuren en el script (ver §D.1.5).
+> **Fuente del análisis.** Script SQL del prototipo (`Database/01_schema_inicial.sql`, 6 tablas: `Usuarios`, `Rutas`, `Jornadas`, `Eventos_Ruta`, `Eventos_Descanso`, `Planillas`), contrastado con el código del backend y de la app móvil del prototipo. Este análisis describe el **punto de partida**; las decisiones que tomó y su estado actual están en §D.1.4.
 
 #### D.1.1 Valoración general
 
@@ -384,8 +604,8 @@ Severidad: **Crítica** (bloquea seguridad o integridad de pago) · **Alta** · 
 | H-17 | `Planillas` | Mezcla cabecera de período y detalle por trabajador; `periodo` es `VARCHAR` (`'SEMANA_1_SEP_2026'`) **sin fechas**. | No es consultable ni validable por rango; no se puede evitar solapar períodos. | Alta |
 | H-18 | `Planillas` | `estado_aprobacion` solo admite `PENDIENTE`/`PAGADA`; no hay `calculada_por`, `verificada_por`, `aprobada_por`. | No soporta el flujo calcular → verificar → aprobar ni la segregación de funciones (CU-11). | Alta |
 | H-19 | `Planillas` | No guarda la tarifa aplicada, la separación de horas extra diurnas/nocturnas, bonificaciones/deducciones ni el desglose del cálculo; no existe tabla de **pagos**. | El pago no es auditable ni reproducible. | Alta |
-| H-20 | Todas | El script **no habilita RLS** ni define índices. Hoy la única barrera es la API, y esta no autentica (C-02). | Con autenticación propia y sin RLS, toda la autorización recae en el código del backend; un error de autorización en un endpoint expone o modifica datos sin una segunda barrera. | **Crítica** |
-| H-21 | Backend | La aplicación se conecta con el rol `postgres` (superusuario) y la contraseña está en el código (C-01). | Un fallo de autorización o una inyección comprometen toda la base; no hay separación de privilegios. | **Crítica** |
+| H-20 | Todas | El script **no habilita RLS** ni define índices. En el prototipo la única barrera era la API, y esta no autenticaba. | Con autenticación propia y sin RLS, toda la autorización recae en el código del backend; un error de autorización en un endpoint expone o modifica datos sin una segunda barrera. | **Crítica** |
+| H-21 | Backend | La aplicación se conectaba con el rol `postgres` (superusuario) y la contraseña estaba escrita en el código. | Un fallo de autorización o una inyección comprometen toda la base; no hay separación de privilegios. | **Crítica** |
 
 #### D.1.3 Disposición por tabla (conservar / modificar / agregar)
 
@@ -435,43 +655,50 @@ create unique index registros_uno_abierto
 
 #### D.1.4 Estrategia de migración
 
-**Decisión D-1 (resuelta):** las tablas actuales contienen **solo datos de prueba**. Se adopta la **reconstrucción limpia** del esquema con migraciones versionadas (herramienta a elegir: `node-pg-migrate` o Flyway **\[VALIDAR\]**), en sustitución del script SQL único. Solo se cargan *seeds* de catálogos; los datos de prueba se descartan.
+**Decisión D-1 (resuelta y aplicada):** las tablas del prototipo contenían **solo datos de prueba**. Se hizo una **reconstrucción limpia** del esquema con migraciones versionadas en SQL plano (`Database/migrations/M002` a `M012`), que se aplican en orden con `psql -1 -v ON_ERROR_STOP=1` (cada archivo en una sola transacción) o desde el editor SQL de Supabase. Se descartó una herramienta adicional (`node-pg-migrate`, Flyway): con un archivo por cambio, numeración estricta y migraciones idempotentes (`IF NOT EXISTS`) el equipo no necesitó más, y el mismo SQL se puede revisar en cada *pull request*. Los datos de prueba se descartaron; el seed `S001` crea solo datos de desarrollo: tres usuarios (uno por rol), una ruta con el trabajador asignado y una jornada abierta.
 
-**Decisión D-2 (resuelta con una observación):** el equipo indica que los valores actuales están en hora local del dispositivo. Sin embargo, el código de la app **ya envía UTC** (`yyyy-MM-dd'T'HH:mm:ss.SSS'Z'`) y el servidor lo inserta tal cual en columnas `TIMESTAMP`, que **ignoran el sufijo `Z`**: los registros recientes quedan como hora UTC sin etiqueta de zona (la consulta `AT TIME ZONE 'UTC' AT TIME ZONE 'America/Guatemala'` del servidor es coherente con eso). Como los datos se descartan, no hace falta convertirlos; lo que importa es fijar el contrato de aquí en adelante:
+**Decisión D-2 (resuelta y aplicada):** el código de la app del prototipo ya enviaba UTC (`yyyy-MM-dd'T'HH:mm:ss.SSS'Z'`), pero el servidor lo insertaba en columnas `TIMESTAMP`, que **ignoran el sufijo `Z`**. Como los datos se descartaron, no hubo que convertirlos; el contrato vigente es:
 
 - El cliente envía siempre **UTC en ISO 8601**.
 - La base guarda `timestamptz`.
-- La conversión a hora local se hace **solo al mostrar**, con la zona de operación como parámetro configurable (`parametros_pago`).
+- La conversión a hora local se hace **solo al mostrar o al agrupar por fecha de calendario**, con la zona de operación configurable (`ZONA_OPERACION`, por defecto `America/Guatemala`).
 
-**Transición de la app móvil.** La app ya se comunica con la API (no escribe en la base), por lo que no hay un problema de acceso directo. La transición se organiza en fases:
+**Transición de la app móvil (completada).** La app del prototipo ya se comunicaba con la API (no escribía en la base). La transición se hizo en fases:
 
-| Fase | Trabajo | Riesgo que cierra |
+| Fase | Trabajo | Riesgo que cerró | Estado |
+| --- | --- | --- | --- |
+| **0** | Credenciales del código a variables de entorno y rol de aplicación `app_user` sin superusuario; índice parcial único de jornada abierta; en la app, sincronización secuencial y no marcar como enviadas las marcas rechazadas (`400`/`409`). | Credenciales en el repositorio; marcas perdidas o duplicadas en la app (H-12, H-21) | Hecha (#5, M002, M006) |
+| **1** | Reconstruir el esquema (M002 a M008) y publicar `/api/v1` con autenticación. | H-01 a H-20; API sin autenticación | Hecha (#9 a #17) |
+| **2** | La app migra a `/api/v1`: inicio de sesión, `client_uuid`, `Idempotency-Key`, precisión de la ubicación y descansos. | Duplicados por reintentos (H-13); datos de ubicación incompletos | Hecha (#27) |
+| **3** | Retirar los endpoints públicos del prototipo (`POST /api/registros`, `GET /api/jornadas`). | Endpoints sin autenticación | Hecha: el backend solo expone `/api/v1` y cualquier otra ruta bajo `/api` responde `404` |
+
+**Migraciones aplicadas** (detalle y procedimiento en `Database/migrations/README.md` y en `manual-despliegue.md`)
+
+| Migración | Contenido | Tablas nuevas |
 | --- | --- | --- |
-| **0 (inmediata)** | Sacar las credenciales del código a variables de entorno y usar un rol de aplicación sin superusuario. Añadir el índice parcial único de jornada abierta. En la app: sincronización secuencial y no marcar como enviados los `400`/`409` genéricos. | C-01, C-04, C-05, C-06 |
-| **1** | Reconstruir el esquema (M001 a M008), publicar `/api/v1` con autenticación y mantener `POST /api/registros` como capa de compatibilidad. | H-01 a H-20, C-02, C-03 |
-| **2** | La app migra a `/api/v1`: inicio de sesión, `client_uuid`, `Idempotency-Key`, envío de precisión de ubicación y pantalla de descansos. | C-08, C-09 |
-| **3** | Retirar `POST /api/registros` y el `GET /api/jornadas` público. | C-02 |
+| M002 | Extensión `pgcrypto`, rol `app_user`, identidad y auditoría | `roles`, `perfiles`, `sesiones_refresh`, `auditoria` |
+| M003 | Rutas, geocerca, asignaciones y turnos (extensión `btree_gist` para impedir asignaciones solapadas) | `rutas`, `ruta_puntos`, `asignaciones_ruta`, `turnos`, `acuerdos_turno` |
+| M004 | Registro de tiempo, descansos y eventos (índice `registros_uno_abierto`, JSONB) | `registros_tiempo`, `tipos_descanso`, `descansos`, `eventos_diarios` |
+| M005 | Tarifas, parámetros, períodos, planillas y pagos | `tarifas_trabajador`, `parametros_pago`, `periodos_planilla`, `planillas`, `planilla_detalle`, `conceptos_pago`, `detalle_conceptos`, `metodos_pago`, `pagos` |
+| M006 | Privilegios mínimos de `app_user` (`GRANT` por tabla) | — |
+| M007 | Estados del trabajador y permisos por rol (RBAC) | `estados_trabajador`, `historial_estado_trabajador`, `permisos`, `rol_permiso` |
+| M008 | RLS en `registros_tiempo` y `eventos_diarios`, funciones `app.*` y pruebas por rol (`Database/tests/`) | — |
+| M009 | Parámetros de pago y feriados para el motor de cálculo (`docs/reglas-calculo.md`) | `feriados` |
+| M010 | RLS en las 25 tablas restantes | — |
+| M011 | Rotación de refresh tokens y detección de reúso en `sesiones_refresh` | — |
+| M012 | Validaciones de los puntos de la geocerca (coordenadas válidas, radio de 10 a 5000 m) | — |
 
-**Orden sugerido de migraciones**
+**Resultado:** 27 tablas (las 26 del modelo de §D.2 más `feriados`), todas con RLS activado.
 
-| Migración | Contenido |
+#### D.1.5 Información que estaba pendiente (resuelta)
+
+| Pendiente en la versión 2.0 | Cómo se resolvió |
 | --- | --- |
-| M001 | Extensiones (`btree_gist`, `pgcrypto`), esquema `app`, funciones auxiliares |
-| M002 | Catálogos (`roles`, `permisos`, `estados_trabajador`, `tipos_descanso`, `metodos_pago`, `conceptos_pago`, `turnos`) |
-| M003 | `perfiles` (con `email`, `password_hash`), `tarifas_trabajador`, `historial_estado_trabajador`, `sesiones_refresh` (tokens de renovación para rotación y detección de reúso) |
-| M004 | `rutas`, `ruta_puntos`, `asignaciones_ruta`, `acuerdos_turno` |
-| M005 | `registros_tiempo`, `descansos`, `eventos_diarios` (con `CHECK`, índices y exclusiones) |
-| M006 | `parametros_pago`, `periodos_planilla`, `planillas`, `planilla_detalle`, `detalle_conceptos`, `pagos` |
-| M007 | `auditoria` y *triggers* de auditoría |
-| M008 | **RLS y políticas** de §D.4 (capa opcional de defensa en profundidad, ver ADR-001) y pruebas automatizadas por rol |
-
-#### D.1.5 Información pendiente para cerrar el análisis
-
-1. **Archivos móviles restantes:** `DatabaseHelper.java` (estructura de la cola offline y estados de sincronización), `RetrofitClient.java` (URL base, TLS y tiempos de espera), `AndroidManifest.xml` (permisos y tráfico en claro) y `build.gradle`.
-2. **Estructura del backend:** nombre del archivo principal y si existe algún otro archivo o carpeta además del servidor recibido.
-3. **Estado real de la base local:** salida de `\d jornadas` y `\di` para confirmar si existe el índice único que el código da por hecho (C-06).
-4. **Reglas de negocio del cálculo (a definir con quien corresponda):** jornada ordinaria diaria y semanal; factor de horas extra diurnas y nocturnas; definición de horario nocturno; si los descansos restan o son remunerados; regla de redondeo; periodicidad de planilla (semanal, quincenal o mensual); qué ocurre con jornadas sin salida.
-5. Política de contraseñas y si el **MFA del Administrador** se construye desde el MVP o se difiere a una fase posterior (ver §F.1); ya no depende de un proveedor externo, así que es una decisión enteramente del equipo.
+| Archivos restantes de la app móvil (cola offline, cliente HTTP, permisos) | Se revisaron y se reescribieron al migrar a `/api/v1` (#27): cola en SQLite con estados de envío, Retrofit con renovación de sesión y permisos de ubicación en tiempo de uso. |
+| Estructura del backend | Se reorganizó en módulos controller-service-repository (#10). |
+| Estado real de la base local (índice de jornada abierta) | Ya no aplica: el esquema se reconstruyó y el índice `registros_uno_abierto` está en M004. |
+| Reglas de negocio del cálculo | Aprobadas por la empresa y documentadas en `docs/reglas-calculo.md` (#30): planilla quincenal, jornada ordinaria diurna, mixta y nocturna, horas extra a 1.5, recargo nocturno, Bonificación Incentivo e IGSS laboral. |
+| Política de contraseñas y MFA del Administrador | Contraseña mínima de 12 caracteres, bloqueo progresivo y reautenticación con contraseña para aprobar y pagar (#32). El MFA (TOTP) se difiere a una fase posterior (§F.1). |
 
 ### D.2 Modelo relacional transaccional (3FN)
 
@@ -653,14 +880,18 @@ revoke update, delete, truncate on public.auditoria from anon, authenticated;
 4. Tamaño máximo por evento (p. ej. 32 KB), controlado en API.
 5. La auditoría se escribe mediante **triggers `SECURITY DEFINER`** para cambios en tablas críticas y desde la API para acciones de negocio (aprobar, pagar).
 
-### D.4 Políticas de Seguridad a Nivel de Fila (RLS opcional, defensa en profundidad)
+### D.4 Políticas de Seguridad a Nivel de Fila (RLS activo, defensa en profundidad)
 
-**Alcance de esta sección.** Con autenticación propia sobre PostgreSQL (Opción B, ADR-001), **la primera barrera de autorización es el backend** (rol + pertenencia verificados en cada endpoint, §E y §F.1). RLS se documenta aquí como **segunda capa opcional**: recomendada antes de producción, pero no bloqueante para empezar a codificar (puede activarse en la Fase 1 de §D.1.4 sin cambiar el esquema).
+**Alcance de esta sección.** Con autenticación propia sobre PostgreSQL (Opción B, ADR-001), **la primera barrera de autorización es el backend** (rol + pertenencia verificados en cada endpoint, §E y §F.1). RLS es la **segunda barrera** y está **activa en las 27 tablas**: M008 la activó en `registros_tiempo` y `eventos_diarios`, y M010 en las 25 restantes. En la versión 2.0 figuraba como opcional; se activó antes de desplegar porque el backend ya se conectaba con un rol sin privilegios y el costo era bajo.
+
+**Verificación en el entorno desplegado (Supabase):** la consulta a `pg_class` devuelve 27 tablas en `public`, las 27 con `relrowsecurity = true`; el backend en Azure se conecta como `app_user` (rol creado `NOSUPERUSER`, que no es dueño de las tablas), así que las políticas se aplican a todas sus consultas.
+
+**Llaves y roles de Supabase.** Supabase entrega una llave `anon`, una llave `service_role` y el rol `postgres`. La aplicación **no usa ninguno**: la llave `service_role` y el rol `postgres` saltan RLS, por eso solo los usa el DBA desde el panel de Supabase para aplicar migraciones, y nunca se guardan en el repositorio, en la web ni en la app. La web y el móvil no tienen credenciales de base de datos: solo hablan con la API.
 
 **Principios**
 
 - **RLS activada en todas las tablas** del esquema `public` (`alter table ... enable row level security`). Sin política = sin acceso.
-- El backend **no tiene un usuario de base de datos por persona**: usa un único rol de aplicación (`app_user`, sin privilegios de superusuario, cierra H-21/C-01) para todas las conexiones del *pool* `pg`. Por eso, para que RLS distinga entre trabajador, supervisor y administrador, **cada transacción que necesite RLS debe declarar quién es el usuario actual** después de verificar su JWT propio:
+- El backend **no tiene un usuario de base de datos por persona**: usa un único rol de aplicación (`app_user`, sin privilegios de superusuario, cierra H-21) para todas las conexiones del *pool* `pg`. Por eso, para que RLS distinga entre trabajador, supervisor y administrador, **cada transacción que necesite RLS debe declarar quién es el usuario actual** después de verificar su JWT propio:
 
   ```sql
   -- Al inicio de cada transacción que requiera RLS, con los claims YA verificados por el backend:
@@ -668,7 +899,7 @@ revoke update, delete, truncate on public.auditoria from anon, authenticated;
   ```
 
   Las políticas leen ese valor con la función auxiliar `app.usuario_actual()` (equivalente casero a `auth.uid()`), nunca con un dato que el cliente pueda manipular directamente.
-- **El rol de aplicación (`app_user`) tiene los privilegios mínimos** que sus operaciones requieren; nunca se conecta con `postgres` ni con un rol de superusuario (cierra H-21/C-01).
+- **El rol de aplicación (`app_user`) tiene los privilegios mínimos** que sus operaciones requieren; nunca se conecta con `postgres` ni con un rol de superusuario (cierra H-21).
 - Las funciones auxiliares usan `security definer` con `search_path` fijo para evitar recursión y suplantación.
 
 **Funciones auxiliares**
@@ -794,7 +1025,7 @@ alter table public.planillas add constraint planillas_segregacion check (
 | --- | --- |
 | Base URL | `/api/v1` (versionado en la ruta) |
 | Formato | `application/json; charset=utf-8` |
-| **Auth Web** | Cookies `HttpOnly` propias (`__Host-psis-access`, `__Secure-psis-refresh`) + cabecera `X-CSRF-Token` en métodos que modifican estado |
+| **Auth Web** | Cookies `HttpOnly` propias (`psis_access`, `psis_refresh`) + cabecera `X-CSRF-Token` en métodos que modifican estado |
 | **Auth Móvil** | `Authorization: Bearer <JWT>` |
 | Idempotencia | `Idempotency-Key: <uuid>` en `POST` del móvil (además de `client_uuid` en el cuerpo) |
 | Trazabilidad | `X-Request-Id` (generado si no viene); se devuelve en toda respuesta |
@@ -802,7 +1033,7 @@ alter table public.planillas add constraint planillas_segregacion check (
 | Fechas | ISO 8601 en UTC (`2026-09-21T13:05:00Z`) |
 | Paginación | `?page=1&page_size=50` → `{ data, page, page_size, total }` |
 | Dinero | Cadena decimal (`"1234.50"`) para evitar errores de punto flotante |
-| Autorización | Rol en el claim `rol` del JWT propio + verificación de pertenencia (ruta/trabajador) en la API + RLS opcional |
+| Autorización | Rol en el claim `rol` del JWT propio + verificación de pertenencia (ruta/trabajador) en la API + RLS activo en la base (segunda barrera, §D.4) |
 
 **Códigos HTTP comunes:** `400` petición mal formada · `401` no autenticado/token vencido · `403` sin permiso · `404` no existe (o no visible por RLS) · `409` conflicto de estado/duplicado · `422` regla de negocio incumplida · `429` límite de tasa · `500`/`503` error del servidor.
 
@@ -839,7 +1070,7 @@ alter table public.planillas add constraint planillas_segregacion check (
 { "email": "supervisor@empresa.com", "password": "********" }
 ```
 
-El backend busca `perfiles` por `email`, verifica `password_hash` con bcrypt/argon2, y si el rol es `administrador` y tiene MFA activo, exige un segundo paso (`mfa_token`) antes de emitir sesión (§F.1).
+El backend busca `perfiles` por `email`, verifica `password_hash` con bcrypt. El segundo factor (MFA) para el administrador está diferido (§F.1); las operaciones críticas (aprobar y pagar) piden reautenticación con contraseña (`POST /auth/reauth`).
 
 **Respuesta `200`** (Web: los tokens viajan **solo** en `Set-Cookie`, no en el cuerpo)
 
@@ -850,11 +1081,11 @@ El backend busca `perfiles` por `email`, verifica `password_hash` con bcrypt/arg
 }
 ```
 
-Web: `Set-Cookie: __Host-psis-access=…; HttpOnly; Secure; SameSite=Lax; Path=/` (JWT propio, firmado por el backend) y `Set-Cookie: __Secure-psis-refresh=…; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`. El backend guarda el *hash* del refresh token emitido en `sesiones_refresh`. Móvil: enviar `X-Client-Type: mobile` para recibir `access_token`/`refresh_token` en el cuerpo (se guardan en Keychain/Keystore). **Errores:** `400` validación · `401` credenciales inválidas (mensaje genérico, no revela si el correo existe) · `423` cuenta bloqueada por intentos fallidos · `429` demasiados intentos.
+Web: `Set-Cookie: psis_access=…; HttpOnly; Secure; SameSite=Lax; Path=/` (JWT propio, firmado por el backend) y `Set-Cookie: psis_refresh=…; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`. El backend guarda el *hash* del refresh token emitido en `sesiones_refresh`. Móvil: enviar `X-Client-Type: mobile` para recibir `access_token`/`refresh_token` en el cuerpo (se guardan en Keychain/Keystore). **Errores:** `400` validación · `401` credenciales inválidas (mensaje genérico, no revela si el correo existe) · `423` cuenta bloqueada por intentos fallidos · `429` demasiados intentos.
 
 #### E-1b · `POST /api/v1/auth/refresh` (renovar sesión)
 
-El cliente no envía el refresh token en el cuerpo si es Web (viaja en la cookie `__Secure-psis-refresh`); el móvil sí lo envía explícito.
+El cliente no envía el refresh token en el cuerpo si es Web (viaja en la cookie `psis_refresh`); el móvil sí lo envía explícito.
 
 **Respuesta `200`**
 
@@ -1065,7 +1296,7 @@ Un **supervisor** solo recibe trabajadores de sus rutas; los montos salariales r
 
 ### F.1 Estrategia de sesiones y autenticación (JWT propio en cookies seguras)
 
-> Decisión D-3 (ADR-001, §0.4.4): autenticación construida en el backend, sin proveedor externo.
+> Decisión D-3 (ADR-001, `adr/ADR-001-autenticacion-propia.md`): autenticación construida en el backend, sin proveedor externo.
 
 **Flujo Web**
 
@@ -1077,7 +1308,7 @@ sequenceDiagram
   participant DB as PostgreSQL
   U->>API: POST /auth/session (email, password)
   API->>DB: SELECT perfil WHERE email
-  API->>API: verifica password_hash (bcrypt/argon2)
+  API->>API: verifica password_hash (bcrypt)
   API->>API: firma access_token (JWT, secreto propio, vida corta)
   API->>DB: INSERT sesiones_refresh (hash del refresh token)
   API-->>U: Set-Cookie HttpOnly Secure SameSite + csrf_token en cuerpo
@@ -1096,11 +1327,11 @@ sequenceDiagram
 | Tema | Decisión | Justificación |
 | --- | --- | --- |
 | Emisión de tokens | El propio backend firma los JWT (librería estándar, p. ej. `jsonwebtoken`), con un secreto (`JWT_SECRET`, HS256) o par de llaves (RS256) fuera del código, en variables de entorno | La SPA nunca manipula tokens; JavaScript no puede leerlos. Ningún proveedor externo emite ni valida credenciales. |
-| Hash de contraseñas | `bcrypt` o `argon2id` con costo adecuado (nunca hash propio ni reversible) | Estándar de la industria; resistente a fuerza bruta con hardware dedicado. |
-| Cookies del access token | `__Host-psis-access`, `HttpOnly; Secure; SameSite=Lax; Path=/` sin atributo `Domain` | El prefijo `__Host-` impide que subdominios las sobrescriban. |
-| Cookie de refresh | `__Secure-psis-refresh`, `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth` | Solo viaja al endpoint de renovación; menor exposición. |
+| Hash de contraseñas | `bcrypt` con costo 10 (nunca hash propio ni reversible) | Estándar de la industria; resistente a fuerza bruta con hardware dedicado. |
+| Cookies del access token | `psis_access`, `HttpOnly; SameSite=Lax; Path=/`, sin atributo `Domain`; `Secure` cuando la petición llega por HTTPS (Azure) | El backend lee `X-Forwarded-Proto` del frontal de Azure (`trust proxy`) para saber si la conexión es HTTPS. Se descartaron los prefijos `__Host-`/`__Secure-` porque obligan a `Secure` y la app también se prueba por HTTP dentro de la red local. |
+| Cookie de refresh | `psis_refresh`, `HttpOnly; SameSite=Strict; Path=/api/v1/auth`; `Secure` por HTTPS | Solo viaja a los endpoints de sesión (renovar y cerrar); menor exposición. |
 | Persistencia del refresh | Tabla `sesiones_refresh`: se guarda el **hash** del token (no el token), con `expira_at`, `revocado_at` y `reemplazado_por` para encadenar la rotación | Un volcado de la base no revela tokens utilizables; permite revocar sesiones individuales o todas las de un usuario. |
-| Vida de tokens | Access corto (≈15 min, configurable); refresh de vida más larga (p. ej. 7–14 días) con **rotación en cada uso** | Limita el daño de un robo de token. |
+| Vida de tokens | Access de 2 h mientras se termina la renovación automática en la web (la meta es ≈15 min); refresh de 7 días con **rotación en cada uso** | Limita el daño de un robo de token. |
 | Detección de reúso | Si llega un refresh ya marcado `reemplazado_por`, se asume robo: se revocan **todas** las sesiones de ese usuario y se registra en `auditoria` | Un atacante que copie un refresh viejo dispara la alarma en el primer intento. |
 | Verificación en API | Firma con el secreto/llave propios, `exp`, `iss`, `aud`; el rol se toma del claim `rol` del propio JWT | Un JWT manipulado o firmado con otra clave se rechaza. |
 | Revocación | Logout marca la sesión como `revocado_at`; cambio de rol o baja del usuario fuerza cierre de sus sesiones activas | El access token sigue siendo válido hasta su `exp`; por eso su vida es corta y además se comprueba `perfiles.activo` en cada request. |
@@ -1109,7 +1340,7 @@ sequenceDiagram
 | Alta de usuarios | Sin registro público: el Administrador crea cada cuenta (E-2b) con contraseña temporal de un solo uso | Sistema interno, no orientado al público; reduce superficie de ataque. |
 | Móvil | `Bearer` en almacén seguro del SO (Keychain/Keystore); sin tokens en almacenamiento plano | No hay cookies, por lo que CSRF no aplica. |
 | Registro de accesos | `LOGIN`, fallos, refresh con reúso detectado y cambios de rol a `auditoria` | Detección de anomalías, ahora sin el respaldo de un proveedor externo. |
-| Autorización | Guarda de UI (solo UX) → **autorización en API** (rol + pertenencia, primera barrera real) → **RLS opcional** (segunda barrera, §D.4) | Defensa en profundidad, adaptada a que la API es hoy la única barrera obligatoria. |
+| Autorización | Guarda de UI (solo UX) → **autorización en API** (rol + pertenencia, primera barrera real) → **RLS activo** (segunda barrera, §D.4) | Defensa en profundidad: si un endpoint olvida una verificación, la base sigue sin entregar filas ajenas. |
 
 ### F.2 Matriz de mitigación para la Web
 
@@ -1119,8 +1350,8 @@ sequenceDiagram
 | **XSS reflejado / basado en DOM** | Parámetros de la URL (filtros, `?ruta=`) leídos por la SPA; History API | Parsear y **validar** *query params* contra una lista/esquema antes de usarlos; nunca insertar en el DOM como HTML; validar `next`/`redirect` (solo rutas internas, mismo origen) | Pruebas unitarias del *parser* de rutas; prueba de *open redirect* |
 | **Impacto de XSS (contención)** | Un XSS residual no debe robar sesión | Cookies `HttpOnly` (no exfiltrables); **CSP estricta** (abajo); sin tokens en `localStorage`; refresh tokens revocables desde `sesiones_refresh` | Escaneo de cabeceras (securityheaders); auditoría de almacenamiento |
 | **CSRF** | Cookies de sesión se envían automáticamente a la API | 1) `SameSite=Lax/Strict`. 2) **Token CSRF** (sincronizador o *double-submit* firmado) en `X-CSRF-Token` para `POST/PUT/PATCH/DELETE`. 3) Validar `Origin`/`Referer` contra lista blanca. 4) CORS con **lista blanca** de orígenes y `credentials` solo para el dominio de la web. 5) Las mutaciones nunca usan `GET`. 6) Exigir `Content-Type: application/json`. | Pruebas: petición cruzada sin token → `403`; CORS con origen no permitido rechazado |
-| **Exposición de secretos** | Credenciales de BD escritas en el código (C-01), `JWT_SECRET`/llave de firma, contraseña del rol `app_user` | 1) `DATABASE_URL` (con el rol `app_user`, sin superusuario) y `JWT_SECRET` **solo en el backend**, en variables de entorno del servidor o gestor de secretos; **jamás** en el bundle web ni en el móvil ni en el repositorio. 2) La web y el móvil **nunca** tienen credenciales de base de datos: solo hablan con la API. 3) Prohibido prefijar secretos con `VITE_`/`NEXT_PUBLIC_`/`REACT_APP_` (se incrustan en el cliente). 4) `.env` en `.gitignore`; `.env.example` sin valores; si la contraseña actual estuvo versionada (C-01), **cambiarla** y limpiar el historial de Git. 5) **Escaneo de secretos** en CI (gitleaks/GitHub secret scanning) y *pre-commit hook*. 6) Bases de datos separadas para dev/staging/prod; **rotación** de `JWT_SECRET` y contraseñas ante cualquier sospecha (invalida todas las sesiones activas). | Búsqueda de la llave en el bundle compilado; escaneo del historial de Git del repositorio |
-| **Control de acceso roto / IDOR** | Manipular IDs (`/planillas/{id}`, `/registros-tiempo/{id}`) | Autorización por objeto en la API (pertenencia a ruta/trabajador), reforzada con **RLS opcional** si está activa; IDs `uuid`; respuesta `404` en lugar de `403` cuando el recurso no es visible | Suite de pruebas con JWT de roles cruzados (§D.4) |
+| **Exposición de secretos** | Credenciales de BD (en el prototipo estaban escritas en el código), `JWT_SECRET`/llave de firma, contraseña del rol `app_user` | 1) `DATABASE_URL` (con el rol `app_user`, sin superusuario) y `JWT_SECRET` **solo en el backend**, en variables de entorno del servidor o gestor de secretos; **jamás** en el bundle web ni en el móvil ni en el repositorio. 2) La web y el móvil **nunca** tienen credenciales de base de datos: solo hablan con la API. 3) Prohibido prefijar secretos con `VITE_`/`NEXT_PUBLIC_`/`REACT_APP_` (se incrustan en el cliente). 4) `.env` en `.gitignore`; `.env.example` sin valores; si la contraseña actual estuvo versionada (C-01), **cambiarla** y limpiar el historial de Git. 5) **Escaneo de secretos** en CI (gitleaks/GitHub secret scanning) y *pre-commit hook*. 6) Bases de datos separadas para dev/staging/prod; **rotación** de `JWT_SECRET` y contraseñas ante cualquier sospecha (invalida todas las sesiones activas). | Búsqueda de la llave en el bundle compilado; escaneo del historial de Git del repositorio |
+| **Control de acceso roto / IDOR** | Manipular IDs (`/planillas/{id}`, `/registros-tiempo/{id}`) | Autorización por objeto en la API (pertenencia a ruta/trabajador), reforzada con **RLS activo** en la base; IDs `uuid`; respuesta `404` en lugar de `403` cuando el recurso no es visible | Suite de pruebas con JWT de roles cruzados (§D.4) |
 | **Inyección (SQL/NoSQL/JSONB)** | Filtros y payloads | Consultas **siempre parametrizadas** con `pg` (`pool.query(texto, [valores])`); **nunca** concatenar SQL (corrige el patrón usado hoy en la ruta `/api/registros`, que ya parametriza, y lo mantiene como estándar); validación de esquema; `jsonb_path` con parámetros, no con cadenas del usuario | SAST (Semgrep/CodeQL) en CI |
 | **Fallas de autenticación** | Fuerza bruta, credenciales filtradas | Límite de tasa en `/auth/session`, bloqueo progresivo, MFA, mensajes de error genéricos | Pruebas de límite de tasa |
 | **Configuración insegura** | Cabeceras, CORS, mensajes de error detallados | Cabeceras de seguridad (abajo); errores sin *stack traces* al cliente; *debug* apagado en producción | Revisión de configuración por entorno |
@@ -1129,18 +1360,22 @@ sequenceDiagram
 | **Fallas de integridad** | Alteración de planilla aprobada | Inmutabilidad (RN-07), `hash_integridad`, segregación de funciones, restricciones `CHECK` | Pruebas de intento de UPDATE sobre `APROBADA` |
 | **Clickjacking** | Incrustar la web en un `iframe` | `frame-ancestors 'none'` / `X-Frame-Options: DENY` | Prueba de incrustación |
 
-**Cabeceras de seguridad (servidor de la SPA)**
+**Cabeceras de seguridad (aplicadas en `backend/src/middlewares/seguridad.js`)**
 
 ```http
-Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'
-Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+# Respuestas de la web (SPA)
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+# Respuestas de la API (JSON): no carga nada
+Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+# Todas
+X-Frame-Options: DENY
 X-Content-Type-Options: nosniff
-Referrer-Policy: strict-origin-when-cross-origin
-Permissions-Policy: geolocation=(), camera=(), microphone=()
-Cross-Origin-Opener-Policy: same-origin
+Referrer-Policy: no-referrer
+Cache-Control: no-store                      (API)
+Strict-Transport-Security: max-age=15552000  (solo cuando la petición llega por HTTPS, 180 días)
 ```
 
-> Se evita `'unsafe-inline'` y `'unsafe-eval'`. Si el *bundler* o alguna librería exige estilos en línea, se resuelve con *nonces*/hashes y no relajando la política. Los valores exactos deben probarse en modo *report-only* (`Content-Security-Policy-Report-Only`) antes de imponerlos.
+> Se evitan `'unsafe-inline'` y `'unsafe-eval'`: la web compilada por Vite no necesita estilos ni scripts en línea. Quedan como mejoras recomendadas `Permissions-Policy`, `Cross-Origin-Opener-Policy` y `require-trusted-types-for 'script'`; antes de imponerlas conviene probarlas en modo *report-only*. El HSTS no incluye `includeSubDomains` ni `preload` porque el dominio `azurewebsites.net` es compartido.
 
 ### F.3 Controles complementarios
 
