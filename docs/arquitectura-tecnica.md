@@ -19,12 +19,14 @@
 
 | Integrante | Carné | Rol | Perfil | Foco principal |
 | --- | --- | --- | --- | --- |
-| Jonatan | _________ | **Dev Backend 1** y **Dev Móvil 1** | Líder Técnico / Arquitecto | Contrato API, arquitectura, ADRs, revisión de calidad; app móvil y sincronización offline |
-| Marco | _________ | **Dev Backend 2** | Backend – Dominio | Par inicial de la autenticación propia (consultado); rutas, turnos, registros de tiempo, motor de cálculo, aprobación y pagos |
-| Sofía | _________ | **Dev Backend 3** | Datos / DBA | Esquema 3FN, JSONB, migraciones, RLS; datos del motor de cálculo (parámetros y feriados) |
-| Daniel | _________ | **Dev Backend 4** | Seguridad / Autenticación / DevOps / QA | Autenticación propia (par inicial: hash, JWT, refresh), OWASP, CI/CD, secretos, pruebas |
-| Samuel | _________ | **Dev Web 1** | Líder Frontend | Shell de la SPA, routing, guardas, CSP |
-| Stefany | _________ | **Dev Web 2** | Frontend | Módulos de UI (rutas, supervisión, planillas) |
+| Jonatan Josue Santiago Itzep | 0910-23-19455 | **Dev Backend 1** y **Dev Móvil 1** | Líder Técnico / Arquitecto | Contrato API, arquitectura, ADRs, revisión de calidad; app móvil y sincronización offline |
+| Marco Antonio Rolando Corado García | 0910-23-6501 | **Dev Backend 2** | Backend – Dominio | Par inicial de la autenticación propia (consultado); rutas, turnos, registros de tiempo, motor de cálculo, aprobación y pagos |
+| Dáliet Sofía Salguero Franco | 0910-23-6180 | **Dev Backend 3** | Datos / DBA | Esquema 3FN, JSONB, migraciones, RLS; datos del motor de cálculo (parámetros y feriados) |
+| Jose Daniel Pereira Cabrera | 0910-23-3852 | **Dev Backend 4** | Seguridad / Autenticación / DevOps / QA | Autenticación propia (par inicial: hash, JWT, refresh), OWASP, CI/CD, secretos, pruebas |
+| Adal Samuel López Reyes | 0910-23-24277 | **Dev Web 1** | Líder Frontend | Shell de la SPA, routing, guardas, CSP |
+| Stefany Mariana Hernández Galindo | 0910-23-6319 | **Dev Web 2** | Frontend | Módulos de UI (rutas, supervisión, planillas) |
+
+En las matrices siguientes cada integrante aparece con su nombre corto (Jonatan, Marco, Sofía, Daniel, Samuel, Stefany).
 
 > El plan original preveía 7 integrantes con un desarrollador móvil dedicado. El equipo quedó en 6: el líder técnico cubre también el rol **Dev Móvil 1**, por eso en las matrices ese rol aparece con su nombre.
 
