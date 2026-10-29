@@ -4,7 +4,7 @@
 
 | Campo | Detalle |
 | --- | --- |
-| Versión | 3.0 – Versión final, resumida para entrega (la versión completa está en `docs/arquitectura-tecnica.md` del repositorio) |
+| Versión | 3.0 (final) |
 | Fecha | 28 de octubre de 2026 |
 | Equipo | 6 integrantes (§A.1) |
 | Repositorio | [https://github.com/AgosAnt/planilla-sis](https://github.com/AgosAnt/planilla-sis) |
@@ -25,7 +25,7 @@
 | Adal Samuel López Reyes | 0910-23-24277 | **Dev Web 1** | Líder Frontend | Shell de la SPA, routing, guardas, CSP |
 | Stefany Mariana Hernández Galindo | 0910-23-6319 | **Dev Web 2** | Frontend | Módulos de UI (rutas, supervisión, planillas) |
 
-El plan original preveía 7 integrantes con un desarrollador móvil dedicado; el líder técnico cubre también ese rol. En las matrices cada integrante aparece con su nombre corto.
+El plan original contemplaba 7 integrantes, con un desarrollador móvil. El rol de Dev Móvil 1 lo asumió el líder técnico.
 
 **Leyenda.** **R** = Responsable (ejecuta). **A** = Aprobador (rinde cuentas; **uno solo por fila**). **C** = Consultado. **I** = Informado. **A/R** = quien aprueba también ejecuta.
 
@@ -52,11 +52,9 @@ El plan original preveía 7 integrantes con un desarrollador móvil dedicado; el
 | 17 | CI/CD, entornos y secretos | I | I | C | C | C | **A/R** | I |
 | 18 | Documentación técnica | R | C | **A** | R | R | R | C |
 
-Cada fila tiene exactamente una **A** y ningún entregable crítico depende de un solo R sin un C de respaldo.
-
 ### A.3 Matriz RACI ejecutada
 
-Construida con los *pull requests* integrados a `develop` del **#9 (13 oct)** al **#58 (27 oct 2026)**. **R** refleja la autoría real en GitHub; cuando el líder técnico construyó la primera versión de un módulo ajeno para desbloquear al equipo figura como **R de apoyo**, y la **A** sigue al dueño del rol.
+Elaborada a partir de los *pull requests* integrados a `develop` entre el #9 (13 de octubre) y el #58 (27 de octubre de 2026). La **R** corresponde a quien hizo el trabajo y la **A** al responsable del rol. Cuando el líder técnico avanzó un módulo de otra área, aparece como R con la anotación "apoyo".
 
 | # | Entregable técnico | Samuel | Stefany | Jonatan | Marco | Sofía | Daniel | Evidencia (PRs) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -83,7 +81,14 @@ Construida con los *pull requests* integrados a `develop` del **#9 (13 oct)** al
 | 21 | Usuarios, auditoría y permisos (CU-02, CU-14) | C | I | R | I | C | **A/R** | #37, #50 (Daniel); #18 (Jonatan) |
 | 22 | Geocerca de las rutas (CU-04) | I | I | R | **A/R** | R | I | #55 (Marco); #52 (Sofía); #39 (Jonatan) |
 
-**Diferencias con el plan:** las pantallas de planillas (fila 11) las construyó Samuel para repartir la carga de Stefany; el par inicial de autenticación (fila 12) fue Daniel y Jonatan porque Marco quedó con el dominio; el rol móvil (fila 15) lo cubrió el líder técnico; las filas 19 a 22 surgieron al construir los casos de uso.
+**Cambios respecto al plan**
+
+| Fila | Cambio | Motivo |
+| --- | --- | --- |
+| 11 | Samuel construyó las pantallas de planillas y pagos | Stefany tenía a su cargo rutas, supervisión, estados, turnos y panel |
+| 12 | La autenticación la trabajaron Daniel y Jonatan | Marco se concentró en rutas, turnos y cálculo |
+| 15 | La app móvil la desarrolló el líder técnico | El equipo quedó en 6 integrantes |
+| 19–22 | Entregables nuevos | Se identificaron al implementar CU-02, CU-03, CU-04, CU-08 y CU-14 |
 
 ### A.4 Desglose y cumplimiento por integrante
 
@@ -134,7 +139,7 @@ flowchart LR
 ```
 
 - **Contexto.** Tres actores: *Administrador* (configura, aprueba y paga), *Supervisor* (asigna, supervisa, verifica) y *Trabajador en ruta* (registra su jornada). Azure y Supabase son solo alojamiento: no se usan Supabase Auth, su API REST ni la llave `service_role`.
-- **Contenedores.** La **SPA** (React + TypeScript + Vite) la sirve el mismo backend, así que web y API comparten origen. La **app Android** (Java) usa la misma API con `Bearer` y guarda los tokens cifrados con el Android Keystore. La **API REST** es la frontera de confianza: valida, autoriza y calcula. **PostgreSQL** aplica RLS como segunda barrera; el backend se conecta con `app_user` (sin superusuario).
+- **Contenedores.** La **SPA** (React + TypeScript + Vite) la sirve el mismo backend, por lo que web y API comparten origen. La **app Android** (Java) usa la misma API con `Bearer` y guarda los tokens cifrados con el Android Keystore. La **API REST** es la frontera de confianza: valida, autoriza y calcula. **PostgreSQL** aplica RLS como segunda barrera; el backend se conecta con `app_user` (sin superusuario).
 - **Componentes de la API.** Controller → Service → Repository; el motor de cálculo es una función pura, probada con casos deterministas.
 
 | Patrón | Dónde | Justificación |
@@ -152,7 +157,7 @@ flowchart LR
 | Interacción intensiva (tablas, filtros, edición de registros) | Actualiza parcialmente y conserva el contexto | Recarga en cada acción | **SPA** |
 | Flujo de planilla en varios pasos | El estado vive en la API; la vista no se reconstruye | Se reconstruye en cada página | **SPA** |
 | Reutilizar la API del móvil | Mismo contrato JSON | Requiere además vistas en servidor | **SPA** |
-| SEO | Débil | Fuerte | Irrelevante: panel privado tras login |
+| SEO | Débil | Fuerte | No aplica: es un panel privado con inicio de sesión |
 | Carga inicial y superficie XSS | Mayores | Menores | MPA, mitigable con *code splitting* y CSP estricta |
 
 **Decisión: SPA.** Los casos de uso son intensivos en interacción, no se necesita SEO y la API REST ya es obligatoria para el móvil.
@@ -185,10 +190,10 @@ flowchart LR
 | **Cookies `HttpOnly; SameSite`** (`psis_access`, `psis_refresh`; `Secure` por HTTPS) | Access y refresh token | Datos de negocio | JavaScript no las lee: un XSS no puede robar la sesión |
 | **Memoria** (estado de React) | Token CSRF, perfil y rol (`/api/v1/me`), datos de cada pantalla | — | Se pierde al recargar y se vuelve a pedir a la API |
 | **`localStorage`** | Solo el tema claro/oscuro (`psis:v1:tema`) | Tokens, nómina, datos personales | Persistente y legible por cualquier script: solo preferencias inocuas |
-| **`sessionStorage`** | Nada | Todo | Ver abajo |
+| **`sessionStorage`** | Nada | Todo | No se necesitó (se explica a continuación) |
 | **Caché HTTP** | Archivos estáticos versionados por Vite | Respuestas de la API (`Cache-Control: no-store`) | Evita fugas en equipos compartidos |
 
-**Por qué no se usó `sessionStorage`.** Se había reservado para borradores del flujo de planilla, pero cada paso (calcular, verificar, aprobar, pagar) es un estado que se guarda en la API: al recargar, la web lee el estado real y un borrador local podría mostrar un paso que ya no corresponde. Los formularios son cortos y se envían de una vez, y no guardar nada reduce lo que un XSS podría leer. Al cerrar sesión la web igual ejecuta `sessionStorage.clear()` como medida preventiva.
+**Uso de `sessionStorage`.** En el diseño inicial se reservó para guardar borradores del flujo de planilla. Al implementarlo no fue necesario, porque cada paso (calcular, verificar, aprobar y pagar) se guarda como estado en la API y, al recargar, la web consulta el estado vigente. Además, los formularios son cortos y se envían en una sola acción. Al cerrar sesión se ejecuta `sessionStorage.clear()` como medida preventiva.
 
 ### B.5 Estructura del repositorio
 
@@ -240,7 +245,7 @@ Ramas `main` / `develop` / `feature/*`; todo cambio entra por *pull request* a `
 
 ![Diagrama UML de casos de uso de planilla-sis](diagramas/casos-de-uso.svg)
 
-*Usuario* es un actor abstracto que especializan los tres actores y que hereda CU-01. CU-11 incluye CU-10: no se calcula una planilla con registros pendientes de validar.
+*Usuario* es un actor abstracto del que heredan Administrador, Supervisor y Trabajador; los tres pueden ejecutar CU-01. CU-11 incluye a CU-10 porque no se puede calcular una planilla mientras haya registros pendientes de validar.
 
 **Matriz de acceso por rol**
 
@@ -280,7 +285,15 @@ stateDiagram-v2
   PAGADA --> CERRADA: cerrar período
 ```
 
-Reglas clave: horas efectivas = salida − ingreso − descansos no remunerados; extras sobre la jornada ordinaria con factor parametrizado; dinero en `numeric(12,2)`; segregación `calculada_por ≠ verificada_por ≠ aprobada_por` (CHECK en la base y validación en la API); una planilla aprobada no se edita. Las reglas completas están en [`docs/reglas-calculo.md`](https://github.com/AgosAnt/planilla-sis/blob/develop/docs/reglas-calculo.md).
+**Reglas de negocio**
+
+- Horas efectivas = salida − ingreso − descansos no remunerados.
+- Las horas que exceden la jornada ordinaria se pagan como extra, con el factor definido en los parámetros.
+- Los montos se guardan como `numeric(12,2)`.
+- Calcular, verificar y aprobar deben hacerlo personas distintas (restricción CHECK en la base y validación en la API).
+- Una planilla aprobada no se puede modificar.
+
+El detalle está en [`docs/reglas-calculo.md`](https://github.com/AgosAnt/planilla-sis/blob/develop/docs/reglas-calculo.md).
 
 #### CU-07 · Registrar ingreso, salida y descansos
 
@@ -402,7 +415,12 @@ erDiagram
 | 26 | `sesiones_refresh` | `id uuid` | → perfiles, → sí misma (`reemplazado_por`) | `token_hash` UNIQUE, `expira_at`, `revocado_at` |
 | 27 | `feriados` | `fecha` | — | Días de asueto para el cálculo (M009) |
 
-**3FN.** Atributos atómicos (los descansos van en su propia tabla); sin dependencias parciales en las claves compuestas; sin dependencias transitivas gracias a los catálogos. La única desnormalización deliberada es `planilla_detalle`, que guarda totales como *snapshot* contable para que un cambio de tarifa no altere pagos ya aprobados.
+**Justificación de 3FN**
+
+- **1FN:** todos los atributos son atómicos; los descansos se registran en su propia tabla.
+- **2FN:** en las tablas con clave compuesta ningún atributo depende solo de una parte de la clave.
+- **3FN:** no hay dependencias transitivas; los catálogos evitan repetir descripciones.
+- **Excepción:** `planilla_detalle` guarda los totales calculados para que un cambio de tarifa posterior no modifique pagos ya aprobados.
 
 ### D.3 Componente NoSQL: JSONB
 
@@ -414,7 +432,7 @@ Los datos que entran al cálculo del pago están en columnas tipadas; JSONB se u
 | `planilla_detalle.calculo_detalle` | Desglose del cálculo por jornada | Objeto JSON generado por el motor de cálculo |
 | `auditoria.datos_antes` / `datos_despues` / `contexto` | Estado anterior y nuevo del registro; IP, agente y `request_id` | Objetos JSON; índice GIN en `contexto` |
 
-Ejemplo de `payload` de una emergencia:
+Ejemplo de `payload` de un evento `PROBLEMA_VEHICULO`:
 
 ```json
 { "precision_m": 12, "descripcion": "Llanta ponchada en el km 34", "dispositivo": { "so": "Android 15", "app": "1.4.2" } }
@@ -502,7 +520,11 @@ El contrato completo está en [`docs/openapi.yaml`](https://github.com/AgosAnt/p
 
 ### E.3 Contratos de los endpoints vitales
 
-**`POST /auth/session`** — Entrada: `{ "email": "supervisor@empresa.com", "password": "********" }`. Respuesta `200` (web; los tokens viajan solo en `Set-Cookie`):
+#### `POST /auth/session` (inicio de sesión)
+
+Entrada: `{ "email": "supervisor@empresa.com", "password": "********" }`
+
+Respuesta `200` para la web (los tokens se envían únicamente en `Set-Cookie`):
 
 ```json
 { "user": { "id": "5b1c…", "nombres": "Ana", "apellidos": "López", "rol": "supervisor" }, "csrf_token": "b7f0c1…" }
@@ -510,7 +532,9 @@ El contrato completo está en [`docs/openapi.yaml`](https://github.com/AgosAnt/p
 
 Con `X-Client-Type: mobile` la respuesta incluye además `access_token` y `refresh_token`. `401` usa el mismo mensaje sin importar si el correo existe.
 
-**`POST /registros-tiempo/ingreso`** — Entrada:
+#### `POST /registros-tiempo/ingreso` (marcar entrada)
+
+Entrada:
 
 ```json
 {
@@ -523,7 +547,13 @@ Con `X-Client-Type: mobile` la respuesta incluye además `access_token` y `refre
 
 Respuesta `201`: `{ "id": "e17b…", "estado_validacion": "PENDIENTE", "dentro_de_geocerca": true }`. Un reintento idéntico devuelve el registro original sin duplicarlo; `409` si ya hay una jornada abierta; `422` si no hay asignación activa.
 
-**`POST /planillas/{id}/aprobar`** — Requiere `X-Reauth-Token` (reautenticación reciente). Entrada: `{ "comentario": "Aprobada quincena 1", "total_esperado": "184230.75" }`. Respuesta `200`:
+#### `POST /planillas/{id}/aprobar` (aprobar planilla)
+
+Requiere la cabecera `X-Reauth-Token`, que se obtiene al volver a ingresar la contraseña.
+
+Entrada: `{ "comentario": "Aprobada quincena 1", "total_esperado": "184230.75" }`
+
+Respuesta `200`:
 
 ```json
 { "id": "8c11…", "estado": "APROBADA", "aprobada_por": "f2b0…", "hash_integridad": "sha256:9c1f…" }
@@ -537,7 +567,7 @@ Respuesta `201`: `{ "id": "e17b…", "estado_validacion": "PENDIENTE", "dentro_d
 
 ### F.1 Sesiones y autenticación
 
-**Por qué no Supabase Auth.** La base vive en Supabase, pero la autenticación es propia del backend:
+**Integración con Supabase.** La base de datos está en Supabase, pero la autenticación se implementó en el backend en lugar de usar Supabase Auth, por estas razones:
 
 1. **Tokens fuera del alcance de JavaScript.** El SDK de Supabase Auth guarda el JWT en `localStorage` o en cookies legibles por JavaScript; aquí la web usa cookies `HttpOnly` emitidas por nuestro dominio y el móvil usa `Bearer`, con un solo contrato.
 2. **Altas controladas:** sin registro público; el administrador crea cada cuenta con contraseña temporal y el rol del sistema viaja en el token.
@@ -588,7 +618,7 @@ sequenceDiagram
   API-->>N: borra las dos cookies
 ```
 
-**Estado actual.** El servidor implementa todo el ciclo. La **app móvil** renueva sola: ante un `401` llama a `/auth/refresh` y repite la petición. La **web** todavía vuelve al login cuando vence el access; la renovación automática está en integración y, cuando entre, el access baja de 2 h a 15 min.
+**Estado de la implementación.** El servidor implementa el ciclo completo. La app móvil renueva la sesión automáticamente: cuando recibe un `401`, llama a `/auth/refresh` y repite la petición. La web todavía regresa al inicio de sesión cuando vence el access token. La renovación automática en la web está en integración; cuando se complete, la duración del access token se reducirá de 2 h a 15 min.
 
 | Tema | Decisión |
 | --- | --- |
@@ -597,7 +627,7 @@ sequenceDiagram
 | Refresh | Solo su *hash* en `sesiones_refresh`; rotación en cada uso; reúso = revocar todas las sesiones |
 | Operaciones críticas | Aprobar planilla y registrar pago piden reautenticación con contraseña (token de un solo uso) |
 | Revocación | Logout, cambio de contraseña o baja cierran las sesiones; se comprueba `perfiles.activo` en cada petición |
-| Móvil | Tokens cifrados con el Android Keystore; sin cookies, así que CSRF no aplica |
+| Móvil | Tokens cifrados con el Android Keystore; al no usar cookies, CSRF no aplica |
 | MFA (TOTP) | Diferido a una fase posterior; la reautenticación cubre las acciones de mayor impacto |
 
 ### F.2 Matriz de mitigación
