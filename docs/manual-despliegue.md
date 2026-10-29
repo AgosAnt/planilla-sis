@@ -211,7 +211,33 @@ Cambiar la ubicación o el radio de la geocerca **no requiere un APK nuevo**: la
 
 ## 8. Entorno local de desarrollo
 
+La web y la app pueden usarse contra el servidor publicado en Azure o contra un servidor local. Los dos modos usan
+**bases de datos distintas** (Supabase y un PostgreSQL local): lo que se marque en uno no aparece en el otro. Para
+una demostración, la app y la web deben apuntar al mismo servidor.
+
+| | Contra Azure | Contra el servidor local |
+| --- | --- | --- |
+| Web | Abrir la URL de Azure | `http://localhost:5173` (pasos 1 a 3) |
+| App | APK compilado con `servidor.api` de Azure (§5.1); no requiere nada más | **Cambiar servidor** → `http://<IP de la PC>:3000/` (paso 4) |
+| Base de datos | Supabase | PostgreSQL local |
+
+### 8.1 Levantar el servidor local
+
 1. PostgreSQL 15 o superior local; aplica las migraciones (§2.2, opción B) y el seed (§2.4) sobre una base propia.
-2. `backend/.env` a partir de `backend/.env.example`, con `DATABASE_URL` usando `app_user`. Luego `npm install` y `npm run dev` en `backend/` (puerto 3000).
-3. `npm install` y `npm run dev` en `web/` (Vite en el puerto 5173, con *proxy* de `/api` hacia el backend).
-4. Para la app, `servidor.api=http://<IP de tu PC en la red>:3000/` en `mobile/local.properties`.
+   El seed crea las cuentas `admin`, `supervisor` y `trabajador` de `@local.test`, una ruta de desarrollo y la
+   asignación del trabajador.
+2. `backend/.env` a partir de `backend/.env.example`, con `DATABASE_URL` usando `app_user`. Luego `npm install` y
+   `npm run dev` en `backend/` (puerto 3000).
+3. `npm install` y `npm run dev` en `web/` (Vite en el puerto 5173, con *proxy* de `/api` hacia el backend en el
+   puerto 3000). En local las cookies viajan sin `Secure` porque la conexión es HTTP; en Azure llevan `Secure`.
+
+### 8.2 Conectar la app al servidor local
+
+4. En la pantalla de inicio de sesión, tocar **Cambiar servidor** y escribir `http://<IP de la PC en la red>:3000/`
+   (por ejemplo `http://192.168.1.76:3000/`). La IP se consulta con `ipconfig` (adaptador WiFi, *Dirección IPv4*).
+   - La app permite HTTP para el servidor de desarrollo, así que no hace falta HTTPS en la red local.
+   - El teléfono y la PC deben estar en la **misma red WiFi**.
+   - El Firewall de Windows debe permitir conexiones entrantes al puerto 3000; si la app no conecta, suele ser esto.
+   - Para volver a Azure, dejar el campo vacío: la app regresa al servidor de fábrica.
+5. Otra opción es compilar un APK de desarrollo con `servidor.api=http://<IP de la PC>:3000/` en
+   `mobile/local.properties`.
