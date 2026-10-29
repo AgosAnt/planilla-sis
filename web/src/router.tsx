@@ -11,6 +11,8 @@ import Rutas from './paginas/Rutas'
 import Supervision from './paginas/Supervision'
 import Planillas from './paginas/Planillas'
 import Pagos from './paginas/Pagos'
+import Usuarios from './paginas/Usuarios'
+import Auditoria from './paginas/Auditoria'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -34,9 +36,9 @@ export const router = createBrowserRouter([
                 element: <RutaProtegida roles={['administrador']} />,
                 children: [
                   { path: '/pagos', element: <Pagos /> },
-                  { path: '/admin/usuarios', element: <EnConstruccion titulo="Usuarios" /> },
+                  { path: '/admin/usuarios', element: <Usuarios /> },
                   { path: '/admin/parametros', element: <EnConstruccion titulo="Parámetros" /> },
-                  { path: '/auditoria', element: <EnConstruccion titulo="Auditoría" /> },
+                  { path: '/auditoria', element: <Auditoria /> },
                 ],
               },
             ],
