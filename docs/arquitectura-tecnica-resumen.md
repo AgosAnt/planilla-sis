@@ -90,18 +90,16 @@ Elaborada con base en la participación de cada integrante durante el desarrollo
 | 15 | La app móvil la desarrolló el líder técnico | El equipo quedó en 6 integrantes |
 | 19–22 | Entregables nuevos | Se identificaron al implementar CU-02, CU-03, CU-04, CU-08 y CU-14 |
 
-### A.4 Desglose y cumplimiento por integrante
+### A.4 Desglose de entregables por integrante
 
-Corte al 28 de octubre de 2026.
-
-| Integrante | Módulos a su cargo | Sección del documento | En curso |
-| --- | --- | --- | --- |
-| Jonatan | Arquitectura y contrato API; app móvil; despliegue en Azure; documentación | A, B.1, B.5, manual | — |
-| Marco | Backend: rutas, asignaciones, turnos, registros, motor de cálculo, aprobación y pagos, geocerca | C.3, E | — |
-| Sofía | Base de datos: 3FN, JSONB, migraciones M002–M012, RLS | D | — |
-| Daniel | Autenticación, sesiones, OWASP, usuarios, estados y emergencias | F | Renovación de sesión en la web (fase 2) |
-| Samuel | Shell de la SPA, guardas, planillas y pagos | B.2, B.3 | Usuarios y auditoría; parámetros |
-| Stefany | Módulos de UI: rutas, supervisión, geocerca, estados, turnos, panel | B.4, C | Geocerca, renovación de sesión, estados y emergencias, turnos, panel |
+| Integrante | Módulos a su cargo | Sección del documento |
+| --- | --- | --- |
+| Jonatan | Arquitectura y contrato API; app móvil; despliegue en Azure; documentación | A, B.1, B.5, manual |
+| Marco | Backend: rutas, asignaciones, turnos, registros, motor de cálculo, aprobación y pagos, geocerca | C.3, E |
+| Sofía | Base de datos: 3FN, JSONB, migraciones M002–M012, RLS | D |
+| Daniel | Autenticación, sesiones, OWASP, usuarios, estados y emergencias | F |
+| Samuel | Shell de la SPA, guardas, planillas y pagos | B.2, B.3 |
+| Stefany | Módulos de UI: rutas, supervisión, geocerca, estados, turnos, panel | B.4, C |
 
 ---
 
@@ -251,12 +249,12 @@ Ramas `main` / `develop` / `feature/*`; todo cambio entra por *pull request* a `
 
 | Acción | Administrador | Supervisor | Trabajador |
 | --- | --- | --- | --- |
-| Gestionar usuarios | ✔ | ✖ | ✖ |
-| Rutas y asignaciones | ✔ | Solo sus rutas | ✖ |
-| Registrar ingreso, descanso o evento | ✖ | ✖ | ✔ (propio) |
-| Ver y validar registros | ✔ | Sus rutas | Ver propios |
-| Calcular / **verificar** / **aprobar** planilla | Calcular y **aprobar** | Calcular y **verificar** | ✖ |
-| Registrar pago y consultar auditoría | ✔ | ✖ | ✖ |
+| Gestionar usuarios | Sí | No | No |
+| Rutas y asignaciones | Sí | Solo sus rutas | No |
+| Registrar ingreso, descanso o evento | No | No | Sí (propio) |
+| Ver y validar registros | Sí | Sus rutas | Ver propios |
+| Calcular / **verificar** / **aprobar** planilla | Calcular y **aprobar** | Calcular y **verificar** | No |
+| Registrar pago y consultar auditoría | Sí | No | No |
 
 ### C.3 Especificación de los casos de uso principales
 
@@ -460,11 +458,11 @@ Las políticas los leen con funciones de `M008_rls_registros_eventos.sql`: `app.
 | `acuerdos_turno` | SELECT propios; aceptar o rechazar | Confirmar los de sus trabajadores | ALL |
 | `registros_tiempo`, `descansos` | SELECT propios; INSERT propio en `PENDIENTE` | SELECT/UPDATE (validar) de sus trabajadores | ALL |
 | `eventos_diarios` | INSERT y SELECT propios; sin UPDATE/DELETE | SELECT; UPDATE solo de la atención | Igual que supervisor, sin límite de ruta |
-| `tarifas_trabajador` | SELECT propia | ✖ | ALL |
-| `periodos_planilla`, `planillas` | ✖ | SELECT/UPDATE de sus rutas (transiciones permitidas) | ALL |
+| `tarifas_trabajador` | SELECT propia | No | ALL |
+| `periodos_planilla`, `planillas` | No | SELECT/UPDATE de sus rutas (transiciones permitidas) | ALL |
 | `planilla_detalle`, `detalle_conceptos` | SELECT propio si está verificada o aprobada | SELECT de sus trabajadores | ALL |
-| `pagos` | SELECT propios | ✖ | ALL |
-| `auditoria` | ✖ | ✖ | Solo SELECT; nadie modifica ni borra |
+| `pagos` | SELECT propios | No | ALL |
+| `auditoria` | No | No | Solo SELECT; nadie modifica ni borra |
 
 Ejemplo (`registros_tiempo`):
 
