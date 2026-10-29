@@ -1346,14 +1346,62 @@ sequenceDiagram
   API->>DB: INSERT sesiones_refresh (hash del refresh token)
   API-->>U: Set-Cookie HttpOnly Secure SameSite + csrf_token en cuerpo
   U->>API: GET /me (cookie automática)
-  API->>API: valida firma propia, exp, iss, aud; lee claim rol
+  API->>API: valida firma propia, exp, iss y aud, y lee el claim rol
   API-->>U: perfil y rol
-  Note over U,API: Access token expira (corta vida)
+  Note over U,API: Access token expira (2 h hoy, meta 15 min)
   U->>API: 401 → POST /auth/refresh (cookie de refresh)
   API->>DB: valida token_hash en sesiones_refresh (no revocado, no expirado)
   API->>DB: marca sesión actual como reemplazada, crea una nueva (rotación)
   API-->>U: nuevas cookies
 ```
+
+**Ciclo de vida de las dos cookies**
+
+La sesión web usa dos tokens con vidas distintas, cada uno en su cookie:
+
+| Cookie | Contiene | Vida | Viaja a | Para qué |
+| --- | --- | --- | --- | --- |
+| `psis_access` | Access token (JWT firmado, con `sub`, `rol`, `iss`, `aud`) | **2 h** hoy; baja a **15 min** cuando la web renueve sola | Todo `/` (cada petición a la API) | Demostrar quién es el usuario en cada petición; no se guarda en la base |
+| `psis_refresh` | Refresh token (aleatorio; en la base solo su *hash*) | **7 días**, y se vuelven a contar en cada renovación | Solo `/api/v1/auth` (renovar y cerrar sesión) | Pedir un access nuevo sin volver a escribir la contraseña |
+
+El access es corto porque viaja en cada petición y el servidor no lo consulta en la base: si se filtrara, solo sirve hasta su `exp`. El refresh es largo pero casi nunca viaja, cada uso lo reemplaza por uno nuevo (rotación) y se puede revocar en la base. Las dos son `HttpOnly` (JavaScript no las lee), `SameSite` (`Lax` y `Strict`) y `Secure` por HTTPS.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant N as Navegador (SPA)
+  participant API as API (módulo Auth)
+  participant DB as sesiones_refresh
+  N->>API: POST /auth/session (correo, contraseña)
+  API->>DB: INSERT sesión A (hash de R1, expira en 7 días)
+  API-->>N: Set-Cookie psis_access=AT1 (2 h, Path=/) y psis_refresh=R1 (7 días, Path=/api/v1/auth)
+  loop Mientras AT1 esté vigente
+    N->>API: GET/POST /api/v1/... (envía solo psis_access + X-CSRF-Token)
+    API-->>N: 200 (verifica firma y exp, sin consultar sesiones_refresh)
+  end
+  Note over N,API: AT1 vence
+  N->>API: GET /api/v1/... con AT1 vencido
+  API-->>N: 401
+  N->>API: POST /auth/refresh (el navegador envía psis_refresh=R1)
+  API->>DB: R1 vigente → A queda reemplazada por B (hash de R2)
+  API-->>N: Set-Cookie psis_access=AT2 y psis_refresh=R2 (los 7 días vuelven a contar)
+  N->>API: repite la petición con AT2
+  API-->>N: 200
+  alt Otra pestaña renovó con R1 hace menos de 30 s
+    N->>API: POST /auth/refresh con R1
+    API-->>N: 409 REFRESH_CONCURRENTE (la cookie nueva ya está en el navegador: repite la petición)
+  else Alguien usa R1 después (copia robada)
+    N->>API: POST /auth/refresh con R1 ya reemplazado
+    API->>DB: posible robo: revoca TODAS las sesiones del usuario y lo registra en auditoria
+    API-->>N: 401 REFRESH_REUTILIZADO: hay que volver a iniciar sesión
+  end
+  Note over N,DB: Pasan 7 días sin renovar → refresh vencido → 401 → login
+  N->>API: POST /auth/logout
+  API->>DB: revoca la sesión (revocado_at) y el backend deja de aceptar su access
+  API-->>N: borra las dos cookies
+```
+
+**Estado actual.** El servidor ya implementa todo el ciclo (#47). La **app móvil** renueva sola: guarda los dos tokens cifrados con el Android Keystore y, ante un `401`, llama a `/auth/refresh` con el refresh en el cuerpo y repite la petición (#48). La **web** todavía no renueva sola: ante un `401` vuelve al login. La renovación automática está en integración (§A.3, "En curso"); cuando entre, el access baja de 2 h a 15 min (`DURACION_ACCESS_SEG` en `backend/src/config/sesion.js`).
 
 **Decisiones**
 
@@ -1383,9 +1431,9 @@ sequenceDiagram
 | **XSS reflejado / basado en DOM** | Parámetros de la URL (filtros, `?ruta=`) leídos por la SPA; History API | Parsear y **validar** *query params* contra una lista/esquema antes de usarlos; nunca insertar en el DOM como HTML; validar `next`/`redirect` (solo rutas internas, mismo origen) | Pruebas unitarias del *parser* de rutas; prueba de *open redirect* |
 | **Impacto de XSS (contención)** | Un XSS residual no debe robar sesión | Cookies `HttpOnly` (no exfiltrables); **CSP estricta** (abajo); sin tokens en `localStorage`; refresh tokens revocables desde `sesiones_refresh` | Escaneo de cabeceras (securityheaders); auditoría de almacenamiento |
 | **CSRF** | Cookies de sesión se envían automáticamente a la API | 1) `SameSite=Lax/Strict`. 2) **Token CSRF** (sincronizador o *double-submit* firmado) en `X-CSRF-Token` para `POST/PUT/PATCH/DELETE`. 3) Validar `Origin`/`Referer` contra lista blanca. 4) CORS con **lista blanca** de orígenes y `credentials` solo para el dominio de la web. 5) Las mutaciones nunca usan `GET`. 6) Exigir `Content-Type: application/json`. | Pruebas: petición cruzada sin token → `403`; CORS con origen no permitido rechazado |
-| **Exposición de secretos** | Credenciales de BD (en el prototipo estaban escritas en el código), `JWT_SECRET`/llave de firma, contraseña del rol `app_user` | 1) `DATABASE_URL` (con el rol `app_user`, sin superusuario) y `JWT_SECRET` **solo en el backend**, en variables de entorno del servidor o gestor de secretos; **jamás** en el bundle web ni en el móvil ni en el repositorio. 2) La web y el móvil **nunca** tienen credenciales de base de datos: solo hablan con la API. Las llaves de Supabase (`anon` y sobre todo `service_role`, que salta RLS) no se usan en la aplicación: no están en Azure, en el repositorio, en la web ni en la app, y solo el DBA usa el panel de Supabase para las migraciones (§D.4). 3) Prohibido prefijar secretos con `VITE_`/`NEXT_PUBLIC_`/`REACT_APP_` (se incrustan en el cliente). 4) `.env` en `.gitignore`; `.env.example` sin valores; si la contraseña actual estuvo versionada (C-01), **cambiarla** y limpiar el historial de Git. 5) **Escaneo de secretos** en CI (gitleaks/GitHub secret scanning) y *pre-commit hook*. 6) Bases de datos separadas para dev/staging/prod; **rotación** de `JWT_SECRET` y contraseñas ante cualquier sospecha (invalida todas las sesiones activas). | Búsqueda de la llave en el bundle compilado; escaneo del historial de Git del repositorio |
+| **Exposición de secretos** | Credenciales de BD (en el prototipo estaban escritas en el código), `JWT_SECRET`/llave de firma, contraseña del rol `app_user` | 1) `DATABASE_URL` (con el rol `app_user`, sin superusuario) y `JWT_SECRET` **solo en el backend**, en variables de entorno del servidor o gestor de secretos; **jamás** en el bundle web ni en el móvil ni en el repositorio. 2) La web y el móvil **nunca** tienen credenciales de base de datos: solo hablan con la API. Las llaves de Supabase (`anon` y sobre todo `service_role`, que salta RLS) no se usan en la aplicación: no están en Azure, en el repositorio, en la web ni en la app, y solo el DBA usa el panel de Supabase para las migraciones (§D.4). 3) Prohibido prefijar secretos con `VITE_`/`NEXT_PUBLIC_`/`REACT_APP_` (se incrustan en el cliente). 4) `.env` en `.gitignore`; `.env.example` sin valores; si una contraseña llegó a estar versionada (como en el prototipo), **cambiarla** y limpiar el historial de Git. 5) **Escaneo de secretos** en CI (gitleaks/GitHub secret scanning) y *pre-commit hook*. 6) Bases de datos separadas para dev/staging/prod; **rotación** de `JWT_SECRET` y contraseñas ante cualquier sospecha (invalida todas las sesiones activas). | Búsqueda de la llave en el bundle compilado; escaneo del historial de Git del repositorio |
 | **Control de acceso roto / IDOR** | Manipular IDs (`/planillas/{id}`, `/registros-tiempo/{id}`) | Autorización por objeto en la API (pertenencia a ruta/trabajador), reforzada con **RLS activo** en la base; IDs `uuid`; respuesta `404` en lugar de `403` cuando el recurso no es visible | Suite de pruebas con JWT de roles cruzados (§D.4) |
-| **Inyección (SQL/NoSQL/JSONB)** | Filtros y payloads | Consultas **siempre parametrizadas** con `pg` (`pool.query(texto, [valores])`); **nunca** concatenar SQL (corrige el patrón usado hoy en la ruta `/api/registros`, que ya parametriza, y lo mantiene como estándar); validación de esquema; `jsonb_path` con parámetros, no con cadenas del usuario | SAST (Semgrep/CodeQL) en CI |
+| **Inyección (SQL/NoSQL/JSONB)** | Filtros y payloads | Consultas **siempre parametrizadas** con `pg` (`pool.query(texto, [valores])`); **nunca** concatenar valores del usuario en el SQL (las únicas interpolaciones son listas fijas de columnas definidas en el código); validación de esquema; `jsonb_path` con parámetros, no con cadenas del usuario | SAST (Semgrep/CodeQL) en CI |
 | **Fallas de autenticación** | Fuerza bruta, credenciales filtradas | Límite de tasa en `/auth/session`, bloqueo progresivo, MFA, mensajes de error genéricos | Pruebas de límite de tasa |
 | **Configuración insegura** | Cabeceras, CORS, mensajes de error detallados | Cabeceras de seguridad (abajo); errores sin *stack traces* al cliente; *debug* apagado en producción | Revisión de configuración por entorno |
 | **Componentes vulnerables / cadena de suministro** | Dependencias npm | `npm audit`/Dependabot, *lockfile* obligatorio, SRI para recursos externos, mínimo de dependencias | Alertas semanales; bloqueo de PR con vulnerabilidades críticas |
