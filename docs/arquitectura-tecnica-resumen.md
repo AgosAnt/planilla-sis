@@ -54,32 +54,32 @@ El plan original contemplaba 7 integrantes, con un desarrollador móvil. El rol 
 
 ### A.3 Matriz RACI ejecutada
 
-Elaborada a partir de los *pull requests* integrados a `develop` entre el #9 (13 de octubre) y el #58 (27 de octubre de 2026). La **R** corresponde a quien hizo el trabajo y la **A** al responsable del rol. Cuando el líder técnico avanzó un módulo de otra área, aparece como R con la anotación "apoyo".
+Elaborada con base en la participación de cada integrante durante el desarrollo y en el rol asignado. La **R** indica quién realizó el trabajo y la **A**, el responsable del rol que lo aprueba.
 
-| # | Entregable técnico | Samuel | Stefany | Jonatan | Marco | Sofía | Daniel | Evidencia (PRs) |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Arquitectura, patrones y ADRs | C | I | **A/R** | R | C | C | #10 (Marco), #30 (Jonatan) |
-| 2 | Integración con el repositorio | R | I | **A** | R | C | C | #10 (Marco), #23 (Samuel) |
-| 3 | Auditoría del esquema BD | I | I | C | C | **A/R** | I | #9 (Sofía) |
-| 4 | Modelo 3FN, JSONB y migraciones | I | I | R | C | **A/R** | C | #9, #35, #44, #52 (Sofía); #11, #14 (Jonatan, apoyo) |
-| 5 | RLS | I | I | R | C | **A/R** | R | #35 (Sofía); #13 (Jonatan); #36 (Daniel) |
-| 6 | Contrato API REST | C | C | **A/R** | R | C | R | #12 (Jonatan); #42, #51 (Marco); #37, #45–#47, #50 (Daniel) |
-| 7 | Backend: rutas, turnos, registros | I | C | R | **A/R** | C | C | #33, #40 (Marco); #16, #22, #24 (Jonatan, apoyo) |
-| 8 | Backend: cálculo, verificación y aprobación | C | I | C | **A/R** | R | C | #42, #43 (Marco); #35 M009 (Sofía) |
-| 9 | Frontend: shell SPA y guardas | **A/R** | R | R | I | I | C | #23 (Samuel); #26 (Stefany); #19, #21 (Jonatan, apoyo) |
-| 10 | Frontend: rutas, turnos y supervisión | **A** | R | C | C | I | I | #26, #31 (Stefany); #29 (Jonatan) |
-| 11 | Frontend: planillas y pagos | **A/R** | C | C | C | I | I | #54 (Samuel) |
-| 12 | Autenticación propia y sesión | C | I | R | C | R | **A/R** | #32, #36, #47 (Daniel); #44 (Sofía); #15, #18, #48, #58 (Jonatan) |
-| 13 | Seguridad OWASP | C | I | R | C | C | **A/R** | #53, #57 (Daniel); #15, #17 (Jonatan) |
-| 14 | API móvil y sincronización offline | I | I | **A/R** | R | C | C | #10 (Marco); #24, #27 (Jonatan) |
-| 15 | App móvil | I | I | **A/R** | C | I | C | #27, #39, #48, #49, #56 (Jonatan) |
-| 16 | Pruebas | C | C | R | R | C | **A/R** | #42 (Marco); #13, #27, #39, #48, #49 (Jonatan) |
-| 17 | CI/CD y secretos | I | I | R | I | C | **A/R** | #53 (Daniel); #38 (Jonatan, apoyo) |
-| 18 | Documentación técnica | C | C | **A/R** | R | R | R | #30 y este documento (Jonatan); #51 (Marco) |
-| 19 | Estados del trabajador (CU-03) | I | I | C | **A** | C | R | #46 (Daniel) |
-| 20 | Emergencias (CU-08) | I | I | R | **A** | I | R | #45 (Daniel); #56 (Jonatan) |
-| 21 | Usuarios, auditoría y permisos (CU-02, CU-14) | C | I | R | I | C | **A/R** | #37, #50 (Daniel); #18 (Jonatan) |
-| 22 | Geocerca de las rutas (CU-04) | I | I | R | **A/R** | R | I | #55 (Marco); #52 (Sofía); #39 (Jonatan) |
+| # | Entregable técnico | Samuel | Stefany | Jonatan | Marco | Sofía | Daniel |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Arquitectura, patrones y ADRs | C | I | **A/R** | R | C | C |
+| 2 | Integración con el repositorio | R | I | **A** | R | C | C |
+| 3 | Auditoría del esquema BD | I | I | C | C | **A/R** | I |
+| 4 | Modelo 3FN, JSONB y migraciones | I | I | R | C | **A/R** | C |
+| 5 | RLS | I | I | R | C | **A/R** | R |
+| 6 | Contrato API REST | C | C | **A/R** | R | C | R |
+| 7 | Backend: rutas, turnos, registros | I | C | R | **A/R** | C | C |
+| 8 | Backend: cálculo, verificación y aprobación | C | I | C | **A/R** | R | C |
+| 9 | Frontend: shell SPA y guardas | **A/R** | R | R | I | I | C |
+| 10 | Frontend: rutas, turnos y supervisión | **A** | R | C | C | I | I |
+| 11 | Frontend: planillas y pagos | **A/R** | C | C | C | I | I |
+| 12 | Autenticación propia y sesión | C | I | R | C | R | **A/R** |
+| 13 | Seguridad OWASP | C | I | R | C | C | **A/R** |
+| 14 | API móvil y sincronización offline | I | I | **A/R** | R | C | C |
+| 15 | App móvil | I | I | **A/R** | C | I | C |
+| 16 | Pruebas | C | C | R | R | C | **A/R** |
+| 17 | CI/CD y secretos | I | I | R | I | C | **A/R** |
+| 18 | Documentación técnica | C | C | **A/R** | R | R | R |
+| 19 | Estados del trabajador (CU-03) | I | I | C | **A** | C | R |
+| 20 | Emergencias (CU-08) | I | I | R | **A** | I | R |
+| 21 | Usuarios, auditoría y permisos (CU-02, CU-14) | C | I | R | I | C | **A/R** |
+| 22 | Geocerca de las rutas (CU-04) | I | I | R | **A/R** | R | I |
 
 **Cambios respecto al plan**
 
@@ -94,14 +94,14 @@ Elaborada a partir de los *pull requests* integrados a `develop` entre el #9 (13
 
 Corte al 28 de octubre de 2026.
 
-| Integrante | Módulos a su cargo | Sección del documento | PRs integrados | En curso |
-| --- | --- | --- | --- | --- |
-| Jonatan | Arquitectura y contrato API; app móvil; despliegue en Azure; documentación | A, B.1, B.5, manual | 21 | — |
-| Marco | Backend: rutas, asignaciones, turnos, registros, motor de cálculo, aprobación y pagos, geocerca | C.3, E | 7 | — |
-| Sofía | Base de datos: 3FN, JSONB, migraciones M002–M012, RLS | D | 4 | — |
-| Daniel | Autenticación, sesiones, OWASP, usuarios, estados y emergencias | F | 9 | Renovación de sesión en la web (fase 2) |
-| Samuel | Shell de la SPA, guardas, planillas y pagos | B.2, B.3 | 2 | Usuarios y auditoría; parámetros |
-| Stefany | Módulos de UI: rutas, supervisión, geocerca, estados, turnos, panel | B.4, C | 2 | Geocerca, renovación de sesión, estados y emergencias, turnos, panel |
+| Integrante | Módulos a su cargo | Sección del documento | En curso |
+| --- | --- | --- | --- |
+| Jonatan | Arquitectura y contrato API; app móvil; despliegue en Azure; documentación | A, B.1, B.5, manual | — |
+| Marco | Backend: rutas, asignaciones, turnos, registros, motor de cálculo, aprobación y pagos, geocerca | C.3, E | — |
+| Sofía | Base de datos: 3FN, JSONB, migraciones M002–M012, RLS | D | — |
+| Daniel | Autenticación, sesiones, OWASP, usuarios, estados y emergencias | F | Renovación de sesión en la web (fase 2) |
+| Samuel | Shell de la SPA, guardas, planillas y pagos | B.2, B.3 | Usuarios y auditoría; parámetros |
+| Stefany | Módulos de UI: rutas, supervisión, geocerca, estados, turnos, panel | B.4, C | Geocerca, renovación de sesión, estados y emergencias, turnos, panel |
 
 ---
 
@@ -642,7 +642,7 @@ sequenceDiagram
 | **Inyección SQL** | Filtros y cuerpos | Consultas parametrizadas con `pg`; nunca se concatena un valor del usuario |
 | **Fuerza bruta** | Login | Límite de intentos, bloqueo progresivo, mensaje genérico |
 | **Integridad de la planilla** | Alterar una planilla aprobada | Inmutabilidad, `hash_integridad`, segregación de funciones con CHECK |
-| **Dependencias vulnerables** | npm | `npm audit` y actualización de dependencias (#53) |
+| **Dependencias vulnerables** | npm | `npm audit` y actualización de dependencias |
 | **Clickjacking** | `iframe` | `frame-ancestors 'none'` y `X-Frame-Options: DENY` |
 
 **Cabeceras aplicadas** (`backend/src/middlewares/seguridad.js`):
