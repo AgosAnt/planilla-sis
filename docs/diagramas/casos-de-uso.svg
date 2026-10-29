@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 880" width="960" height="880" font-family="Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-labelledby="titulo desc">
+  <title id="titulo">Diagrama de casos de uso de planilla-sis</title>
+  <desc id="desc">Actores Administrador, Supervisor y Trabajador en ruta, especializaciones de Usuario, y los casos de uso CU-01 a CU-15 dentro del sistema.</desc>
+  <defs>
+    <!-- Generalización: triángulo hueco -->
+    <marker id="generalizacion" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="14" markerHeight="14" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#ffffff" stroke="#1f2933" stroke-width="1.2"/>
+    </marker>
+    <!-- Include: flecha abierta -->
+    <marker id="flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M1 1 L9 5 L1 9" fill="none" stroke="#1f2933" stroke-width="1.3"/>
+    </marker>
+    <symbol id="actor" viewBox="-20 -52 40 84" overflow="visible">
+      <circle cx="0" cy="-40" r="12" fill="#ffffff" stroke="#1f2933" stroke-width="2"/>
+      <line x1="0" y1="-28" x2="0" y2="5" stroke="#1f2933" stroke-width="2"/>
+      <line x1="-18" y1="-15" x2="18" y2="-15" stroke="#1f2933" stroke-width="2"/>
+      <line x1="0" y1="5" x2="-14" y2="30" stroke="#1f2933" stroke-width="2"/>
+      <line x1="0" y1="5" x2="14" y2="30" stroke="#1f2933" stroke-width="2"/>
+    </symbol>
+  </defs>
+
+  <rect width="960" height="880" fill="#ffffff"/>
+
+  <!-- Límite del sistema -->
+  <rect x="180" y="50" width="640" height="800" rx="10" fill="#f6f8f7" stroke="#2e7d5b" stroke-width="2"/>
+  <text x="800" y="76" text-anchor="end" font-size="15" font-weight="600" fill="#2e7d5b">Sistema planilla-sis</text>
+
+  <!-- Generalizaciones hacia Usuario (abstracto) -->
+  <g fill="none" stroke="#1f2933" stroke-width="1.3">
+    <path d="M95 236 L95 156" marker-end="url(#generalizacion)"/>
+    <path d="M77 625 L30 625 L30 95 L75 95" marker-end="url(#generalizacion)"/>
+    <path d="M905 396 L905 24 L95 24 L95 40" marker-end="url(#generalizacion)"/>
+  </g>
+
+  <!-- Asociaciones -->
+  <g stroke="#52606d" stroke-width="1.2">
+    <!-- Usuario -->
+    <line x1="118" y1="85" x2="330" y2="100"/>
+    <!-- Administrador -->
+    <line x1="118" y1="275" x2="210" y2="160"/>
+    <line x1="118" y1="275" x2="210" y2="215"/>
+    <line x1="118" y1="275" x2="210" y2="270"/>
+    <line x1="118" y1="275" x2="210" y2="325"/>
+    <line x1="118" y1="275" x2="210" y2="405"/>
+    <line x1="118" y1="275" x2="210" y2="460"/>
+    <line x1="118" y1="275" x2="210" y2="515"/>
+    <line x1="118" y1="275" x2="210" y2="570"/>
+    <!-- Supervisor -->
+    <line x1="118" y1="625" x2="210" y2="405"/>
+    <line x1="118" y1="625" x2="210" y2="460"/>
+    <line x1="118" y1="625" x2="210" y2="515"/>
+    <line x1="118" y1="625" x2="210" y2="570"/>
+    <line x1="118" y1="625" x2="210" y2="660"/>
+    <line x1="118" y1="625" x2="210" y2="715"/>
+    <line x1="118" y1="625" x2="210" y2="790"/>
+    <!-- Trabajador -->
+    <line x1="882" y1="435" x2="790" y2="380"/>
+    <line x1="882" y1="435" x2="790" y2="450"/>
+    <line x1="882" y1="435" x2="790" y2="520"/>
+    <line x1="893" y1="480" x2="530" y2="790"/>
+  </g>
+
+  <!-- Actores -->
+  <use href="#actor" x="75" y="43" width="40" height="84"/>
+  <text x="95" y="146" text-anchor="middle" font-size="13" font-style="italic" fill="#1f2933">Usuario</text>
+  <use href="#actor" x="75" y="238" width="40" height="84"/>
+  <text x="95" y="340" text-anchor="middle" font-size="13" font-weight="600" fill="#1f2933">Administrador</text>
+  <use href="#actor" x="75" y="588" width="40" height="84"/>
+  <text x="95" y="690" text-anchor="middle" font-size="13" font-weight="600" fill="#1f2933">Supervisor</text>
+  <use href="#actor" x="885" y="398" width="40" height="84"/>
+  <text x="905" y="500" text-anchor="middle" font-size="13" font-weight="600" fill="#1f2933">Trabajador</text>
+  <text x="905" y="516" text-anchor="middle" font-size="13" font-weight="600" fill="#1f2933">en ruta</text>
+
+  <!-- Casos de uso -->
+  <g font-size="12" fill="#1f2933" text-anchor="middle">
+    <g>
+      <ellipse cx="500" cy="100" rx="170" ry="26" fill="#ffffff" stroke="#1f2933" stroke-width="1.5"/>
+      <text x="500" y="96" font-weight="700">CU-01</text><text x="500" y="111">Iniciar sesión y verificar rol</text>
+    </g>
+
+    <!-- Columna izquierda: web (Administrador y Supervisor) -->
+    <g fill="#ffffff" stroke="#1f2933" stroke-width="1.5">
+      <ellipse cx="370" cy="160" rx="160" ry="24"/>
+      <ellipse cx="370" cy="215" rx="160" ry="24"/>
+      <ellipse cx="370" cy="270" rx="160" ry="24"/>
+      <ellipse cx="370" cy="325" rx="160" ry="24"/>
+      <ellipse cx="370" cy="405" rx="160" ry="24"/>
+      <ellipse cx="370" cy="460" rx="160" ry="24"/>
+      <ellipse cx="370" cy="515" rx="160" ry="24"/>
+      <ellipse cx="370" cy="570" rx="160" ry="24"/>
+      <ellipse cx="370" cy="660" rx="160" ry="24"/>
+      <ellipse cx="370" cy="715" rx="160" ry="24"/>
+      <ellipse cx="370" cy="790" rx="160" ry="24"/>
+    </g>
+    <text x="370" y="156" font-weight="700">CU-02</text><text x="370" y="171">Gestionar usuarios y roles</text>
+    <text x="370" y="211" font-weight="700">CU-14</text><text x="370" y="226">Consultar bitácora de auditoría</text>
+    <text x="370" y="266" font-weight="700">CU-15</text><text x="370" y="281">Configurar parámetros de pago</text>
+    <text x="370" y="321" font-weight="700">CU-12</text><text x="370" y="336">Registrar el pago de planilla</text>
+    <text x="370" y="401" font-weight="700">CU-03</text><text x="370" y="416">Gestionar estado del trabajador</text>
+    <text x="370" y="456" font-weight="700">CU-04</text><text x="370" y="471">Crear y gestionar rutas y sus puntos</text>
+    <text x="370" y="511" font-weight="700">CU-05</text><text x="370" y="526">Asignar trabajadores a rutas</text>
+    <text x="370" y="566" font-weight="700">CU-11</text><text x="370" y="581">Calcular, verificar y aprobar planilla</text>
+    <text x="370" y="656" font-weight="700">CU-10</text><text x="370" y="671">Validar, corregir o rechazar registros</text>
+    <text x="370" y="711" font-weight="700">CU-09</text><text x="370" y="726">Supervisar horarios y registros</text>
+    <text x="370" y="786" font-weight="700">CU-06</text><text x="370" y="801">Definir y confirmar acuerdos de turno</text>
+
+    <!-- Columna derecha: móvil (Trabajador) -->
+    <g fill="#ffffff" stroke="#1f2933" stroke-width="1.5">
+      <ellipse cx="665" cy="380" rx="125" ry="24"/>
+      <ellipse cx="665" cy="450" rx="125" ry="24"/>
+      <ellipse cx="665" cy="520" rx="125" ry="24"/>
+    </g>
+    <text x="665" y="376" font-weight="700">CU-07</text><text x="665" y="391">Registrar ingreso, salida, descansos</text>
+    <text x="665" y="446" font-weight="700">CU-08</text><text x="665" y="461">Registrar eventos y emergencias</text>
+    <text x="665" y="516" font-weight="700">CU-13</text><text x="665" y="531">Consultar mis turnos y horas</text>
+  </g>
+
+  <!-- CU-11 incluye CU-10: no se calcula con registros pendientes (FA-1) -->
+  <line x1="370" y1="594" x2="370" y2="634" stroke="#1f2933" stroke-width="1.3" stroke-dasharray="5 4" marker-end="url(#flecha)"/>
+  <text x="380" y="619" font-size="12" fill="#1f2933">«include»</text>
+
+  <!-- Agrupación por plataforma -->
+  <text x="665" y="345" text-anchor="middle" font-size="11" fill="#52606d" letter-spacing="1">APP MÓVIL</text>
+  <text x="370" y="830" text-anchor="middle" font-size="11" fill="#52606d">CU-06: el supervisor propone en la web y el trabajador confirma en la app</text>
+</svg>

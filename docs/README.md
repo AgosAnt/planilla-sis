@@ -2,9 +2,11 @@
 
 | Recurso | Ubicación |
 |---|---|
-| Entregable Fase 1 (arquitectura técnica) | `arquitectura-tecnica.md` (este mismo directorio) |
+| Entregable de arquitectura técnica (RACI planificada y ejecutada, casos de uso, base de datos, API, seguridad) | `arquitectura-tecnica.md` (este mismo directorio) |
+| Manual de despliegue (Supabase, Azure, GitHub Actions, APK) | `manual-despliegue.md` |
+| Diagrama UML de casos de uso | `diagramas/casos-de-uso.svg` |
 | Registros de decisiones de arquitectura (ADR) | `adr/` (ADR-001: autenticación propia) |
-| Contrato de la API (OpenAPI 3.1, borrador v0.1) | `openapi.yaml` |
+| Contrato de la API (OpenAPI 3.1) | `openapi.yaml` |
 | Reglas de cálculo de la planilla | `reglas-calculo.md` |
 
 Un ADR es un documento corto que registra una decisión técnica importante, con su contexto, alternativas y consecuencias.
