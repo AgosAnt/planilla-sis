@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { rutasService, type Ruta } from '../servicios/rutas';
+import GeocercaRuta from '../components/GeocercaRuta';
 
 export default function Rutas() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -10,6 +11,7 @@ export default function Rutas() {
   const [editingRuta, setEditingRuta] = useState<Ruta | null>(null);
   const [codigoInput, setCodigoInput] = useState('');
   const [nombreInput, setNombreInput] = useState('');
+  const [geocercaRuta, setGeocercaRuta] = useState<Ruta | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -148,7 +150,15 @@ export default function Rutas() {
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </button>
-                      <button 
+                      <button
+                        onClick={() => setGeocercaRuta(ruta)}
+                        disabled={!ruta.id}
+                        className="p-2 bg-green-500/10 text-green-600 rounded-lg hover:bg-green-500/20 transition-colors disabled:opacity-40"
+                        title="Geocerca (dónde se puede marcar)"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                      </button>
+                      <button
                         onClick={() => handleDarDeBaja(ruta)}
                         className="p-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors" 
                         title="Dar de baja"
@@ -163,6 +173,8 @@ export default function Rutas() {
           </table>
         )}
       </div>
+
+      {geocercaRuta && <GeocercaRuta ruta={geocercaRuta} onCerrar={() => setGeocercaRuta(null)} />}
 
       {/* --- MODAL --- */}
       {isModalOpen && (
