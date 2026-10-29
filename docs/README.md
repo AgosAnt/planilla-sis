@@ -3,7 +3,6 @@
 | Recurso | Ubicación |
 |---|---|
 | Entregable de arquitectura técnica (RACI planificada y ejecutada, casos de uso, base de datos, API, seguridad) | `arquitectura-tecnica.md` (este mismo directorio) |
-| Versión resumida del entregable (la que se entrega) | `arquitectura-tecnica-resumen.md` |
 | Manual de despliegue (Supabase, Azure, GitHub Actions, APK) | `manual-despliegue.md` |
 | Diagrama UML de casos de uso | `diagramas/casos-de-uso.svg` |
 | Registros de decisiones de arquitectura (ADR) | `adr/` (ADR-001: autenticación propia) |
