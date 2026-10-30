@@ -16,6 +16,8 @@ export const MENU: ItemMenu[] = [
   { ruta: '/rutas', etiqueta: 'Rutas', roles: ADMIN_Y_SUPERVISOR },
   { ruta: '/turnos', etiqueta: 'Turnos', roles: ADMIN_Y_SUPERVISOR },
   { ruta: '/supervision', etiqueta: 'Supervisión', roles: ADMIN_Y_SUPERVISOR },
+  { ruta: '/trabajadores', etiqueta: 'Trabajadores', roles: ADMIN_Y_SUPERVISOR },
+  { ruta: '/emergencias', etiqueta: 'Emergencias', roles: ADMIN_Y_SUPERVISOR },
   { ruta: '/planillas', etiqueta: 'Planillas', roles: ADMIN_Y_SUPERVISOR },
   { ruta: '/pagos', etiqueta: 'Pagos', roles: SOLO_ADMIN },
   { ruta: '/admin/usuarios', etiqueta: 'Usuarios', roles: SOLO_ADMIN },
