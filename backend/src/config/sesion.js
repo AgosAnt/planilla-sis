@@ -3,9 +3,8 @@
 export const COOKIE_ACCESS = 'psis_access';
 export const COOKIE_REFRESH = 'psis_refresh';
 
-// ADR-001 pide un access token de ~15 min con refresh. Se mantiene en 2 h hasta que la web y el móvil
-// renueven solos con POST /auth/refresh; después baja a 15 min.
-export const DURACION_ACCESS_SEG = 2 * 60 * 60;
+// ADR-001: access token de 15 min; la web y el móvil lo renuevan solos con POST /auth/refresh.
+export const DURACION_ACCESS_SEG = 15 * 60;
 
 // Refresh token (ADR-001: 7 a 14 días). Cada renovación lo rota y vuelve a contar los 7 días.
 export const DURACION_REFRESH_SEG = 7 * 24 * 60 * 60;
