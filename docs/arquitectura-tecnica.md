@@ -69,17 +69,18 @@ Elaborada con base en la participación de cada integrante durante el desarrollo
 | 9 | Frontend: shell SPA y guardas | **A/R** | R | R | I | I | C |
 | 10 | Frontend: rutas, turnos y supervisión | **A** | R | C | C | I | I |
 | 11 | Frontend: planillas y pagos | **A/R** | C | C | C | I | I |
-| 12 | Autenticación propia y sesión | C | I | R | C | R | **A/R** |
+| 12 | Autenticación propia y sesión | C | R | R | C | R | **A/R** |
 | 13 | Seguridad OWASP | C | I | R | C | C | **A/R** |
 | 14 | API móvil y sincronización offline | I | I | **A/R** | R | C | C |
 | 15 | App móvil | I | I | **A/R** | C | I | C |
 | 16 | Pruebas | C | C | R | R | C | **A/R** |
 | 17 | CI/CD y secretos | I | I | R | I | C | **A/R** |
 | 18 | Documentación técnica | C | C | **A/R** | R | R | R |
-| 19 | Estados del trabajador (CU-03) | I | I | C | **A** | C | R |
-| 20 | Emergencias (CU-08) | I | I | R | **A** | I | R |
-| 21 | Usuarios, auditoría y permisos (CU-02, CU-14) | C | I | R | I | C | **A/R** |
-| 22 | Geocerca de las rutas (CU-04) | I | I | R | **A/R** | R | I |
+| 19 | Estados del trabajador (CU-03) | I | R | C | **A** | C | R |
+| 20 | Emergencias (CU-08) | I | R | R | **A** | I | R |
+| 21 | Usuarios, auditoría y permisos (CU-02, CU-14) | R | I | R | I | C | **A/R** |
+| 22 | Geocerca de las rutas (CU-04) | I | R | R | **A/R** | R | I |
+| 23 | Frontend: parámetros, feriados y tarifas (CU-15) | **A/R** | C | C | C | I | I |
 
 **Cambios respecto al plan**
 
@@ -88,7 +89,7 @@ Elaborada con base en la participación de cada integrante durante el desarrollo
 | 11 | Samuel construyó las pantallas de planillas y pagos | Stefany tenía a su cargo rutas, supervisión, estados, turnos y panel |
 | 12 | La autenticación la trabajaron Daniel y Jonatan | Marco se concentró en rutas, turnos y cálculo |
 | 15 | La app móvil la desarrolló el líder técnico | El equipo quedó en 6 integrantes |
-| 19–22 | Entregables nuevos | Se identificaron al implementar CU-02, CU-03, CU-04, CU-08 y CU-14 |
+| 19–23 | Entregables nuevos | Se identificaron al implementar CU-02, CU-03, CU-04, CU-08, CU-14 y CU-15 |
 
 ### A.4 Desglose de entregables por integrante
 
@@ -98,7 +99,7 @@ Elaborada con base en la participación de cada integrante durante el desarrollo
 | Marco | Backend: rutas, asignaciones, turnos, registros, motor de cálculo, aprobación y pagos, geocerca | C.3, E |
 | Sofía | Base de datos: 3FN, JSONB, migraciones M002–M012, RLS | D |
 | Daniel | Autenticación, sesiones, OWASP, usuarios, estados y emergencias | F |
-| Samuel | Shell de la SPA, guardas, planillas y pagos | B.2, B.3 |
+| Samuel | Shell de la SPA, guardas, planillas y pagos, usuarios, auditoría y parámetros | B.2, B.3 |
 | Stefany | Módulos de UI: rutas, supervisión, geocerca, estados, turnos, panel | B.4, C |
 
 ---
@@ -146,7 +147,7 @@ flowchart LR
 | Máquina de estados | Planilla, registro de tiempo, acuerdo de turno | Transiciones explícitas y auditables |
 | Idempotencia (`Idempotency-Key`, `client_uuid`) | Escrituras del móvil | Los reintentos por mala señal no duplican registros |
 | Defensa en profundidad | API + RLS | Un fallo de autorización en la API no expone datos |
-| Bitácora *append-only* y *snapshot* inmutable | `auditoria`, `eventos_diarios`, `planilla_detalle` | Trazabilidad; los montos aprobados no cambian si cambia una tarifa |
+| Bitácora *append-only* y *snapshot* inmutable | `auditoria`, `planilla_detalle` | Trazabilidad; los montos aprobados no cambian si cambia una tarifa |
 
 ### B.2 SPA o MPA
 
@@ -156,7 +157,7 @@ flowchart LR
 | Flujo de planilla en varios pasos | El estado vive en la API; la vista no se reconstruye | Se reconstruye en cada página | **SPA** |
 | Reutilizar la API del móvil | Mismo contrato JSON | Requiere además vistas en servidor | **SPA** |
 | SEO | Débil | Fuerte | No aplica: es un panel privado con inicio de sesión |
-| Carga inicial y superficie XSS | Mayores | Menores | MPA, mitigable con *code splitting* y CSP estricta |
+| Carga inicial y superficie XSS | Mayores | Menores | MPA. En un panel interno se acepta la carga inicial; XSS se mitiga con CSP estricta |
 
 **Decisión: SPA.** Los casos de uso son intensivos en interacción, no se necesita SEO y la API REST ya es obligatoria para el móvil.
 
@@ -164,8 +165,8 @@ flowchart LR
 
 ### B.3 Enrutamiento con History API
 
-1. **Rutas limpias** sin `#` (`/planillas/2026-09`) con `pushState`, `replaceState` y `popstate`; el backend devuelve `index.html` para cualquier ruta que no sea un archivo ni `/api/*`, así funcionan los enlaces directos y el refresco.
-2. **Estado compartible en la URL:** filtros y paginación como *query params* (`/supervision?ruta=R-12&fecha=2026-09-21`).
+1. **Rutas limpias** sin `#` (`/planillas`, `/admin/usuarios`) con `pushState`, `replaceState` y `popstate`; el backend devuelve `index.html` para cualquier ruta que no sea un archivo ni `/api/*`, así funcionan los enlaces directos y el refresco.
+2. **Estado compartible en la URL:** la planilla seleccionada en Pagos viaja como *query param* (`/pagos?planilla=<id>`), por lo que la vista se puede recargar o enlazar.
 3. **Guardas por autenticación y rol** antes de mostrar la vista. Son solo experiencia de usuario: la autorización real está en la API y en RLS.
 4. **Nada sensible** en la URL ni en `history.state`.
 
@@ -173,10 +174,12 @@ flowchart LR
 | --- | --- | --- |
 | `/login` | Inicio de sesión | Público |
 | `/panel` | Resumen | Admin, Supervisor |
-| `/rutas`, `/rutas/:rutaId` | Rutas, geocerca y asignaciones | Admin, Supervisor |
-| `/turnos` | Turnos y acuerdos | Admin, Supervisor |
-| `/supervision` | Registros de tiempo y emergencias | Admin, Supervisor |
-| `/planillas`, `/planillas/:id` | Períodos, cálculo y verificación | Admin, Supervisor |
+| `/rutas` | Rutas y geocerca | Admin, Supervisor |
+| `/turnos` | Asignaciones, turnos y acuerdos | Admin, Supervisor |
+| `/supervision` | Registros de tiempo | Admin, Supervisor |
+| `/trabajadores` | Estados del trabajador | Admin, Supervisor |
+| `/emergencias` | Eventos y emergencias | Admin, Supervisor |
+| `/planillas` | Períodos, cálculo, verificación y aprobación | Admin, Supervisor |
 | `/pagos` | Pagos | Admin |
 | `/admin/usuarios`, `/admin/parametros`, `/auditoria` | Administración | Admin |
 | `/403`, `*` | Acceso denegado / no encontrado | Autenticado |
@@ -263,31 +266,26 @@ Ramas `main` / `develop` / `feature/*`; todo cambio entra por *pull request* a `
 | Campo | Descripción |
 | --- | --- |
 | **Actores** | Supervisor (calcula y verifica), Administrador (aprueba); secundario: motor de cálculo |
-| **Precondiciones** | Usuario autenticado con rol autorizado; período existente y abierto; tarifas y parámetros vigentes; sin registros `PENDIENTE` en el alcance |
-| **Flujo principal** | 1. El supervisor abre el período y elige el alcance. 2. El sistema lista excepciones (registros pendientes, jornadas sin salida). 3. El supervisor las resuelve (CU-10). 4. Ejecuta **Calcular**: en una transacción el backend lee registros, descansos, tarifas y parámetros, calcula horas ordinarias y extra y montos por trabajador, y guarda `planilla_detalle` con el desglose en JSONB → `CALCULADA`. 5. Otro supervisor **verifica** → `VERIFICADA`. 6. El administrador **aprueba** con reautenticación → `APROBADA`; los montos se congelan. 7. Cada transición queda en `auditoria`. |
-| **Flujos alternos** | FA-1 hay registros pendientes: se bloquea el cálculo y se listan. FA-2 el verificador o el administrador rechaza con motivo → `RECHAZADA` → se corrige y se recalcula. FA-3 se corrige un registro después de calcular: la planilla vuelve a `BORRADOR`. |
-| **Excepciones** | `403` sin rol o fuera de su ruta · `409 SEGREGACION_FUNCIONES` si la misma persona calcula y verifica o aprueba · `422` falta tarifa o parámetro · `409` cálculo concurrente · fallo de BD: *rollback* completo |
-| **Postcondiciones** | Éxito: planilla `APROBADA`, *snapshot* inmutable, habilita CU-12 (pago). Fallo: la planilla queda en su último estado válido y el intento se audita. |
+| **Precondiciones** | Usuario autenticado con rol autorizado; período existente que no esté `CERRADO` ni `PAGADO`; tarifas vigentes para cada trabajador; ninguna jornada del período pendiente de validar o sin salida |
+| **Flujo principal** | 1. El supervisor o el administrador selecciona el período y, si corresponde, la ruta; la planilla general (sin ruta) solo la crea el administrador. 2. Ejecuta **Calcular**: en una transacción, el backend lee jornadas, descansos, tarifas y parámetros, calcula horas ordinarias y extra y montos por trabajador, y guarda `planilla_detalle` con el desglose en JSONB; la planilla queda `CALCULADA`. 3. Un supervisor distinto de quien calculó **verifica** y la planilla queda `VERIFICADA`. 4. El administrador **aprueba** con reautenticación e indica el total esperado; la planilla queda `APROBADA` y se guarda `hash_integridad`. 5. Cada transición queda en `auditoria`. |
+| **Flujos alternos** | FA-1 hay jornadas pendientes o sin salida: no se calcula, se informa cuáles son y se validan (CU-10). FA-2 se corrige un dato antes de verificar: la planilla se recalcula mientras siga `CALCULADA`. |
+| **Excepciones** | `403` sin rol o fuera de su alcance · `409 JORNADAS_PENDIENTES` · `409 SEGREGACION_FUNCIONES` si la misma persona calcula y verifica o aprueba · `409 PLANILLA_NO_RECALCULABLE` si ya no está `CALCULADA` · `409 TOTAL_NO_COINCIDE` si el total esperado cambió · `422 TARIFA_FALTANTE` · fallo de BD: *rollback* completo |
+| **Postcondiciones** | Éxito: planilla `APROBADA`, *snapshot* inmutable, habilita CU-12 (pago). Fallo: la transacción se revierte y la planilla queda en su último estado válido. |
 
 ```mermaid
 stateDiagram-v2
-  [*] --> BORRADOR
-  BORRADOR --> CALCULADA: calcular()
-  CALCULADA --> BORRADOR: corregir registros
+  [*] --> CALCULADA: calcular()
+  CALCULADA --> CALCULADA: recalcular()
   CALCULADA --> VERIFICADA: verificar() [supervisor distinto]
-  CALCULADA --> RECHAZADA: rechazar(motivo)
-  VERIFICADA --> APROBADA: aprobar() [admin distinto]
-  VERIFICADA --> RECHAZADA: rechazar(motivo)
-  RECHAZADA --> BORRADOR: reabrir
+  VERIFICADA --> APROBADA: aprobar() [administrador distinto]
   APROBADA --> PAGADA: registrar pago
-  PAGADA --> CERRADA: cerrar período
 ```
 
 **Reglas de negocio**
 
 - Horas efectivas = salida − ingreso − descansos no remunerados.
 - Las horas que exceden la jornada ordinaria se pagan como extra, con el factor definido en los parámetros.
-- Los montos se guardan como `numeric(12,2)`.
+- Los montos se guardan en columnas `NUMERIC`, nunca como punto flotante.
 - Calcular, verificar y aprobar deben hacerlo personas distintas (restricción CHECK en la base y validación en la API).
 - Una planilla aprobada no se puede modificar.
 
@@ -329,7 +327,7 @@ El prototipo tenía 6 tablas (`Usuarios`, `Rutas`, `Jornadas`, `Eventos_Ruta`, `
 | --- | --- |
 | Sin credenciales ni sesiones; la app se conectaba como `postgres` con la contraseña en el código | `email` + `password_hash`, tabla `sesiones_refresh`, rol `app_user` sin superusuario |
 | `TIMESTAMP` sin zona horaria | Todo en `timestamptz`; el cliente envía UTC (ISO 8601) y se muestra en `America/Guatemala` |
-| `ON DELETE CASCADE` borraba el historial de pagos al borrar un usuario | FK con `RESTRICT` y baja lógica (`activo`) |
+| `ON DELETE CASCADE` borraba el historial de pagos al borrar un usuario | Sin borrado en cascada del historial; baja lógica con `activo` |
 | Sin restricciones: varias jornadas abiertas, duplicados por reintentos | Índice único de jornada abierta, `client_uuid` único por trabajador |
 | `Planillas` mezclaba período y detalle, sin flujo de aprobación ni pagos | `periodos_planilla`, `planillas`, `planilla_detalle`, `pagos` con segregación de funciones |
 | Sin RLS | RLS activo en las 27 tablas |
@@ -400,13 +398,13 @@ erDiagram
 | 13 | `tipos_descanso` | `id smallint` | — | `remunerado boolean` |
 | 14 | `descansos` | `id uuid` | → registros_tiempo, tipos_descanso | CHECK(`fin_at > inicio_at`) |
 | 15 | `eventos_diarios` | `id uuid` | → perfiles, (registro, trabajador) → registros_tiempo | `tipo_evento`, `estado_atencion`, **JSONB** `payload` |
-| 16 | `tarifas_trabajador` | `id uuid` | → perfiles | `valor_hora`, `vigente_desde`, `vigente_hasta` |
-| 17 | `parametros_pago` | `id smallint` | — | `clave` UNIQUE + vigencia |
+| 16 | `tarifas_trabajador` | `id uuid` | → perfiles | `monto_hora`, `monto_hora_extra`, `vigente_desde`, `vigente_hasta` |
+| 17 | `parametros_pago` | `id smallint` (fila única) | — | Factores de hora extra y nocturna, tolerancia de llegada, regla de redondeo |
 | 18 | `periodos_planilla` | `id uuid` | — | `fecha_inicio`, `fecha_fin`, `estado` |
 | 19 | `planillas` | `id uuid` | → periodos, rutas, perfiles (calcula, verifica, aprueba) | `estado`; CHECK de segregación |
 | 20 | `planilla_detalle` | `id uuid` | → planillas, perfiles | horas, montos, **JSONB** `calculo_detalle` |
 | 21 | `conceptos_pago` | `id smallint` | — | `tipo` (BONIFICACION / DEDUCCION) |
-| 22 | `detalle_conceptos` | `id uuid` | → planilla_detalle, conceptos_pago | `monto numeric(12,2)` |
+| 22 | `detalle_conceptos` | `id uuid` | → planilla_detalle, conceptos_pago | `monto` |
 | 23 | `metodos_pago` | `id smallint` | — | `nombre` |
 | 24 | `pagos` | `id uuid` | → planilla_detalle, metodos_pago | `monto`, `referencia`, `pagado_at` |
 | 25 | `auditoria` | `id bigint` | `actor_id` → perfiles | **JSONB** `datos_antes`, `datos_despues`, `contexto` |
@@ -428,7 +426,7 @@ Los datos que entran al cálculo del pago están en columnas tipadas; JSONB se u
 | --- | --- | --- |
 | `eventos_diarios.payload` | Datos variables de cada evento del móvil | Objeto JSON (CHECK `jsonb_typeof = 'object'`), versionado con `esquema_version`, índice GIN |
 | `planilla_detalle.calculo_detalle` | Desglose del cálculo por jornada | Objeto JSON generado por el motor de cálculo |
-| `auditoria.datos_antes` / `datos_despues` / `contexto` | Estado anterior y nuevo del registro; IP, agente y `request_id` | Objetos JSON; índice GIN en `contexto` |
+| `auditoria.datos_antes` / `datos_despues` | Estado anterior y nuevo del registro | Objetos JSON. La columna `contexto` (JSONB) queda reservada para datos adicionales |
 
 Ejemplo de `payload` de un evento `PROBLEMA_VEHICULO`:
 
@@ -436,7 +434,7 @@ Ejemplo de `payload` de un evento `PROBLEMA_VEHICULO`:
 { "precision_m": 12, "descripcion": "Llanta ponchada en el km 34", "dispositivo": { "so": "Android 15", "app": "1.4.2" } }
 ```
 
-Reglas: la API valida el contenido y limita su tamaño; la web lo muestra siempre como texto, nunca como HTML (XSS); no se guardan datos personales innecesarios.
+Reglas: la API valida la estructura del lote y limita su tamaño a 256 KB; la web muestra el contenido siempre como texto, nunca como HTML (XSS).
 
 ### D.4 Políticas de Seguridad a Nivel de Fila (RLS)
 
@@ -446,23 +444,31 @@ RLS está **activo en las 27 tablas** y es la segunda barrera después de la aut
 select set_config('app.jwt_claims', '{"sub":"5b1c…","rol":"supervisor"}', true);
 ```
 
-Las políticas los leen con funciones de `M008_rls_registros_eventos.sql`: `app.usuario_actual()` (equivalente propio a `auth.uid()` de Supabase), `app.rol_actual()`, `app.supervisa_trabajador(id)` y `app.supervisa_ruta(id)`. La llave `service_role` y el rol `postgres` de Supabase saltan RLS: la aplicación no los usa; solo el DBA, desde el panel, para aplicar migraciones.
+Las políticas los leen con funciones de `M008_rls_registros_eventos.sql`: `app.usuario_actual()` (equivalente propio a `auth.uid()` de Supabase), `app.rol_actual()`, `app.supervisa_trabajador(id)` y `app.gestiona_ruta(id)`. La llave `service_role` y el rol `postgres` de Supabase saltan RLS: la aplicación no los usa; solo el DBA, desde el panel, para aplicar migraciones.
 
 | Tabla | Trabajador | Supervisor | Administrador |
 | --- | --- | --- | --- |
-| `perfiles` | SELECT su fila | SELECT de trabajadores de sus rutas | ALL |
-| Catálogos (`roles`, `permisos`, `turnos`, `tipos_descanso`, `metodos_pago`, …) | SELECT | SELECT | ALL |
-| `historial_estado_trabajador` | SELECT propio | SELECT/INSERT de sus trabajadores | ALL |
-| `rutas`, `ruta_puntos` | SELECT de su ruta asignada | SELECT/UPDATE de las que supervisa | ALL |
-| `asignaciones_ruta` | SELECT propias | ALL sobre sus rutas | ALL |
-| `acuerdos_turno` | SELECT propios; aceptar o rechazar | Confirmar los de sus trabajadores | ALL |
-| `registros_tiempo`, `descansos` | SELECT propios; INSERT propio en `PENDIENTE` | SELECT/UPDATE (validar) de sus trabajadores | ALL |
-| `eventos_diarios` | INSERT y SELECT propios; sin UPDATE/DELETE | SELECT; UPDATE solo de la atención | Igual que supervisor, sin límite de ruta |
-| `tarifas_trabajador` | SELECT propia | No | ALL |
-| `periodos_planilla`, `planillas` | No | SELECT/UPDATE de sus rutas (transiciones permitidas) | ALL |
-| `planilla_detalle`, `detalle_conceptos` | SELECT propio si está verificada o aprobada | SELECT de sus trabajadores | ALL |
-| `pagos` | SELECT propios | No | ALL |
-| `auditoria` | No | No | Solo SELECT; nadie modifica ni borra |
+| `perfiles` | SELECT su fila | SELECT de los trabajadores | SELECT, INSERT, UPDATE |
+| `roles`, `permisos`, `rol_permiso`, `estados_trabajador`, `tipos_descanso`, `turnos`, `metodos_pago`, `conceptos_pago` | SELECT | SELECT | SELECT |
+| `feriados` | SELECT | SELECT | SELECT, INSERT, DELETE |
+| `parametros_pago` | SELECT | SELECT | SELECT, UPDATE |
+| `historial_estado_trabajador` | SELECT propio | SELECT, INSERT, UPDATE de sus trabajadores | SELECT, INSERT, UPDATE |
+| `rutas` | SELECT | SELECT; INSERT y UPDATE de las que supervisa | SELECT, INSERT, UPDATE |
+| `ruta_puntos` | SELECT | SELECT; ALL de las rutas que gestiona | ALL |
+| `asignaciones_ruta` | SELECT propias | SELECT, INSERT, UPDATE de sus rutas | SELECT, INSERT, UPDATE |
+| `acuerdos_turno` | SELECT propios; aceptar o rechazar | SELECT, INSERT, UPDATE de sus asignaciones | SELECT, INSERT, UPDATE |
+| `registros_tiempo` | SELECT propios; INSERT en `PENDIENTE`; UPDATE mientras siga `PENDIENTE` | SELECT, UPDATE de sus trabajadores | ALL |
+| `descansos` | SELECT e INSERT en sus registros | SELECT de sus trabajadores | ALL |
+| `eventos_diarios` | SELECT e INSERT propios | SELECT, UPDATE de sus trabajadores | SELECT, UPDATE |
+| `tarifas_trabajador` | SELECT propia | SELECT de sus trabajadores | SELECT, INSERT, UPDATE |
+| `periodos_planilla` | Sin acceso | SELECT, UPDATE | SELECT, INSERT, UPDATE |
+| `planillas` | Sin acceso | SELECT, INSERT, UPDATE | SELECT, INSERT, UPDATE |
+| `planilla_detalle`, `detalle_conceptos` | SELECT propio | ALL | ALL |
+| `pagos` | SELECT propios | Sin acceso | SELECT, INSERT, UPDATE |
+| `auditoria` | INSERT de sus acciones | INSERT de sus acciones | SELECT; INSERT de sus acciones |
+| `sesiones_refresh` | ALL de las propias | ALL de las propias | ALL de las propias |
+
+En `planillas` y `planilla_detalle`, RLS permite el acceso por rol; la restricción por ruta y las transiciones de estado las valida la API. Ningún rol tiene política de UPDATE o DELETE sobre `auditoria`.
 
 Ejemplo (`registros_tiempo`):
 
@@ -557,7 +563,7 @@ Respuesta `200`:
 { "id": "8c11…", "estado": "APROBADA", "aprobada_por": "f2b0…", "hash_integridad": "sha256:9c1f…" }
 ```
 
-`409 TOTAL_DESACTUALIZADO` si alguien recalculó y el total cambió; `409 SEGREGACION_FUNCIONES` si quien aprueba calculó o verificó.
+`409 TOTAL_NO_COINCIDE` si el total esperado no coincide con el de la planilla; `409 SEGREGACION_FUNCIONES` si quien aprueba calculó o verificó.
 
 ---
 
@@ -576,10 +582,10 @@ Respuesta `200`:
 
 | Cookie | Contiene | Vida | Viaja a | Atributos |
 | --- | --- | --- | --- | --- |
-| `psis_access` | JWT firmado (`sub`, `rol`, `iss`, `aud`) | **2 h** hoy; **15 min** cuando la web renueve sola | Todo `/` | `HttpOnly; SameSite=Lax; Secure` |
+| `psis_access` | JWT firmado (`sub`, `rol`, `iss`, `aud`) | **15 min** | Todo `/` | `HttpOnly; SameSite=Lax; Secure` |
 | `psis_refresh` | Token aleatorio (en la base solo su *hash*) | **7 días**, se reinician en cada renovación | Solo `/api/v1/auth` | `HttpOnly; SameSite=Strict; Secure` |
 
-El access es corto porque viaja en cada petición y el servidor no lo consulta en la base. El refresh es largo, pero casi nunca viaja, se reemplaza en cada uso (rotación) y se puede revocar.
+El access es corto porque viaja en cada petición y el servidor no lo consulta en la base; solo revisa en memoria si su sesión ya se cerró. El refresh es largo, pero casi nunca viaja, se reemplaza en cada uso (rotación) y se puede revocar.
 
 ```mermaid
 sequenceDiagram
@@ -589,7 +595,7 @@ sequenceDiagram
   participant DB as sesiones_refresh
   N->>API: POST /auth/session (correo, contraseña)
   API->>DB: INSERT sesión A (hash de R1, expira en 7 días)
-  API-->>N: Set-Cookie psis_access=AT1 (2 h, Path=/) y psis_refresh=R1 (7 días, Path=/api/v1/auth)
+  API-->>N: Set-Cookie psis_access=AT1 (15 min, Path=/) y psis_refresh=R1 (7 días, Path=/api/v1/auth)
   loop Mientras AT1 esté vigente
     N->>API: GET/POST /api/v1/... (envía solo psis_access + X-CSRF-Token)
     API-->>N: 200 (verifica firma y exp, sin consultar sesiones_refresh)
@@ -616,7 +622,7 @@ sequenceDiagram
   API-->>N: borra las dos cookies
 ```
 
-**Estado de la implementación.** El servidor implementa el ciclo completo. La app móvil renueva la sesión automáticamente: cuando recibe un `401`, llama a `/auth/refresh` y repite la petición. La web todavía regresa al inicio de sesión cuando vence el access token. La renovación automática en la web está en integración; cuando se complete, la duración del access token se reducirá de 2 h a 15 min.
+**Renovación automática.** La web y la app móvil renuevan la sesión de la misma forma: cuando reciben un `401`, llaman a `/auth/refresh` y repiten la petición una vez. Si varias peticiones de la web reciben `401` al mismo tiempo, comparten una sola renovación.
 
 | Tema | Decisión |
 | --- | --- |
@@ -624,7 +630,7 @@ sequenceDiagram
 | Firma | JWT HS256 con `JWT_SECRET` en variables de entorno; se verifican firma, `exp`, `iss` y `aud` |
 | Refresh | Solo su *hash* en `sesiones_refresh`; rotación en cada uso; reúso = revocar todas las sesiones |
 | Operaciones críticas | Aprobar planilla y registrar pago piden reautenticación con contraseña (token de un solo uso) |
-| Revocación | Logout, cambio de contraseña o baja cierran las sesiones; se comprueba `perfiles.activo` en cada petición |
+| Revocación | Cerrar sesión revoca esa sesión; cambiar la contraseña revoca todas las del usuario. La baja y el cambio de rol se aplican al renovar: el access vigente sigue válido hasta su vencimiento (máximo 15 min) y un usuario dado de baja ya no puede renovar |
 | Móvil | Tokens cifrados con el Android Keystore; al no usar cookies, CSRF no aplica |
 | MFA (TOTP) | Diferido a una fase posterior; la reautenticación cubre las acciones de mayor impacto |
 
