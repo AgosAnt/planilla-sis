@@ -515,23 +515,28 @@ El contrato completo está en [`docs/openapi.yaml`](https://github.com/AgosAnt/p
 
 ### E.2 Matriz de endpoints principales
 
-| Verbo | Ruta | Rol | Cabeceras | Éxito | Errores |
-| --- | --- | --- | --- | --- | --- |
-| `POST` | `/auth/session` | Público | `Content-Type` | `200` | `400`, `401`, `423` |
-| `POST` | `/auth/refresh` | Con refresh token | Cookie de refresh (web) / cuerpo y `X-Client-Type: mobile` (móvil) | `200` | `401`, `409` |
-| `POST` | `/auth/logout` | Autenticado | Cookie + `X-CSRF-Token` / `Bearer` | `204` | `401`, `403` |
-| `GET` | `/me` | Autenticado | Cookie / `Bearer` | `200` | `401` |
-| `POST` | `/admin/usuarios` | Administrador | Cookie + `X-CSRF-Token` | `201` | `400`, `401`, `403`, `409`, `422` |
-| `POST` | `/registros-tiempo/ingreso` | Trabajador | `Bearer` + `Idempotency-Key` | `201` (`200` si es reintento) | `400`, `401`, `403`, `409`, `422` |
-| `PATCH` | `/registros-tiempo/{id}/salida` | Trabajador | `Bearer` + `Idempotency-Key` | `200` | `400`, `401`, `403`, `404`, `409`, `422` |
-| `POST` | `/eventos:batch` | Trabajador | `Bearer` + `Idempotency-Key` | `207` | `400`, `401`, `403`, `413` |
-| `PATCH` | `/registros-tiempo/{id}/validacion` | Supervisor, Admin | Cookie + `X-CSRF-Token` | `200` | `400`, `401`, `403`, `404`, `409`, `422` |
-| `POST` | `/rutas/{id}/asignaciones` | Supervisor, Admin | Cookie + `X-CSRF-Token` | `201` | `400`, `401`, `403`, `404`, `409`, `422` |
-| `POST` | `/planillas` | Supervisor, Admin | Cookie + `X-CSRF-Token` | `201` | `400`, `401`, `403`, `404`, `409`, `422` |
-| `POST` | `/planillas/{id}/calcular` | Supervisor, Admin | Cookie + `X-CSRF-Token` | `200` | `400`, `401`, `403`, `404`, `409`, `422` |
-| `POST` | `/planillas/{id}/verificar` | Supervisor | Cookie + `X-CSRF-Token` | `200` | `400`, `401`, `403`, `404`, `409`, `422` |
-| `POST` | `/planillas/{id}/aprobar` | Administrador | Cookie + `X-CSRF-Token` + `X-Reauth-Token` | `200` | `400`, `401`, `403`, `404`, `409` |
-| `POST` | `/planillas/{id}/pagos` | Administrador | Cookie + `X-CSRF-Token` + `X-Reauth-Token` + `Idempotency-Key` | `201` | `400`, `401`, `403`, `404`, `409`, `422` |
+Todas las rutas parten de `/api/v1`. En el payload, `?` indica un campo opcional. Los errores se responden en `application/problem+json` (§E.1).
+
+| Verbo | Ruta | Rol | Cabeceras requeridas | Payload JSON (entrada) | Éxito | Errores |
+| --- | --- | --- | --- | --- | --- | --- |
+| `POST` | `/auth/session` | Público | `Content-Type` | `{ email, password }` | `200` | `400`, `401`, `423`, `500` |
+| `POST` | `/auth/refresh` | Con refresh token | Web: cookie de refresh. Móvil: `Content-Type`, `X-Client-Type: mobile` | Web: sin cuerpo. Móvil: `{ refresh_token }` | `200` | `401`, `409`, `500` |
+| `POST` | `/auth/logout` | Autenticado | Web: cookie + `X-CSRF-Token`. Móvil: `Authorization` | Sin cuerpo | `204` | `401`, `403`, `500` |
+| `GET` | `/me` | Autenticado | Cookie o `Authorization` | Sin cuerpo | `200` | `401`, `500` |
+| `POST` | `/admin/usuarios` | Administrador | Cookie + `X-CSRF-Token` + `Content-Type` | `{ email, nombres, apellidos, rol, codigo_empleado, documento }` | `201` | `400`, `401`, `403`, `409`, `422`, `500` |
+| `GET` | `/rutas` | Autenticado | Cookie o `Authorization` | Sin cuerpo; `?page&page_size` | `200` | `400`, `401`, `500` |
+| `PUT` | `/rutas/{id}/puntos` | Supervisor, Admin | Cookie + `X-CSRF-Token` + `Content-Type` | `{ puntos: [{ nombre, latitud, longitud, radio_m }] }` | `200` | `400`, `401`, `403`, `404`, `500` |
+| `POST` | `/rutas/{id}/asignaciones` | Supervisor, Admin | Cookie + `X-CSRF-Token` + `Content-Type` | `{ trabajador_id, fecha_inicio, fecha_fin?, turno_id }` | `201` | `400`, `401`, `403`, `404`, `409`, `422`, `500` |
+| `POST` | `/registros-tiempo/ingreso` | Trabajador | `Authorization` + `Idempotency-Key` + `Content-Type` | `{ client_uuid, asignacion_id, ingreso_at, ubicacion?, dispositivo? }` | `201` (`200` si es reintento) | `400`, `401`, `403`, `409`, `422`, `500` |
+| `PATCH` | `/registros-tiempo/{id}/salida` | Trabajador | `Authorization` + `Idempotency-Key` + `Content-Type` | `{ salida_at, ubicacion? }` | `200` | `400`, `401`, `403`, `404`, `409`, `422`, `500` |
+| `PATCH` | `/registros-tiempo/{id}/validacion` | Supervisor, Admin | Cookie + `X-CSRF-Token` + `Content-Type` | `{ estado_validacion, observaciones? }` | `200` | `400`, `401`, `403`, `404`, `409`, `422`, `500` |
+| `POST` | `/eventos:batch` | Trabajador | `Authorization` + `Idempotency-Key` + `Content-Type` | `{ eventos: [{ client_uuid, tipo_evento, esquema_version, ocurrido_en, registro_tiempo_id?, latitud?, longitud?, payload? }] }` | `207` | `400`, `401`, `403`, `413`, `500` |
+| `POST` | `/planillas` | Supervisor, Admin | Cookie + `X-CSRF-Token` + `Content-Type` | `{ periodo_id, ruta_id? }` | `201` | `400`, `401`, `403`, `404`, `409`, `422`, `500` |
+| `POST` | `/planillas/{id}/calcular` | Supervisor, Admin | Cookie + `X-CSRF-Token` | Sin cuerpo | `200` | `400`, `401`, `403`, `404`, `409`, `422`, `500` |
+| `POST` | `/planillas/{id}/verificar` | Supervisor | Cookie + `X-CSRF-Token` + `Content-Type` | `{ observaciones, excepciones_revisadas? }` | `200` | `400`, `401`, `403`, `404`, `409`, `422`, `500` |
+| `POST` | `/planillas/{id}/aprobar` | Administrador | Cookie + `X-CSRF-Token` + `X-Reauth-Token` + `Content-Type` | `{ total_esperado, comentario? }` | `200` | `400`, `401`, `403`, `404`, `409`, `500` |
+| `POST` | `/planillas/{id}/pagos` | Administrador | Cookie + `X-CSRF-Token` + `X-Reauth-Token` + `Idempotency-Key` + `Content-Type` | `{ metodo_id, fecha_pago, pagos: [{ detalle_id, monto, referencia? }] }` | `201` | `400`, `401`, `403`, `404`, `409`, `422`, `500` |
+| `DELETE` | `/admin/feriados/{fecha}` | Administrador | Cookie + `X-CSRF-Token` | Sin cuerpo | `204` | `400`, `401`, `403`, `404`, `500` |
 
 ### E.3 Contratos de los endpoints vitales
 
