@@ -249,6 +249,11 @@ Ramas `main` / `develop` / `feature/*`; todo cambio entra por *pull request* a `
 
 *Usuario* es un actor abstracto del que heredan Administrador, Supervisor y Trabajador; los tres pueden ejecutar CU-01. CU-11 incluye a CU-10 porque no se puede calcular una planilla mientras haya registros pendientes de validar.
 
+**Fuera de alcance de esta versión**
+
+- **Rechazo de planillas:** una planilla no se rechaza con motivo. Los errores se corrigen antes de verificarla, recalculándola mientras siga `CALCULADA`.
+- **Corrección de registros de tiempo:** un registro se aprueba o se rechaza. La base incluye el estado `CORREGIDA` y el cálculo lo acepta, pero ningún endpoint lo asigna.
+
 **Matriz de acceso por rol**
 
 | Acción | Administrador | Supervisor | Trabajador |
@@ -472,7 +477,7 @@ Las políticas los leen con funciones definidas en M008 y M010: `app.usuario_act
 | `auditoria` | INSERT de sus acciones | INSERT de sus acciones | SELECT; INSERT de sus acciones |
 | `sesiones_refresh` | ALL de las propias | ALL de las propias | ALL de las propias |
 
-En `planillas` y `planilla_detalle`, RLS permite el acceso por rol; la restricción por ruta y las transiciones de estado las valida la API. Ningún rol tiene política de UPDATE o DELETE sobre `auditoria`.
+En `planillas` y `planilla_detalle`, RLS permite el acceso por rol; la restricción por ruta y las transiciones de estado las valida la API. Ningún rol tiene política de UPDATE o DELETE sobre `auditoria`. En `tarifas_trabajador`, RLS permite al trabajador leer su fila, pero la API no lo expone: consultar tarifas responde `403` y la app solo muestra horas, sin montos. El supervisor las necesita porque calcula planillas.
 
 Ejemplo (`registros_tiempo`):
 

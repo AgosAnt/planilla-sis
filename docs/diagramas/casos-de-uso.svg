@@ -100,9 +100,9 @@
     <text x="370" y="456" font-weight="700">CU-04</text><text x="370" y="471">Crear y gestionar rutas y sus puntos</text>
     <text x="370" y="511" font-weight="700">CU-05</text><text x="370" y="526">Asignar trabajadores a rutas</text>
     <text x="370" y="566" font-weight="700">CU-11</text><text x="370" y="581">Calcular, verificar y aprobar planilla</text>
-    <text x="370" y="656" font-weight="700">CU-10</text><text x="370" y="671">Validar, corregir o rechazar registros</text>
+    <text x="370" y="656" font-weight="700">CU-10</text><text x="370" y="671">Validar o rechazar registros</text>
     <text x="370" y="711" font-weight="700">CU-09</text><text x="370" y="726">Supervisar horarios y registros</text>
-    <text x="370" y="786" font-weight="700">CU-06</text><text x="370" y="801">Definir y confirmar acuerdos de turno</text>
+    <text x="370" y="786" font-weight="700">CU-06</text><text x="370" y="801">Proponer y confirmar acuerdos de turno</text>
 
     <!-- Columna derecha: móvil (Trabajador) -->
     <g fill="#ffffff" stroke="#1f2933" stroke-width="1.5">
