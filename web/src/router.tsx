@@ -2,7 +2,6 @@ import { createBrowserRouter, Navigate } from 'react-router'
 import { Layout } from './components/Layout'
 import { RutaProtegida } from './components/RutaProtegida'
 import { AccesoDenegado } from './paginas/AccesoDenegado'
-import { EnConstruccion } from './paginas/EnConstruccion'
 import { Login } from './paginas/Login'
 import { NoEncontrada } from './paginas/NoEncontrada'
 import { Panel } from './paginas/Panel'
@@ -16,6 +15,7 @@ import Planillas from './paginas/Planillas'
 import Pagos from './paginas/Pagos'
 import Usuarios from './paginas/Usuarios'
 import Auditoria from './paginas/Auditoria'
+import Parametros from './paginas/Parametros'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -42,7 +42,7 @@ export const router = createBrowserRouter([
                 children: [
                   { path: '/pagos', element: <Pagos /> },
                   { path: '/admin/usuarios', element: <Usuarios /> },
-                  { path: '/admin/parametros', element: <EnConstruccion titulo="Parámetros" /> },
+                  { path: '/admin/parametros', element: <Parametros /> },
                   { path: '/auditoria', element: <Auditoria /> },
                 ],
               },
