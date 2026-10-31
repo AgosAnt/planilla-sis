@@ -1,5 +1,6 @@
 // Cliente de la API (F.2 y B.4). Sesión solo en memoria: el JWT vive en la cookie
 // HttpOnly psis_access, que JavaScript no puede leer. Aquí solo queda el token CSRF.
+// Cuando el access token vence (401), se renueva una vez con la cookie psis_refresh (FE-6) y se repite la petición.
 
 export type Rol = 'administrador' | 'supervisor' | 'trabajador'
 
@@ -52,27 +53,63 @@ export const limpiarSesionApi = () => {
   }
 }
 
-// cabecerasExtra: las que piden algunas operaciones, como X-Reauth-Token e Idempotency-Key al aprobar y pagar
+// Rutas que no se renuevan: el login y la propia renovación responden 401 por credenciales o refresh inválidos
+const SIN_RENOVACION = ['/auth/session', '/auth/refresh']
+
+// Una sola renovación a la vez: si varias peticiones reciben 401 juntas, todas esperan la misma
+let renovacion: Promise<boolean> | null = null
+
+// true si hay un access token nuevo en la cookie. 409: otra pestaña ya renovó y la cookie nueva
+// ya está en el navegador, así que también basta con repetir la petición.
+const renovarSesion = (): Promise<boolean> => {
+  renovacion ??= fetch(BASE + '/auth/refresh', {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+    credentials: 'same-origin',
+  })
+    .then((respuesta) => {
+      // El cuerpo no se usa, pero hay que descartarlo: si no, el navegador deja la petición abierta
+      void respuesta.body?.cancel()
+      return respuesta.ok || respuesta.status === 409
+    })
+    .catch(() => false)
+    .finally(() => {
+      renovacion = null
+    })
+  return renovacion
+}
+
+const enviar = (metodo: string, ruta: string, cuerpo: unknown, cabecerasExtra: Record<string, string>) => {
+  const cabeceras: Record<string, string> = { ...cabecerasExtra, Accept: 'application/json' }
+  if (cuerpo !== undefined) cabeceras['Content-Type'] = 'application/json'
+  if (!METODOS_SEGUROS.includes(metodo) && csrf) cabeceras['X-CSRF-Token'] = csrf
+
+  return fetch(BASE + ruta, {
+    method: metodo,
+    headers: cabeceras,
+    credentials: 'same-origin',
+    body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+  })
+}
+
+// cabecerasExtra: las que piden algunas operaciones, como X-Reauth-Token e Idempotency-Key al aprobar y pagar.
+// Al repetir tras renovar van las mismas: el 401 sale antes de gastar el token de reautenticación.
 export async function api<T>(
   metodo: string,
   ruta: string,
   cuerpo?: unknown,
   cabecerasExtra: Record<string, string> = {},
 ): Promise<T> {
-  const cabeceras: Record<string, string> = { ...cabecerasExtra, Accept: 'application/json' }
-  if (cuerpo !== undefined) cabeceras['Content-Type'] = 'application/json'
-  if (!METODOS_SEGUROS.includes(metodo) && csrf) cabeceras['X-CSRF-Token'] = csrf
+  let respuesta = await enviar(metodo, ruta, cuerpo, cabecerasExtra)
 
-  const respuesta = await fetch(BASE + ruta, {
-    method: metodo,
-    headers: cabeceras,
-    credentials: 'same-origin',
-    body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
-  })
+  // Access token vencido: se renueva y se repite la petición una sola vez
+  if (respuesta.status === 401 && !SIN_RENOVACION.includes(ruta) && (await renovarSesion())) {
+    respuesta = await enviar(metodo, ruta, cuerpo, cabecerasExtra)
+  }
   const datos: unknown = respuesta.status === 204 ? null : await respuesta.json().catch(() => null)
 
   if (!respuesta.ok) {
-    // Sesión vencida en medio del uso: se limpia y se avisa para volver al login
+    // La sesión venció del todo (tampoco se pudo renovar): se limpia y se avisa para volver al login
     if (respuesta.status === 401 && sesionActiva) {
       limpiarSesionApi()
       alExpirar()
@@ -92,7 +129,7 @@ export async function iniciarSesion(email: string, password: string): Promise<Us
   return datos.user
 }
 
-// Al cargar la página: si la cookie sigue vigente recupera perfil y CSRF; si no, no hay sesión
+// Al cargar la página: si la cookie sigue vigente (o se puede renovar) recupera perfil y CSRF; si no, no hay sesión
 export async function restaurarSesion(): Promise<Usuario | null> {
   try {
     const usuario = await api<Usuario>('GET', '/me')
