@@ -1,3 +1,4 @@
+-- Active: 1791922342489@@127.0.0.1@5432@planilla_sis_dev
 -- Tabla de Usuarios (Trabajadores de campo, Supervisores, Admin)
 CREATE TABLE Usuarios (
     id_usuario SERIAL PRIMARY KEY,
@@ -19,21 +20,18 @@ CREATE TABLE Jornadas (
     id_usuario INT REFERENCES Usuarios(id_usuario) ON DELETE CASCADE,
     id_ruta INT REFERENCES Rutas(id_ruta) ON DELETE SET NULL,
     fecha DATE NOT NULL DEFAULT CURRENT_DATE,
-    
     -- Datos capturados directamente desde Android
     hora_entrada TIMESTAMP NOT NULL,
     latitud_entrada NUMERIC(10,8),
     longitud_entrada NUMERIC(11,8),
-    
     -- Se llenan cuando el usuario marca SALIDA en la app
     hora_salida TIMESTAMP,
     latitud_salida NUMERIC(10,8),
     longitud_salida NUMERIC(11,8),
-    
     estado VARCHAR(50) DEFAULT 'EN_RUTA' -- 'PROGRAMADA', 'EN_RUTA', 'EN_PAUSA', 'FINALIZADA', 'APROBADA'
 );
 
--- ¡NUEVA TABLA! Registro de Eventos Especiales y Emergencias (Desde la app móvil)
+-- Registro de Eventos Especiales y Emergencias (Desde la app móvil)
 CREATE TABLE Eventos_Ruta (
     id_evento SERIAL PRIMARY KEY,
     id_usuario INT REFERENCES Usuarios(id_usuario) ON DELETE CASCADE,
