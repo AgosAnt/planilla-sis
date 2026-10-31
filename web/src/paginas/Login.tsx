@@ -29,9 +29,19 @@ export function Login() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <form onSubmit={alEnviar} className="w-full max-w-sm space-y-4 rounded-lg border p-6">
-        <h1 className="text-xl font-semibold">Iniciar sesión</h1>
+    <main className="login-fondo flex min-h-screen items-center justify-center p-6">
+      <div aria-hidden="true">
+        <span className="login-luz login-luz-1" />
+        <span className="login-luz login-luz-2" />
+        <span className="login-luz login-luz-3" />
+        <span className="login-luz login-luz-4" />
+      </div>
+
+      <form onSubmit={alEnviar} className="login-tarjeta w-full max-w-sm space-y-5 p-8">
+        <header className="space-y-1 text-center">
+          <p className="text-sm font-medium text-muted-foreground">Planilla SIS</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Iniciar sesión</h1>
+        </header>
 
         <label className="block space-y-1 text-sm">
           <span>Correo</span>
@@ -41,7 +51,7 @@ export function Login() {
             autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border bg-background px-3 py-2"
+            className="login-campo"
           />
         </label>
 
@@ -53,17 +63,17 @@ export function Login() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border bg-background px-3 py-2"
+            className="login-campo"
           />
         </label>
 
         {error && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm font-medium text-destructive">
             {error}
           </p>
         )}
 
-        <Button type="submit" className="w-full" disabled={enviando}>
+        <Button type="submit" className="h-11 w-full rounded-xl text-base" disabled={enviando}>
           {enviando ? 'Entrando…' : 'Entrar'}
         </Button>
       </form>
