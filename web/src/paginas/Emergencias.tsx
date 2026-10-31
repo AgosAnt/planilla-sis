@@ -81,7 +81,7 @@ export default function Emergencias() {
   return (
     <div className="space-y-6 p-6 text-foreground">
       <div>
-        <h1 className="text-3xl font-bold">Emergencias y eventos</h1>
+        <h1 className="text-3xl font-bold">Emergencias</h1>
         <p className="mt-1 text-sm text-muted-foreground">Avisos enviados desde la app móvil durante la jornada.</p>
       </div>
 

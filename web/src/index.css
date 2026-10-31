@@ -129,7 +129,7 @@
     }
 }
 
-/* Pantalla de inicio de sesión: círculos de luz difuminados que se cruzan y se funden, y tarjeta translúcida.
+/* Pantalla de inicio de sesión: manchas de luz de forma irregular que se cruzan y se funden, y tarjeta translúcida.
    Va aquí y no en atributos style porque la CSP (style-src 'self') solo admite hojas propias. */
 :root {
     --luz-1: oklch(0.72 0.15 264);
@@ -167,42 +167,42 @@
 .login-luz {
     position: absolute;
     z-index: -1;
-    width: 34vmax;
-    height: 34vmax;
-    border-radius: 9999px;
-    filter: blur(42px);
+    width: 44vmax;
+    height: 32vmax;
+    border-radius: 58% 42% 63% 37% / 46% 61% 39% 54%;
+    filter: blur(58px);
     mix-blend-mode: var(--login-mezcla);
     will-change: transform;
     animation: 16s ease-in-out infinite alternate;
 }
 
-.login-luz-1 { top: -6vmax; left: -4vmax; background: var(--luz-1); animation-name: login-deriva-1; }
-.login-luz-2 { top: -8vmax; right: -6vmax; background: var(--luz-2); animation-name: login-deriva-2; animation-duration: 13s; animation-delay: -3s; }
-.login-luz-3 { bottom: -10vmax; left: 4vmax; background: var(--luz-3); animation-name: login-deriva-3; animation-duration: 18s; animation-delay: -7s; }
-.login-luz-4 { bottom: -8vmax; right: -2vmax; background: var(--luz-4); animation-name: login-deriva-4; animation-duration: 15s; animation-delay: -5s; }
+.login-luz-1 { top: -6vmax; left: -8vmax; background: radial-gradient(closest-side, var(--luz-1) 35%, transparent); animation-name: login-deriva-1; }
+.login-luz-2 { top: -8vmax; right: -10vmax; width: 36vmax; height: 40vmax; border-radius: 41% 59% 37% 63% / 62% 44% 56% 38%; background: radial-gradient(closest-side, var(--luz-2) 30%, transparent); animation-name: login-deriva-2; animation-duration: 13s; animation-delay: -3s; }
+.login-luz-3 { bottom: -10vmax; left: 0; width: 50vmax; height: 28vmax; border-radius: 66% 34% 48% 52% / 38% 57% 43% 62%; background: radial-gradient(closest-side, var(--luz-3) 35%, transparent); animation-name: login-deriva-3; animation-duration: 18s; animation-delay: -7s; }
+.login-luz-4 { bottom: -8vmax; right: -6vmax; width: 38vmax; height: 36vmax; border-radius: 47% 53% 69% 31% / 55% 36% 64% 45%; background: radial-gradient(closest-side, var(--luz-4) 30%, transparent); animation-name: login-deriva-4; animation-duration: 15s; animation-delay: -5s; }
 
 @keyframes login-deriva-1 {
-    0% { transform: translate3d(0, 0, 0) scale(1); }
-    50% { transform: translate3d(38vw, 22vh, 0) scale(1.1); }
-    100% { transform: translate3d(12vw, 52vh, 0) scale(0.9); }
+    0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1, 1); }
+    50% { transform: translate3d(38vw, 22vh, 0) rotate(70deg) scale(1.2, 0.9); }
+    100% { transform: translate3d(12vw, 52vh, 0) rotate(150deg) scale(0.9, 1.15); }
 }
 
 @keyframes login-deriva-2 {
-    0% { transform: translate3d(0, 0, 0) scale(0.95); }
-    50% { transform: translate3d(-42vw, 30vh, 0) scale(1.1); }
-    100% { transform: translate3d(-14vw, 58vh, 0) scale(1); }
+    0% { transform: translate3d(0, 0, 0) rotate(20deg) scale(0.95, 1.1); }
+    50% { transform: translate3d(-42vw, 30vh, 0) rotate(-55deg) scale(1.2, 0.85); }
+    100% { transform: translate3d(-14vw, 58vh, 0) rotate(-130deg) scale(1, 1.1); }
 }
 
 @keyframes login-deriva-3 {
-    0% { transform: translate3d(0, 0, 0) scale(1.05); }
-    50% { transform: translate3d(36vw, -34vh, 0) scale(0.9); }
-    100% { transform: translate3d(58vw, -8vh, 0) scale(1.1); }
+    0% { transform: translate3d(0, 0, 0) rotate(-15deg) scale(1.05, 0.95); }
+    50% { transform: translate3d(36vw, -34vh, 0) rotate(60deg) scale(0.9, 1.2); }
+    100% { transform: translate3d(58vw, -8vh, 0) rotate(120deg) scale(1.15, 0.9); }
 }
 
 @keyframes login-deriva-4 {
-    0% { transform: translate3d(0, 0, 0) scale(0.9); }
-    50% { transform: translate3d(-30vw, -40vh, 0) scale(1.1); }
-    100% { transform: translate3d(-56vw, -14vh, 0) scale(1); }
+    0% { transform: translate3d(0, 0, 0) rotate(40deg) scale(0.9, 1.1); }
+    50% { transform: translate3d(-30vw, -40vh, 0) rotate(-40deg) scale(1.15, 0.9); }
+    100% { transform: translate3d(-56vw, -14vh, 0) rotate(-110deg) scale(1, 1.2); }
 }
 
 .login-tarjeta {
