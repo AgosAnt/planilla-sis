@@ -39,7 +39,7 @@ export function Login() {
 
       <form onSubmit={alEnviar} className="login-tarjeta w-full max-w-sm space-y-5 p-8">
         <header className="space-y-1 text-center">
-          <p className="text-sm font-medium text-muted-foreground">Planilla SIS</p>
+          <p className="text-sm font-medium text-foreground/75">Planilla SIS</p>
           <h1 className="text-2xl font-semibold tracking-tight">Iniciar sesión</h1>
         </header>
 
