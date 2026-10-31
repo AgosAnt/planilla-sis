@@ -13,6 +13,7 @@ Un ADR es un documento corto que registra una decisión técnica importante, con
 
 ## Fuera de alcance de esta versión
 
+- **Rechazo de planillas y corrección de registros de tiempo:** una planilla se corrige recalculándola antes de verificarla, y un registro se aprueba o se rechaza.
 - **Contratos laborales y prestaciones** (aguinaldo, bono 14, indemnización, vacaciones pagadas): ningún caso de uso
   (CU-01 a CU-15) los pide y las reglas de cálculo cubren horas, extras, Bonificación Incentivo e IGSS. Lo que la
   planilla necesita del trabajador ya está en `perfiles`, sus estados, sus tarifas con vigencia y sus asignaciones.
