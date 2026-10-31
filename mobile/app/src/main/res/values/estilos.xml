@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Estilos de las pantallas sobre Material 3: colores por rol del tema (funcionan en claro y oscuro) y la escala
+     tipográfica de M3 -->
+<resources>
+    <!-- Botón por defecto: sin mayúsculas y con las esquinas de M3 -->
+    <style name="Boton" parent="Widget.Material3.Button">
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <!-- Acciones principales de la pantalla (Marcar entrada, Iniciar sesión…) -->
+    <style name="BotonPrincipal" parent="Widget.Material3.Button">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textAppearance">?attr/textAppearanceTitleMedium</item>
+        <item name="shapeAppearance">?attr/shapeAppearanceCornerLarge</item>
+    </style>
+
+    <style name="BotonPrincipal.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textAppearance">?attr/textAppearanceTitleMedium</item>
+        <item name="shapeAppearance">?attr/shapeAppearanceCornerLarge</item>
+    </style>
+
+    <style name="BotonSecundario" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="shapeAppearance">?attr/shapeAppearanceCornerLarge</item>
+    </style>
+
+    <style name="BotonTexto" parent="Widget.Material3.Button.TextButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="Volver" parent="Widget.Material3.Button.TextButton.Icon">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">-12dp</item>
+        <item name="android:text">Volver</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="icon">@drawable/ic_volver</item>
+    </style>
+
+    <!-- Contenido de cada pantalla: respeta las barras del sistema (Android 15+ dibuja detrás de ellas) -->
+    <style name="Pantalla">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:background">?android:attr/colorBackground</item>
+        <item name="android:fitsSystemWindows">true</item>
+    </style>
+
+    <style name="TituloPantalla">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:textAppearance">?attr/textAppearanceHeadlineMedium</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="Subtitulo">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceBodyMedium</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <style name="Nota">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceBodySmall</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <style name="TextoError">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceBodyMedium</item>
+        <item name="android:textColor">?attr/colorError</item>
+    </style>
+
+    <!-- Tarjeta sin borde ni sombra, un tono sobre el fondo -->
+    <style name="Tarjeta" parent="Widget.Material3.CardView.Filled">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="cardBackgroundColor">?attr/colorSurfaceContainerLow</item>
+        <item name="shapeAppearance">?attr/shapeAppearanceCornerLarge</item>
+    </style>
+
+    <style name="EtiquetaDato">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:textAppearance">?attr/textAppearanceLabelLarge</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <style name="ValorDato">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceHeadlineSmall</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- Etiqueta de estado (turnos): el fondo y el texto los pone el código según el estado -->
+    <style name="Etiqueta">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:background">@drawable/fondo_etiqueta</item>
+        <item name="android:textAppearance">?attr/textAppearanceLabelMedium</item>
+    </style>
+</resources>
