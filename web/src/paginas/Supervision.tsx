@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect, type SyntheticEvent } from 'react';
 import { api } from "../lib/api";
 
 interface RegistroTiempo {
@@ -13,6 +13,9 @@ export default function Supervision() {
   const [registros, setRegistros] = useState<RegistroTiempo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [rechazandoId, setRechazandoId] = useState<string | number | null>(null);
+  const [motivo, setMotivo] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -32,13 +35,32 @@ export default function Supervision() {
     return () => { activo = false; };
   }, []);
 
-  const handleValidacion = async (id: string | number, estado: 'APROBADA' | 'RECHAZADA') => {
+  const handleValidacion = async (id: string | number, estado: 'APROBADA' | 'RECHAZADA', observaciones?: string) => {
+    setEnviando(true);
     try {
-      await api('PATCH', `/registros-tiempo/${id}/validacion`, { estado_validacion: estado });
+      await api('PATCH', `/registros-tiempo/${id}/validacion`, { estado_validacion: estado, observaciones });
       setRegistros(prev => prev.map(r => r.id === id ? { ...r, estado_validacion: estado } : r));
+      cancelarRechazo();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error al validar la jornada');
+    } finally {
+      setEnviando(false);
     }
+  };
+
+  const iniciarRechazo = (id: string | number) => {
+    setRechazandoId(id);
+    setMotivo('');
+  };
+
+  const cancelarRechazo = () => {
+    setRechazandoId(null);
+    setMotivo('');
+  };
+
+  const confirmarRechazo = (evento: SyntheticEvent<HTMLFormElement>, id: string | number) => {
+    evento.preventDefault();
+    handleValidacion(id, 'RECHAZADA', motivo.trim());
   };
 
   const enJornada = registros.filter(r => r.salida_at === null).length;
@@ -88,7 +110,8 @@ export default function Supervision() {
             </thead>
             <tbody className="divide-y divide-border">
               {registros.map((reg) => (
-                <tr key={reg.id} className="hover:bg-muted/50 transition-colors">
+                <Fragment key={reg.id}>
+                <tr className="hover:bg-muted/50 transition-colors">
                   <td className="px-6 py-5 whitespace-nowrap text-sm font-bold text-foreground">
                     {reg.trabajador_id.slice(0, 8)}
                   </td>
@@ -110,10 +133,10 @@ export default function Supervision() {
                   <td className="px-6 py-5 whitespace-nowrap text-sm font-medium">
                     {reg.salida_at && reg.estado_validacion === 'PENDIENTE' ? (
                       <div className="flex gap-2">
-                        <button onClick={() => handleValidacion(reg.id, 'APROBADA')} className="p-2 bg-green-500/10 text-green-600 rounded-lg hover:bg-green-500/20 transition-colors" title="Aprobar">
+                        <button onClick={() => handleValidacion(reg.id, 'APROBADA')} disabled={enviando} className="p-2 bg-green-500/10 text-green-600 rounded-lg hover:bg-green-500/20 transition-colors" title="Aprobar">
                           ✓
                         </button>
-                        <button onClick={() => handleValidacion(reg.id, 'RECHAZADA')} className="p-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors" title="Rechazar">
+                        <button onClick={() => iniciarRechazo(reg.id)} disabled={enviando} className="p-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors" title="Rechazar">
                           ✕
                         </button>
                       </div>
@@ -122,6 +145,35 @@ export default function Supervision() {
                     )}
                   </td>
                 </tr>
+                {rechazandoId === reg.id && (
+                  <tr className="bg-muted/30">
+                    <td colSpan={5} className="px-6 py-4">
+                      <form onSubmit={(evento) => confirmarRechazo(evento, reg.id)} className="space-y-3">
+                        <label className="block space-y-1 text-sm">
+                          <span className="font-medium">Motivo del rechazo</span>
+                          <textarea
+                            rows={2}
+                            maxLength={1000}
+                            required
+                            autoFocus
+                            value={motivo}
+                            onChange={(e) => setMotivo(e.target.value)}
+                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <div className="flex gap-2">
+                          <button type="submit" disabled={enviando || !motivo.trim()} className="rounded-lg bg-destructive px-3 py-2 text-sm font-medium text-white hover:bg-destructive/90 transition-colors disabled:opacity-50">
+                            Rechazar jornada
+                          </button>
+                          <button type="button" onClick={cancelarRechazo} disabled={enviando} className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors">
+                            Cancelar
+                          </button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>
