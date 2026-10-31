@@ -128,3 +128,94 @@
     @apply font-sans;
     }
 }
+
+/* Pantalla de inicio de sesión: luces difuminadas y tarjeta translúcida.
+   Va aquí y no en atributos style porque la CSP (style-src 'self') solo admite hojas propias. */
+:root {
+    --luz-1: oklch(0.82 0.09 264);
+    --luz-2: oklch(0.86 0.07 225);
+    --luz-3: oklch(0.84 0.08 295);
+    --luz-4: oklch(0.89 0.05 200);
+    --login-base: oklch(0.97 0.006 264);
+    --login-tarjeta: oklch(1 0 0 / 62%);
+    --login-borde: oklch(1 0 0 / 70%);
+    --login-campo: oklch(1 0 0 / 60%);
+    --login-sombra: oklch(0.3 0.04 264 / 18%);
+}
+
+.dark {
+    --luz-1: oklch(0.38 0.14 264);
+    --luz-2: oklch(0.36 0.09 235);
+    --luz-3: oklch(0.32 0.11 295);
+    --luz-4: oklch(0.33 0.06 215);
+    --login-base: oklch(0.145 0.01 264);
+    --login-tarjeta: oklch(0.2 0.005 264 / 58%);
+    --login-borde: oklch(1 0 0 / 14%);
+    --login-campo: oklch(1 0 0 / 7%);
+    --login-sombra: oklch(0 0 0 / 45%);
+}
+
+.login-fondo {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-color: var(--login-base);
+}
+
+.login-luz {
+    position: absolute;
+    z-index: -1;
+    width: 65vmax;
+    height: 65vmax;
+    border-radius: 9999px;
+    opacity: 0.8;
+    filter: blur(130px);
+    will-change: transform;
+    animation: login-deriva 28s ease-in-out infinite alternate;
+}
+
+.login-luz-1 { top: -25vmax; left: -15vmax; background: var(--luz-1); }
+.login-luz-2 { top: -20vmax; right: -25vmax; background: var(--luz-2); animation-duration: 34s; animation-delay: -8s; }
+.login-luz-3 { bottom: -30vmax; left: -5vmax; background: var(--luz-3); animation-duration: 40s; animation-delay: -16s; }
+.login-luz-4 { bottom: -30vmax; right: -15vmax; background: var(--luz-4); animation-duration: 31s; animation-delay: -22s; }
+
+@keyframes login-deriva {
+    from { transform: translate3d(-6%, -4%, 0) scale(1); }
+    to { transform: translate3d(10%, 8%, 0) scale(1.15); }
+}
+
+.login-tarjeta {
+    border: 1px solid var(--login-borde);
+    border-radius: 1.75rem;
+    background-color: var(--card);
+    box-shadow: 0 24px 60px -12px var(--login-sombra), inset 0 1px 0 oklch(1 0 0 / 22%);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+    .login-tarjeta {
+        background-color: var(--login-tarjeta);
+        backdrop-filter: blur(32px) saturate(170%);
+    }
+}
+
+.login-campo {
+    display: block;
+    width: 100%;
+    height: 2.75rem;
+    padding-inline: 0.875rem;
+    border: 1px solid var(--login-borde);
+    border-radius: 0.75rem;
+    background-color: var(--login-campo);
+    font-size: 1rem;
+    transition: border-color 150ms, box-shadow 150ms;
+}
+
+.login-campo:focus {
+    outline: none;
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-luz { animation: none; }
+}
