@@ -34,11 +34,14 @@ function Tarjeta({ titulo, valor, detalle, enlace, alerta }: PropsTarjeta) {
   return (
     <Link
       to={enlace}
-      className={`block rounded-xl border bg-card p-5 shadow-sm transition-colors hover:bg-muted/50 ${resaltar ? 'border-destructive/50' : ''}`}
+      className={`group flex flex-col rounded-xl border bg-card p-5 shadow-sm transition-colors hover:bg-muted/50 ${resaltar ? 'border-destructive/50' : ''}`}
     >
       <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{titulo}</div>
       <div className={`mt-2 text-3xl font-bold ${resaltar ? 'text-destructive' : ''}`}>{numero}</div>
       <div className="mt-1 text-sm text-muted-foreground">{detalle}</div>
+      <div className="mt-auto pt-3 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+        Ver detalle →
+      </div>
     </Link>
   )
 }

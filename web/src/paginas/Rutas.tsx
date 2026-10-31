@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 import { rutasService, type Ruta } from '../servicios/rutas';
 import GeocercaRuta from '../components/GeocercaRuta';
 
@@ -12,6 +13,7 @@ export default function Rutas() {
   const [codigoInput, setCodigoInput] = useState('');
   const [nombreInput, setNombreInput] = useState('');
   const [geocercaRuta, setGeocercaRuta] = useState<Ruta | null>(null);
+  const [errorFormulario, setErrorFormulario] = useState<string | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -35,6 +37,7 @@ export default function Rutas() {
     setEditingRuta(null);
     setCodigoInput('');
     setNombreInput('');
+    setErrorFormulario(null);
     setIsModalOpen(true);
   };
 
@@ -42,12 +45,14 @@ export default function Rutas() {
     setEditingRuta(ruta);
     setCodigoInput(ruta.codigo);
     setNombreInput(ruta.nombre);
+    setErrorFormulario(null);
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!codigoInput.trim() || !nombreInput.trim()) return;
+    setErrorFormulario(null);
 
     try {
       if (editingRuta && editingRuta.id) {
@@ -69,14 +74,15 @@ export default function Rutas() {
 
       setIsModalOpen(false);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo guardar la ruta');
+      setErrorFormulario(err instanceof Error ? err.message : 'No se pudo guardar la ruta');
     }
   };
 
   const handleDarDeBaja = async (ruta: Ruta) => {
     if (!ruta.id) return;
-    const confirmacion = window.confirm(`¿Estás segura de dar de baja la ruta "${ruta.nombre}"?`);
+    const confirmacion = window.confirm(`¿Dar de baja la ruta "${ruta.nombre}"?`);
     if (!confirmacion) return;
+    setErrorMsg(null);
 
     try {
       await rutasService.darDeBajaRuta(ruta.id);
@@ -84,35 +90,27 @@ export default function Rutas() {
         prev.map((r) => (r.id === ruta.id ? { ...r, activa: false } : r))
       );
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo dar de baja la ruta');
+      setErrorMsg(err instanceof Error ? err.message : 'No se pudo dar de baja la ruta');
     }
   };
 
   return (
     <div className="min-h-screen text-foreground p-6">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Gestión de Rutas</h1>
+          <h1 className="text-3xl font-bold">Rutas</h1>
           <p className="text-muted-foreground text-sm mt-1">Configuración y estado de los trayectos activos.</p>
         </div>
-        <button 
-          onClick={handleOpenCreateModal}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-5 py-2.5 rounded-full shadow-lg transition-all flex items-center gap-2 text-sm"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
-          Nueva Ruta
-        </button>
+        <Button onClick={handleOpenCreateModal}>Nueva ruta</Button>
       </div>
 
       {errorMsg && (
-        <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-xl text-destructive text-sm">
+        <div role="alert" className="sticky top-2 z-10 mb-4 p-4 bg-card border border-destructive/50 rounded-xl text-destructive text-sm shadow-lg">
           {errorMsg}
         </div>
       )}
 
-      <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-card border rounded-xl shadow-sm overflow-x-auto">
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground font-medium">
             Cargando rutas desde el servidor...
@@ -183,7 +181,7 @@ export default function Rutas() {
             <div className="p-6 border-b flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-bold tracking-tight">
-                  {editingRuta ? 'Editar Ruta' : 'Registrar Nueva Ruta'}
+                  {editingRuta ? 'Editar ruta' : 'Nueva ruta'}
                 </h2>
                 <p className="text-muted-foreground text-xs mt-1">
                   {editingRuta ? 'Modifica los datos del trayecto' : 'Ingresa los datos para la nueva ruta'}
@@ -228,20 +226,15 @@ export default function Rutas() {
                 />
               </div>
 
+              {errorFormulario && (
+                <p role="alert" className="text-sm font-medium text-destructive">{errorFormulario}</p>
+              )}
+
               <div className="flex justify-end gap-3 pt-4 border-t mt-6">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)} 
-                  className="px-5 py-2.5 text-muted-foreground hover:text-foreground font-medium rounded-xl hover:bg-muted transition-colors text-sm"
-                >
+                <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
                   Cancelar
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-full transition-all text-sm"
-                >
-                  {editingRuta ? 'Actualizar Ruta' : 'Guardar Ruta'}
-                </button>
+                </Button>
+                <Button type="submit">{editingRuta ? 'Actualizar ruta' : 'Guardar ruta'}</Button>
               </div>
             </form>
           </div>

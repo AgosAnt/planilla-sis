@@ -15,7 +15,8 @@ export function BotonTema() {
 
   return (
     <Button variant="outline" size="sm" onClick={alternar}>
-      {tema === 'oscuro' ? 'Tema claro' : 'Tema oscuro'}
+      <span className="sm:hidden">Tema</span>
+      <span className="hidden sm:inline">{tema === 'oscuro' ? 'Tema claro' : 'Tema oscuro'}</span>
     </Button>
   )
 }

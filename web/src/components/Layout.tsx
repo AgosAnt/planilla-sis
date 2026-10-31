@@ -16,9 +16,9 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="flex items-center justify-between border-b px-4 py-3">
-        <span className="font-semibold">Planilla SIS</span>
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
+        <span className="whitespace-nowrap font-semibold">Planilla SIS</span>
+        <div className="flex items-center gap-1.5 sm:gap-3">
           <span className="hidden text-sm text-muted-foreground sm:inline">
             {usuario?.nombres} {usuario?.apellidos} · {usuario?.rol}
           </span>
@@ -27,7 +27,8 @@ export function Layout() {
             Contraseña
           </Button>
           <Button variant="outline" size="sm" onClick={salir}>
-            Cerrar sesión
+            <span className="sm:hidden">Salir</span>
+            <span className="hidden sm:inline">Cerrar sesión</span>
           </Button>
         </div>
       </header>

@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 import { rutasService, type PuntoGeocerca, type Ruta } from '../servicios/rutas';
 
@@ -327,20 +328,12 @@ export default function GeocercaRuta({ ruta, onCerrar }: Props) {
         </div>
 
         <div className="flex justify-end gap-3 p-6 border-t">
-          <button
-            type="button"
-            onClick={onCerrar}
-            className="px-5 py-2.5 text-muted-foreground hover:text-foreground font-medium rounded-xl hover:bg-muted transition-colors text-sm"
-          >
+          <Button type="button" variant="ghost" onClick={onCerrar}>
             Cerrar
-          </button>
-          <button
-            onClick={guardar}
-            disabled={cargando || guardando}
-            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-full transition-all text-sm disabled:opacity-50"
-          >
+          </Button>
+          <Button onClick={guardar} disabled={cargando || guardando}>
             {guardando ? 'Guardando...' : 'Guardar geocerca'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
