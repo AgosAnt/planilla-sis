@@ -7,6 +7,8 @@ import { Login } from './paginas/Login'
 import { NoEncontrada } from './paginas/NoEncontrada'
 import { Panel } from './paginas/Panel'
 
+import Emergencias from './paginas/Emergencias'
+import Trabajadores from './paginas/Trabajadores'
 import Rutas from './paginas/Rutas'
 import Supervision from './paginas/Supervision'
 import Planillas from './paginas/Planillas'
@@ -31,6 +33,8 @@ export const router = createBrowserRouter([
               { path: '/rutas', element: <Rutas /> },
               { path: '/turnos', element: <EnConstruccion titulo="Turnos" /> },
               { path: '/supervision', element: <Supervision /> },
+              { path: '/trabajadores', element: <Trabajadores /> },
+              { path: '/emergencias', element: <Emergencias /> },
               { path: '/planillas', element: <Planillas /> },
               {
                 element: <RutaProtegida roles={['administrador']} />,
