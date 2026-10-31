@@ -23,6 +23,9 @@ export function Layout() {
             {usuario?.nombres} {usuario?.apellidos} · {usuario?.rol}
           </span>
           <BotonTema />
+          <Button variant="outline" size="sm" onClick={() => navegar('/cambiar-password')}>
+            Contraseña
+          </Button>
           <Button variant="outline" size="sm" onClick={salir}>
             Cerrar sesión
           </Button>
@@ -50,11 +53,6 @@ export function Layout() {
         </nav>
 
         <main className="flex-1">
-            {usuario?.debe_cambiar_password && (
-    <p role="alert" className="border-b bg-muted px-4 py-2 text-sm">
-      Tu contraseña es temporal y debe cambiarse.
-    </p>
-  )}
           <Outlet />
         </main>
       </div>

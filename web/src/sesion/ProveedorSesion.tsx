@@ -44,9 +44,14 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const cambiarPassword = useCallback((actual: string, nueva: string) => clienteApi.cambiarPassword(actual, nueva), [])
+
+  // Tras cambiar la contraseña la sesión ya no existe en el servidor: solo falta olvidar al usuario
+  const terminarSesionLocal = useCallback(() => setUsuario(null), [])
+
   const valor = useMemo<ValorSesion>(
-    () => ({ usuario, cargando, iniciarSesion, cerrarSesion }),
-    [usuario, cargando, iniciarSesion, cerrarSesion],
+    () => ({ usuario, cargando, iniciarSesion, cerrarSesion, cambiarPassword, terminarSesionLocal }),
+    [usuario, cargando, iniciarSesion, cerrarSesion, cambiarPassword, terminarSesionLocal],
   )
 
   return <ContextoSesion.Provider value={valor}>{children}</ContextoSesion.Provider>

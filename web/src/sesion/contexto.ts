@@ -6,6 +6,8 @@ export interface ValorSesion {
   cargando: boolean
   iniciarSesion: (email: string, password: string) => Promise<Usuario>
   cerrarSesion: () => Promise<void>
+  cambiarPassword: (actual: string, nueva: string) => Promise<void>
+  terminarSesionLocal: () => void
 }
 
 export const ContextoSesion = createContext<ValorSesion | null>(null)
