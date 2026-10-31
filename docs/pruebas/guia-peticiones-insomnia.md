@@ -226,9 +226,3 @@ Cada prueba se puede hacer por separado: incluye todo lo necesario, sin volver a
 | `423` en el login | La cuenta se bloqueó tras varios intentos fallidos | Espera a que termine el bloqueo, hasta 15 minutos |
 | `403` con `DEBE_CAMBIAR_PASSWORD` | La cuenta tiene una contraseña temporal | Cámbiala en la web y vuelve a hacer el login |
 | `400` en la prueba 7 | El cuerpo no es JSON o el `id` no es válido | Revisa **Body → JSON** y el `id` |
-
-## Para la presentación
-
-- **Tokens:** obtenlos justo antes de proyectar, porque duran 15 minutos.
-- **Datos sensibles:** no muestres las pantallas de login con contraseña ni los tokens. Si el docente pide ver un login, muestra la prueba 3.
-- **Contraseñas:** no las guardes en este archivo. Deja los textos en mayúsculas tal como están y escribe la contraseña real solo en Insomnia.
