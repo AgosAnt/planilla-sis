@@ -154,7 +154,7 @@ Si se hacen dos merges seguidos, el flujo cancela la ejecución anterior y publi
 1. En **Actions**, la última ejecución debe aparecer en verde.
 2. Al abrir la URL de Azure (`https://<aplicación>.azurewebsites.net/`) debe cargar la pantalla de inicio de sesión. Después de un tiempo sin uso, la primera petición puede tardar o devolver `502` mientras Azure inicia la aplicación.
 3. Sin sesión, `curl -i https://<aplicación>.azurewebsites.net/api/v1/me` debe responder `401` con un JSON de error.
-4. Después de iniciar sesión en la web, en las herramientas del navegador (**Application → Cookies**) las cookies `psis_access` y `psis_refresh` deben tener **HttpOnly** y **Secure**. En **Network**, las respuestas deben incluir `Strict-Transport-Security`.
+4. Después de iniciar sesión en la web, en **Network**, la respuesta de `POST /api/v1/auth/session` debe incluir `Set-Cookie` para `psis_access` y `psis_refresh`, ambas con **HttpOnly** y **Secure**, además de `Strict-Transport-Security`. `psis_refresh` puede no aparecer en **Application → Cookies** porque solo aplica a `/api/v1/auth`.
 
 ## 5. App móvil (Android)
 
@@ -190,7 +190,7 @@ Desde la terminal, el equivalente es `./gradlew assembleDebug` dentro de `mobile
 1. **Usuarios:** el administrador crea cada cuenta en la pantalla **Usuarios**. El sistema genera una contraseña temporal que el usuario debe cambiar al ingresar.
 2. **Rutas y geocerca:** cada ruta tiene uno o más puntos con latitud, longitud y un radio de 10 a 5000 m, que se configuran en **Rutas → Geocerca**. Las coordenadas reales de la empresa se registran solo en la base de datos, nunca en el repositorio.
 3. **Asignaciones:** cada trabajador necesita una asignación vigente. La base de datos no permite que un trabajador tenga dos asignaciones con fechas que se crucen.
-4. **Tarifas y parámetros:** antes de calcular una planilla, cada trabajador debe tener una tarifa por hora vigente y deben existir los parámetros de pago (`docs/reglas-calculo.md`). Mientras su pantalla no esté integrada, se cargan con SQL.
+4. **Tarifas y parámetros:** antes de calcular una planilla, cada trabajador debe tener una tarifa por hora vigente y deben existir los parámetros de pago (`docs/reglas-calculo.md`). Se configuran en la pantalla Parámetros (`/admin/parametros`).
 
 Los cambios en la ubicación o el radio de la geocerca no requieren un APK nuevo: la app los recibe del servidor al iniciar sesión o al sincronizar.
 
