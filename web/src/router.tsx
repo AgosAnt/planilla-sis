@@ -10,6 +10,7 @@ import { Panel } from './paginas/Panel'
 import Emergencias from './paginas/Emergencias'
 import Trabajadores from './paginas/Trabajadores'
 import Rutas from './paginas/Rutas'
+import Turnos from './paginas/Turnos'
 import Supervision from './paginas/Supervision'
 import Planillas from './paginas/Planillas'
 import Pagos from './paginas/Pagos'
@@ -31,7 +32,7 @@ export const router = createBrowserRouter([
               { path: '/', element: <Navigate to="/panel" replace /> },
               { path: '/panel', element: <Panel /> },
               { path: '/rutas', element: <Rutas /> },
-              { path: '/turnos', element: <EnConstruccion titulo="Turnos" /> },
+              { path: '/turnos', element: <Turnos /> },
               { path: '/supervision', element: <Supervision /> },
               { path: '/trabajadores', element: <Trabajadores /> },
               { path: '/emergencias', element: <Emergencias /> },
