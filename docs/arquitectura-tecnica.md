@@ -93,14 +93,14 @@ Elaborada con base en la participación de cada integrante durante el desarrollo
 
 ### A.4 Desglose de entregables por integrante
 
-| Integrante | Módulos a su cargo | Sección del documento |
-| --- | --- | --- |
-| Jonatan | Arquitectura y contrato API; app móvil; despliegue en Azure; documentación | A, B.1, B.5, manual |
-| Marco | Backend: rutas, asignaciones, turnos, registros, motor de cálculo, aprobación y pagos, geocerca | C.3, E |
-| Sofía | Base de datos: 3FN, JSONB, migraciones M002–M012, RLS | D |
-| Daniel | Autenticación, sesiones, OWASP, usuarios, estados y emergencias | F |
-| Samuel | Shell de la SPA, guardas, planillas y pagos, usuarios, auditoría y parámetros | B.2, B.3 |
-| Stefany | Módulos de UI: rutas, supervisión, geocerca, estados, turnos, panel | B.4, C |
+| Integrante | Módulos a su cargo | Sección del documento | Cumplimiento |
+| --- | --- | --- | --- |
+| Jonatan | Arquitectura y contrato API; app móvil; despliegue en Azure; documentación | A, B.1, B.5, manual | Cumplido |
+| Marco | Backend: rutas, asignaciones, turnos, registros, motor de cálculo, aprobación y pagos, geocerca | C.3, E | Cumplido |
+| Sofía | Base de datos: 3FN, JSONB, migraciones M002–M012, RLS | D | Cumplido |
+| Daniel | Autenticación, sesiones, OWASP, usuarios, estados y emergencias | F | Cumplido |
+| Samuel | Shell de la SPA, guardas, planillas y pagos, usuarios, auditoría y parámetros | B.2, B.3 | Cumplido |
+| Stefany | Módulos de UI: rutas, supervisión, geocerca, estados, turnos, panel | B.4, C | Cumplido |
 
 ---
 
