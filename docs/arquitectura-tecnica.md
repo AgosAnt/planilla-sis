@@ -182,6 +182,7 @@ flowchart LR
 | `/planillas` | Períodos, cálculo, verificación y aprobación | Admin, Supervisor |
 | `/pagos` | Pagos | Admin |
 | `/admin/usuarios`, `/admin/parametros`, `/auditoria` | Administración | Admin |
+| `/cambiar-password` | Cambio de contraseña; obligatoria si es temporal | Autenticado |
 | `/403`, `*` | Acceso denegado / no encontrado | Autenticado |
 
 ### B.4 Distribución del almacenamiento web

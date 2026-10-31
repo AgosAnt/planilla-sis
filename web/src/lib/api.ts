@@ -143,6 +143,12 @@ export async function restaurarSesion(): Promise<Usuario | null> {
   }
 }
 
+// El backend revoca todas las sesiones y borra las cookies, así que hay que volver a iniciar sesión
+export async function cambiarPassword(actual: string, nueva: string): Promise<void> {
+  await api<null>('POST', '/auth/password', { password_actual: actual, password_nueva: nueva })
+  limpiarSesionApi()
+}
+
 export async function cerrarSesion(): Promise<void> {
   try {
     await api<null>('POST', '/auth/logout')

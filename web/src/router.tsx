@@ -16,6 +16,7 @@ import Pagos from './paginas/Pagos'
 import Usuarios from './paginas/Usuarios'
 import Auditoria from './paginas/Auditoria'
 import Parametros from './paginas/Parametros'
+import CambiarPassword from './paginas/CambiarPassword'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
     element: <RutaProtegida />,
     children: [
       { path: '/403', element: <AccesoDenegado /> },
+      { path: '/cambiar-password', element: <CambiarPassword /> },
       {
         element: <RutaProtegida roles={['administrador', 'supervisor']} />,
         children: [
