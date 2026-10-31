@@ -129,14 +129,15 @@
     }
 }
 
-/* Pantalla de inicio de sesión: luces difuminadas y tarjeta translúcida.
+/* Pantalla de inicio de sesión: círculos de luz difuminados que se cruzan y se funden, y tarjeta translúcida.
    Va aquí y no en atributos style porque la CSP (style-src 'self') solo admite hojas propias. */
 :root {
-    --luz-1: oklch(0.82 0.09 264);
-    --luz-2: oklch(0.86 0.07 225);
-    --luz-3: oklch(0.84 0.08 295);
-    --luz-4: oklch(0.89 0.05 200);
-    --login-base: oklch(0.97 0.006 264);
+    --luz-1: oklch(0.72 0.15 264);
+    --luz-2: oklch(0.78 0.12 225);
+    --luz-3: oklch(0.74 0.14 295);
+    --luz-4: oklch(0.82 0.1 195);
+    --login-base: oklch(0.95 0.006 264);
+    --login-mezcla: multiply;
     --login-tarjeta: oklch(1 0 0 / 62%);
     --login-borde: oklch(1 0 0 / 70%);
     --login-campo: oklch(1 0 0 / 60%);
@@ -144,15 +145,16 @@
 }
 
 .dark {
-    --luz-1: oklch(0.38 0.14 264);
-    --luz-2: oklch(0.36 0.09 235);
-    --luz-3: oklch(0.32 0.11 295);
-    --luz-4: oklch(0.33 0.06 215);
-    --login-base: oklch(0.145 0.01 264);
-    --login-tarjeta: oklch(0.2 0.005 264 / 58%);
+    --luz-1: oklch(0.5 0.2 264);
+    --luz-2: oklch(0.52 0.13 235);
+    --luz-3: oklch(0.45 0.17 295);
+    --luz-4: oklch(0.55 0.1 200);
+    --login-base: oklch(0.08 0 0);
+    --login-mezcla: screen;
+    --login-tarjeta: oklch(0.16 0.005 264 / 55%);
     --login-borde: oklch(1 0 0 / 14%);
     --login-campo: oklch(1 0 0 / 7%);
-    --login-sombra: oklch(0 0 0 / 45%);
+    --login-sombra: oklch(0 0 0 / 55%);
 }
 
 .login-fondo {
@@ -165,23 +167,42 @@
 .login-luz {
     position: absolute;
     z-index: -1;
-    width: 65vmax;
-    height: 65vmax;
+    width: 34vmax;
+    height: 34vmax;
     border-radius: 9999px;
-    opacity: 0.8;
-    filter: blur(130px);
+    filter: blur(42px);
+    mix-blend-mode: var(--login-mezcla);
     will-change: transform;
-    animation: login-deriva 28s ease-in-out infinite alternate;
+    animation: 16s ease-in-out infinite alternate;
 }
 
-.login-luz-1 { top: -25vmax; left: -15vmax; background: var(--luz-1); }
-.login-luz-2 { top: -20vmax; right: -25vmax; background: var(--luz-2); animation-duration: 34s; animation-delay: -8s; }
-.login-luz-3 { bottom: -30vmax; left: -5vmax; background: var(--luz-3); animation-duration: 40s; animation-delay: -16s; }
-.login-luz-4 { bottom: -30vmax; right: -15vmax; background: var(--luz-4); animation-duration: 31s; animation-delay: -22s; }
+.login-luz-1 { top: -6vmax; left: -4vmax; background: var(--luz-1); animation-name: login-deriva-1; }
+.login-luz-2 { top: -8vmax; right: -6vmax; background: var(--luz-2); animation-name: login-deriva-2; animation-duration: 13s; animation-delay: -3s; }
+.login-luz-3 { bottom: -10vmax; left: 4vmax; background: var(--luz-3); animation-name: login-deriva-3; animation-duration: 18s; animation-delay: -7s; }
+.login-luz-4 { bottom: -8vmax; right: -2vmax; background: var(--luz-4); animation-name: login-deriva-4; animation-duration: 15s; animation-delay: -5s; }
 
-@keyframes login-deriva {
-    from { transform: translate3d(-6%, -4%, 0) scale(1); }
-    to { transform: translate3d(10%, 8%, 0) scale(1.15); }
+@keyframes login-deriva-1 {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(38vw, 22vh, 0) scale(1.1); }
+    100% { transform: translate3d(12vw, 52vh, 0) scale(0.9); }
+}
+
+@keyframes login-deriva-2 {
+    0% { transform: translate3d(0, 0, 0) scale(0.95); }
+    50% { transform: translate3d(-42vw, 30vh, 0) scale(1.1); }
+    100% { transform: translate3d(-14vw, 58vh, 0) scale(1); }
+}
+
+@keyframes login-deriva-3 {
+    0% { transform: translate3d(0, 0, 0) scale(1.05); }
+    50% { transform: translate3d(36vw, -34vh, 0) scale(0.9); }
+    100% { transform: translate3d(58vw, -8vh, 0) scale(1.1); }
+}
+
+@keyframes login-deriva-4 {
+    0% { transform: translate3d(0, 0, 0) scale(0.9); }
+    50% { transform: translate3d(-30vw, -40vh, 0) scale(1.1); }
+    100% { transform: translate3d(-56vw, -14vh, 0) scale(1); }
 }
 
 .login-tarjeta {
