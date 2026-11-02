@@ -18,12 +18,12 @@
 
 | Integrante | Carné | Rol | Perfil | Foco principal |
 | --- | --- | --- | --- | --- |
-| Jonatan Josue Santiago Itzep | 0910-23-19455 | **Dev Backend 1** y **Dev Móvil 1** | Líder Técnico / Arquitecto | Contrato API, arquitectura, revisión de calidad; app móvil y sincronización offline |
-| Marco Antonio Rolando Corado García | 0910-23-6501 | **Dev Backend 2** | Backend – Dominio | Rutas, turnos, registros de tiempo, motor de cálculo, aprobación y pagos |
-| Dáliet Sofía Salguero Franco | 0910-23-6180 | **Dev Backend 3** | Datos / DBA | Esquema 3FN, JSONB, migraciones, RLS |
-| Jose Daniel Pereira Cabrera | 0910-23-3852 | **Dev Backend 4** | Seguridad / DevOps / QA | Autenticación propia, OWASP, CI/CD, secretos, pruebas |
-| Adal Samuel López Reyes | 0910-23-24277 | **Dev Web 1** | Líder Frontend | Shell de la SPA, routing, guardas, CSP |
-| Stefany Mariana Hernández Galindo | 0910-23-6319 | **Dev Web 2** | Frontend | Módulos de UI (rutas, supervisión, planillas) |
+| Jonatan Santiago | 19455 | **Dev Backend 1** y **Dev Móvil 1** | Líder Técnico / Arquitecto | Contrato API, arquitectura, revisión de calidad; app móvil y sincronización offline |
+| Marco Corado | 6501 | **Dev Backend 2** | Backend – Dominio | Rutas, turnos, registros de tiempo, motor de cálculo, aprobación y pagos |
+| Sofía Salguero | 6180 | **Dev Backend 3** | Datos / DBA | Esquema 3FN, JSONB, migraciones, RLS |
+| Daniel Pereira | 3852 | **Dev Backend 4** | Seguridad / DevOps / QA | Autenticación propia, OWASP, CI/CD, secretos, pruebas |
+| Samuel López | 24277 | **Dev Web 1** | Líder Frontend | Shell de la SPA, routing, guardas, CSP |
+| Stefany Hernández | 6319 | **Dev Web 2** | Frontend | Módulos de UI (rutas, supervisión, planillas) |
 
 El plan original contemplaba 7 integrantes, con un desarrollador móvil. El rol de Dev Móvil 1 lo asumió el líder técnico.
 
